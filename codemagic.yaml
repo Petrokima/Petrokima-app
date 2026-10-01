@@ -1,0 +1,40 @@
+# iPhone build for TestFlight — used ONLY after the Apple Developer account is approved.
+# (Codemagic setup will be done step by step together; the values marked TODO come from App Store Connect.)
+workflows:
+  ios-testflight:
+    name: Petrokima iPhone → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: TODO_name_of_your_App_Store_Connect_API_key_in_Codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.petrokima.hr
+      groups:
+        - petrokima            # contains SUPABASE_ANON_KEY
+      node: 22
+    scripts:
+      - name: Install
+        script: npm ci
+      - name: Prepare the app
+        script: APP_BUILD=$BUILD_NUMBER node scripts/prepare-web.js
+      - name: Create the iPhone project
+        script: |
+          npx cap add ios
+          npx @capacitor/assets generate --ios --iconBackgroundColor '#1f4fb5' --splashBackgroundColor '#f3f5f9'
+          node scripts/patch-ios.js
+          npx cap sync ios
+      - name: Signing
+        script: xcode-project use-profiles
+      - name: Build
+        script: |
+          agvtool new-version -all $BUILD_NUMBER
+          xcode-project build-ipa --project "ios/App/App.xcodeproj" --scheme "App"
+        working_directory: .
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

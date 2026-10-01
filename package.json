@@ -1,0 +1,22 @@
+{
+  "name": "petrokima-hr-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Petrokima attendance & HR — Android and iPhone app (Capacitor shell around the Petrokima mobile web app)",
+  "scripts": {
+    "prepare-web": "node scripts/prepare-web.js",
+    "android": "npm run prepare-web && npx cap add android && node scripts/patch-android.js && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/geolocation": "8.2.2",
+    "@capacitor/ios": "8.5.2",
+    "@capacitor/preferences": "8.0.1",
+    "@supabase/supabase-js": "2.117.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2"
+  }
+}
