@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4fb5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Petrokima">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Petrokima</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--line:#e3e7ef;--text:#15192a;--muted:#6b7389;--brand:#1f4fb5;--brand2:#0f9d7a;--danger:#d23b3b;--warn:#c06a17;--radius:16px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Cairo',system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);font-size:15px;
+  padding-top:env(safe-area-inset-top,0px)}
+button{font-family:inherit;cursor:pointer;border:none}
+input,select,textarea{font-family:inherit;font-size:16px}
+.screen{display:none;min-height:100%}
+.screen.on{display:block}
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(20,30,60,.06);padding:18px;margin-bottom:14px}
+.logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:800;font-size:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+h1{font-size:22px;font-weight:800;text-align:center}
+.sub{color:var(--muted);font-size:13px;text-align:center;margin-top:4px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff;color:var(--text);outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand)}
+.field textarea{min-height:90px;resize:vertical}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;border-radius:14px;font-size:16px;font-weight:700;color:#fff;background:var(--brand)}
+.btn:disabled{opacity:.55}
+.btn.green{background:var(--brand2)} .btn.red{background:var(--danger)} .btn.ghost{background:#fff;color:var(--brand);border:1.5px solid var(--line)}
+.btn.small{padding:10px 14px;font-size:14px;width:auto;border-radius:10px}
+.row{display:flex;gap:10px}
+.err{background:#fdecec;color:var(--danger);border-radius:12px;padding:11px 13px;font-size:14px;margin-top:12px;display:none;line-height:1.6}
+.muted{color:var(--muted)}
+/* top bar + tabs */
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.top .who{flex:1;min-width:0}
+.top .name{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .meta{font-size:12px;color:var(--muted)}
+.iconbtn{background:var(--bg);color:var(--text);border-radius:10px;padding:8px 11px;font-size:14px;font-weight:700}
+main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
+.view{display:none}.view.on{display:block}
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.tab{flex:1;background:none;color:var(--muted);font-size:11.5px;font-weight:700;padding:6px 2px;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tab .ic{font-size:21px;line-height:1.1}
+.tab.on{color:var(--brand);background:#eef3ff}
+/* clock card */
+.clock{text-align:center;padding:22px 18px}
+.clock .time{font-size:44px;font-weight:800;letter-spacing:1px;direction:ltr}
+.clock .date{color:var(--muted);font-size:14px;margin-bottom:14px}
+.state{border-radius:14px;padding:14px;margin:6px 0 16px;font-size:15px;line-height:1.6}
+.state.off{background:#f1f3f8;color:var(--muted)}
+.state.on{background:#e6f7f2;color:#08694f}
+.state.warn{background:#fff4e5;color:var(--warn)}
+.state b{color:inherit}
+.big{font-size:18px;padding:18px}
+.list .it{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.list .it:last-child{border-bottom:none}
+.it .grow{flex:1;min-width:0}
+.it .t1{font-weight:700;font-size:14.5px}
+.it .t2{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.5}
+.num{direction:ltr;unicode-bidi:isolate;font-variant-numeric:tabular-nums;font-weight:700}
+.sec{font-weight:800;font-size:15px;margin:4px 0 10px}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 3px rgba(20,30,60,.06)}
+.stat .v{font-size:22px;font-weight:800}
+.stat .l{font-size:11.5px;color:var(--muted);line-height:1.35;margin-top:2px}
+.chip{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
+.c-green{background:#e3f6ef;color:#08694f}.c-orange{background:#fff1dd;color:#9a5410}.c-red{background:#fde8e8;color:#b02a2a}.c-grey{background:#eef0f4;color:#5c6478}.c-blue{background:#e8efff;color:#1f4fb5}
+.empty{text-align:center;color:var(--muted);padding:22px 8px;font-size:14px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--muted)}
+.kv .v{font-weight:700;text-align:end}
+/* bottom sheet */
+.sheet{position:fixed;inset:0;background:rgba(10,15,30,.45);z-index:50;display:none;align-items:flex-end}
+.sheet.on{display:flex}
+.sheet-box{background:var(--card);width:100%;max-height:92vh;overflow-y:auto;border-radius:22px 22px 0 0;padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px));animation:up .2s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+.grab{width:42px;height:5px;border-radius:3px;background:var(--line);margin:4px auto 14px}
+.sheet h2{font-size:18px;font-weight:800;margin-bottom:14px}
+.site{display:block;width:100%;text-align:start;background:var(--bg);border-radius:12px;padding:12px 14px;margin-bottom:8px;color:var(--text)}
+.site b{display:block;font-size:14.5px}.site span{font-size:12.5px;color:var(--muted)}
+.site.sel{outline:2px solid var(--brand);background:#eef3ff}
+.hint{font-size:13px;color:var(--muted);line-height:1.7;margin:-4px 0 14px}
+.hint b{color:var(--text)}
+.neg{color:var(--danger)}.pos{color:#08694f}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:60;background:#15192a;color:#fff;border-radius:14px;padding:13px 16px;font-size:14.5px;font-weight:600;text-align:center;
+  transform:translateY(30px);opacity:0;pointer-events:none;transition:all .25s}
+#toast.on{transform:none;opacity:1}
+#toast.bad{background:var(--danger)}
+#offline{display:none;background:var(--warn);color:#fff;text-align:center;font-size:13px;font-weight:700;padding:6px}
+.spin{width:22px;height:22px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.spinning{animation:sp .8s linear infinite}
+.loading{display:flex;justify-content:center;padding:40px}
+.loading .spin{border-color:var(--line);border-top-color:var(--brand)}
+</style>
+</head>
+<body>
+<div id="offline" data-t="offline"></div>
+
+<!-- LOGIN -->
+<section class="screen" id="scr-login"><div class="center"><div style="width:100%;max-width:400px">
+  <div class="logo">PK</div><h1 data-t="appName"></h1><div class="sub" data-t="loginSub"></div>
+  <div class="card" style="margin-top:22px">
+    <div class="field"><label data-t="empCode"></label><input id="li-code" inputmode="text" autocomplete="username" autocapitalize="off"></div>
+    <div class="field"><label data-t="password"></label><input id="li-pass" type="password" autocomplete="current-password"></div>
+    <button class="btn" id="li-go" data-t="signIn"></button>
+    <div class="err" id="li-err"></div>
+  </div>
+  <div class="sub" style="margin-top:6px"><button class="iconbtn" data-lang>English</button></div>
+  <div class="sub" style="margin-top:12px" data-t="forgot"></div>
+</div></div></section>
+
+<!-- FIRST SIGN-IN -->
+<section class="screen" id="scr-first"><div class="center"><div style="width:100%;max-width:400px">
+  <div class="logo">PK</div><h1 data-t="firstTitle"></h1><div class="sub" data-t="firstSub"></div>
+  <div class="card" style="margin-top:22px">
+    <div class="field"><label data-t="nid4"></label><input id="fl-nid" inputmode="numeric" maxlength="4" autocomplete="off" style="direction:ltr;text-align:center;letter-spacing:6px;font-size:20px"></div>
+    <div class="field"><label data-t="newPass"></label><input id="fl-p1" type="password" autocomplete="new-password"></div>
+    <div class="field"><label data-t="repeatPass"></label><input id="fl-p2" type="password" autocomplete="new-password"></div>
+    <button class="btn" id="fl-go" data-t="savePass"></button>
+    <div class="err" id="fl-err"></div>
+  </div>
+  <button class="btn ghost" data-act="signout" data-t="signOut"></button>
+</div></div></section>
+
+<!-- INSTALL FIRST (iPhone) -->
+<section class="screen" id="scr-install"><div class="center"><div style="width:100%;max-width:400px;text-align:center">
+  <div class="logo">PK</div><h1 data-t="installTitle"></h1>
+  <div class="card" style="margin-top:18px;text-align:start;line-height:1.9"><div data-t="installText" style="margin-bottom:10px"></div><div id="ios-steps" style="white-space:pre-line;font-weight:700"></div></div>
+  <button class="iconbtn" data-lang>English</button>
+</div></div></section>
+
+<!-- MESSAGE (no access etc.) -->
+<section class="screen" id="scr-msg"><div class="center"><div style="width:100%;max-width:400px;text-align:center">
+  <div class="logo">PK</div><div class="card" id="msg-body" style="line-height:1.8"></div>
+  <button class="btn ghost" data-act="signout" data-t="back"></button>
+</div></div></section>
+
+<!-- MAIN -->
+<section class="screen" id="scr-main">
+  <div class="top">
+    <div class="who"><div class="name" id="me-name"></div><div class="meta" id="me-meta"></div></div>
+    <button class="iconbtn" data-act="refresh" id="btn-refresh" style="display:flex;align-items:center;gap:5px;background:#eef3ff;color:var(--brand)"><span id="rf-ic" style="display:inline-block;font-size:16px">⟳</span><span data-t="refresh"></span></button>
+    <button class="iconbtn" data-lang>English</button>
+  </div>
+  <div id="ptr" style="height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;color:var(--brand);transition:height .15s"><span id="ptr-ic">⟳</span><span id="ptr-tx"></span></div>
+  <main>
+    <!-- HOME -->
+    <div class="view on" id="v-home">
+      <div class="card clock">
+        <div class="time" id="clk-time">--:--</div>
+        <div class="date" id="clk-date"></div>
+        <div id="clk-upd" style="font-size:12px;color:var(--muted);margin:-8px 0 10px"></div>
+        <div id="clk-state"></div>
+        <div id="clk-btns"></div>
+        <div class="muted" style="font-size:12px;margin-top:12px" data-t="locNote"></div>
+      </div>
+      <div class="card"><div class="sec" data-t="today"></div><div class="list" id="today-list"></div></div>
+      <div class="card"><div class="sec" id="month-title"></div><div class="list" id="month-list"></div></div>
+    </div>
+    <!-- REQUESTS -->
+    <div class="view" id="v-req">
+      <div class="stats" id="req-stats"></div>
+      <div style="display:grid;gap:10px;margin-bottom:14px">
+        <button class="btn" data-act="req-leave">🌴 <span data-t="reqLeave"></span></button>
+        <button class="btn" data-act="req-perm">✋ <span data-t="reqPerm"></span></button>
+        <button class="btn ghost" data-act="req-hr">📨 <span data-t="reqOther"></span></button>
+      </div>
+      <div class="card"><div class="sec" data-t="myRequests"></div><div class="list" id="req-list"></div></div>
+    </div>
+    <!-- TEAM APPROVALS (managers) -->
+    <div class="view" id="v-team"><div class="card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
+      <div class="card"><div class="sec" data-t="teamTitle"></div><div class="hint" data-t="teamNote"></div><div class="list" id="team-list"></div></div></div>
+    <!-- PAYSLIPS -->
+    <div class="view" id="v-pay"><div class="card"><div class="sec" data-t="payslips"></div><div class="list" id="pay-list"></div></div></div>
+    <!-- PROFILE -->
+    <div class="view" id="v-prof">
+      <div class="card" id="prof-card"></div>
+      <div class="card" id="install-card" style="display:none"></div>
+      <div style="display:grid;gap:10px">
+        <button class="btn ghost" data-act="chpass">🔑 <span data-t="changePass"></span></button>
+        <button class="btn red" data-act="signout" data-t="signOut"></button>
+      </div>
+    </div>
+  </main>
+  <nav class="tabbar">
+    <button class="tab on" data-view="home"><span class="ic">⏱</span><span data-t="home"></span></button>
+    <button class="tab" data-view="req"><span class="ic">📋</span><span data-t="requests"></span></button>
+    <button class="tab" data-view="team" id="tab-team" style="display:none;position:relative"><span class="ic">✅</span><span data-t="approvals"></span><span id="team-badge" style="display:none;position:absolute;top:2px;inset-inline-end:14px;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px"></span></button>
+    <button class="tab" data-view="pay"><span class="ic">💰</span><span data-t="payslips"></span></button>
+    <button class="tab" data-view="prof"><span class="ic">👤</span><span data-t="profile"></span></button>
+  </nav>
+</section>
+
+<div class="sheet" id="sheet"><div class="sheet-box"><div class="grab"></div><div id="sheet-body"></div></div></div>
+<div id="toast"></div>
+<div id="boot" class="loading"><div class="spin"></div></div>
+
+<script>
+// ═════════════════════════════════════════════════════════
+//  CONFIGURATION — the only lines to fill in before publishing
+// ═════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://hckkrzghxxhauotyqlqr.supabase.co';
+const SUPABASE_KEY = 'PASTE-YOUR-ANON-KEY-HERE';
+const LOGIN_DOMAIN = 'petrokima.local';
+const APP_BUILD = 0;            // set automatically by the Android / iPhone build — 0 on the web
+const APK_REPO  = '';           // GitHub repository that publishes the Android app (owner/name)
+// Running inside the Android or iPhone app?
+const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+const PLATFORM = NATIVE ? window.Capacitor.getPlatform() : 'web';
+const nativePlugin = name => (NATIVE && window.Capacitor.registerPlugin) ? (window.Capacitor.Plugins[name] || window.Capacitor.registerPlugin(name)) : null;
+
+// ═════════════════════════════════════════════════════════
+//  LANGUAGE (Arabic / English)
+// ═════════════════════════════════════════════════════════
+const T = {
+ en:{appName:'Petrokima',loginSub:'Attendance & HR requests',empCode:'Employee code',password:'Password',signIn:'Sign in',forgot:'Forgot your password? Ask HR to reset it.',
+  wrongLogin:'Wrong employee code or password.',fillLogin:'Enter your employee code and password.',
+  firstTitle:'Welcome',firstSub:'This is your first sign-in. Confirm who you are and choose your own password.',nid4:'Last 4 digits of your national ID',
+  newPass:'New password (at least 8 characters)',repeatPass:'Repeat the new password',savePass:'Save my password',signOut:'Sign out',
+  need4:'Enter the last 4 digits of your national ID.',short:'The password must be at least 8 characters.',nomatch:'The two passwords do not match.',sameTemp:'Choose a password different from the temporary one.',
+  nidWrong:'The national ID digits do not match HR records.',locked:'Your account is locked. Ask HR to reset it.',passSet:'Password saved — welcome!',
+  noRole:'This account has no access yet. Please contact HR.',notLinked:'This account is not linked to an employee record.',inactive:'This account is locked or deactivated. Please contact HR.',
+  offline:'No internet — check-ins are saved on your phone and sent later; requests need a connection',
+  home:'Attendance',requests:'Requests',payslips:'Payslips',profile:'Profile',
+  notIn:'You are not checked in.',checkedIn:'Checked in at',since:'since',hSince:'for',checkIn:'Check in',checkOut:'Check out',switchSite:'Switch site',
+  openFrom:'You checked in on {d} at {t} and have not checked out yet.',
+  locNote:'Your time comes from the company server. Your location is recorded with each check-in.',
+  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',totalToday:'Total today',hours:'h',
+  thisCycle:'This payroll month',noMonth:'No attendance recorded this payroll month.',
+  whereWork:'Where are you working?',recent:'Recent sites',searchSite:'Type the site code or name',typeMore:'Type at least 2 letters or numbers',noSites:'No site found',
+  confirmIn:'Check in at',gettingLoc:'Getting your location…',noLoc:'Location not available — saved without it',
+  doneIn:'Checked in ✓',doneOut:'Checked out ✓',doneSwitch:'Site changed ✓',confirmOut:'Check out now?',yes:'Yes',cancel:'Cancel',
+  alreadyIn:'You are already checked in at this site.',notInErr:'You are not checked in.',lockedPeriod:'This payroll month is approved and locked. Contact HR.',
+  annualLeft:'Annual leave left',permsUsed:'Permissions this month',openReq:'Waiting for HR',
+  reqLeave:'Request vacation',reqPerm:'Late arrival / early leave',reqOther:'Other HR request',myRequests:'My requests',noRequests:'You have not made any requests yet.',
+  cancelReq:'Cancel',cancelQ:'Cancel this request?',cancelled:'Request cancelled',cantCancel:'This request can no longer be cancelled.',
+  type:'Type',from:'From',to:'To',days:'Working days',reason:'Reason',date:'Date',hoursL:'Hours',details:'Details',send:'Send request',sent:'Request sent to HR ✓',
+  wd:'{c} calendar days · {w} working days (weekends and holidays not counted)',balAfter:'Annual balance after this request',over:'More than your balance — HR may reject it',
+  overlap:'These dates overlap another vacation of yours.',past:'These dates are in the past — HR will review them.',unpaidNote:'Unpaid leave is deducted from your salary.',sickNote:'Keep your medical report — HR may ask for it.',
+  noDays:'The request has no working days — check the dates.',toBefore:'“To” is before “From”.',
+  permCycle:'Payroll month {p}: {u} of {l} permissions approved',permFull:'You have used all permissions for this month — the request would be rejected.',
+  hoursRange:'Hours must be between 0.25 and {m}.',dupPerm:'You already have this request for that date.',needDetails:'Please add the details HR will need.',
+  noSlips:'No approved payslips yet. They appear here once payroll is approved.',gross:'Gross',ded:'Deductions',net:'Net pay',additions:'Additions',deductions:'Deductions',approvedSlip:'Approved payslip',
+  code:'Employee code',job:'Job',dept:'Department',unit:'Unit',manager:'Direct manager',hired:'Employment date',mobile:'Mobile',email:'Email',entity:'Company',nidL:'National ID',
+  changePass:'Change password',passChanged:'Password changed ✓',install:'Install the app',installAndroid:'Add Petrokima to your home screen for one-tap access.',installBtn:'Install',
+  installIos:'On iPhone: tap the Share button, then “Add to Home Screen”.',configMissing:'The app is not configured yet. The administrator must add the Supabase key.',
+  st:{Pending:'Pending',Approved:'Approved',Rejected:'Rejected',Cancelled:'Cancelled','In progress':'In progress',Completed:'Completed','Waiting for manager':'Waiting for your manager','Waiting for HR':'Manager approved — waiting for HR'},
+  lt:{Annual:'Annual',Casual:'Casual',Sick:'Sick',Unpaid:'Unpaid','Other paid':'Other paid'},
+  pt:{'Late arrival':'Late arrival','Early leave':'Early leave'},
+  ht:{'HR letter':'HR letter','Salary certificate':'Salary certificate','Experience certificate':'Experience certificate','Update my personal data':'Update my personal data','Payslip copy':'Payslip copy','Loan request':'Loan request','Other':'Other'},
+  leaveTitle:'{t} leave',attempts:'({n} attempts left)',langBtn:'العربية',
+  noProject:'No project',inNoProject:'Check in without a project',inSite:'Check in at a site',orSite:'Or choose a site',
+  installTitle:'Install the app first',installText:'For security, Petrokima must be installed on your home screen before you sign in.',
+  iosSteps:'1. Tap the Share button ⬆︎ at the bottom of Safari\n2. Choose “Add to Home Screen”\n3. Open Petrokima from your home screen and sign in',
+  otherDevice:'Your employee code is registered to another phone. If you changed your phone, ask HR to reset your registered phone.',
+  deviceTaken:'This phone is already registered to another employee. Each phone can be used by one employee only.',
+  deviceMismatch:'This phone is not the phone registered to your employee code. Contact HR.',
+  badDevice:'This phone could not be identified. Close the app and open it again.',
+  phoneReg:'Registered phone',thisPhone:'This phone is registered to you',back:'Back',
+  locTitle:'Location is required',locDenied:'Check-in needs your location, and this phone is not sharing it with Petrokima.',
+  locIos:'iPhone — check both:\n1. Settings → Privacy & Security → Location Services → ON → “Safari Websites” → “While Using the App”.\n2. Settings → Apps → Safari → Settings for Websites → Location → set petrokima.github.io (and “Other Websites”) to Allow or Ask.\nThen close Petrokima completely (swipe it away) and open it again. Still blocked? Ask HR — the app may need to be added to the home screen again.',
+  locAndroid:'Android: open the phone Settings → Location → turn it ON. Then in Chrome tap ⋮ → Settings → Site settings → Location → allow this site (or long-press the Petrokima icon → App info → Permissions → Location → Allow).',
+  locTimeout:'Your location could not be found. Move near a window or outside, wait a few seconds and try again.',tryAgain:'Try again',
+  queued:'Saved on your phone ✓ — it will be sent automatically when you are back online',
+  waiting:'{n} check-in(s) saved on this phone, waiting for internet',waitingOne:'waiting to send',
+  sentNow:'{n} saved check-in(s) sent ✓',notRecorded:'A saved check-in could not be recorded — see the details on the home screen',
+  failedItem:'Not recorded',discard:'Discard',discardQ:'Discard this saved check-in? HR will need to record it manually.',sendNow:'Send now',
+  tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
+  offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
+  noCache:'No internet connection. Connect once to sign in.',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',mgrNote:'Your note',
+  approvedFinal:'Approved ✓',teamTitle:'Project Allowance for your team',teamNote:'Calculated from their attendance at projects. Nothing is paid until you approve and HR then approves.',
+  approve:'Approve',reject:'Reject',rejectWhy:'Reason for rejecting',approvedMsg:'Approved — sent to HR ✓',rejectedMsg:'Rejected',noTeam:'Nothing to approve',
+  aaWait:'Waiting for you',aaHR:'Approved by you — waiting for HR',aaOk:'Approved — will be paid',aaNo:'Rejected',day:'day',daysW:'days',at:'at',
+  locAppAndroid:'Android: open the phone Settings → Apps → Petrokima → Permissions → Location → “Allow only while using the app”. Also make sure Location is switched ON in the quick settings.',
+  locAppIos:'iPhone: open Settings → Petrokima → Location → “While Using the App”, and switch Precise Location on.',
+  updateAvail:'A new version of the app is available',updateBtn:'Download update',
+  refresh:'Refresh',refreshed:'Up to date ✓',updated:'Updated {t}',pull:'Pull down to refresh',release:'Release to refresh',refreshing:'Refreshing…'},
+ ar:{appName:'بتروكيما',loginSub:'الحضور وطلبات الموارد البشرية',empCode:'كود الموظف',password:'كلمة المرور',signIn:'تسجيل الدخول',forgot:'نسيت كلمة المرور؟ اطلب من الموارد البشرية إعادة تعيينها.',
+  wrongLogin:'كود الموظف أو كلمة المرور غير صحيحة.',fillLogin:'أدخل كود الموظف وكلمة المرور.',
+  firstTitle:'مرحباً بك',firstSub:'هذا أول تسجيل دخول لك. أكّد هويتك واختر كلمة مرور خاصة بك.',nid4:'آخر ٤ أرقام من الرقم القومي',
+  newPass:'كلمة المرور الجديدة (٨ أحرف على الأقل)',repeatPass:'أعد كتابة كلمة المرور الجديدة',savePass:'حفظ كلمة المرور',signOut:'تسجيل الخروج',
+  need4:'أدخل آخر ٤ أرقام من الرقم القومي.',short:'يجب ألا تقل كلمة المرور عن ٨ أحرف.',nomatch:'كلمتا المرور غير متطابقتين.',sameTemp:'اختر كلمة مرور مختلفة عن كلمة المرور المؤقتة.',
+  nidWrong:'أرقام الرقم القومي لا تطابق سجلات الموارد البشرية.',locked:'تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',passSet:'تم حفظ كلمة المرور — مرحباً بك!',
+  noRole:'هذا الحساب ليس له صلاحية بعد. يرجى التواصل مع الموارد البشرية.',notLinked:'هذا الحساب غير مرتبط بملف موظف.',inactive:'هذا الحساب مقفل أو موقوف. يرجى التواصل مع الموارد البشرية.',
+  offline:'لا يوجد إنترنت — يتم حفظ تسجيلات الحضور على هاتفك وإرسالها لاحقاً، والطلبات تحتاج إلى اتصال',
+  home:'الحضور',requests:'الطلبات',payslips:'الرواتب',profile:'حسابي',
+  notIn:'لم تسجّل حضورك بعد.',checkedIn:'مسجّل حضور في',since:'منذ',hSince:'مدة',checkIn:'تسجيل حضور',checkOut:'تسجيل انصراف',switchSite:'تغيير الموقع',
+  openFrom:'سجّلت حضورك يوم {d} الساعة {t} ولم تسجّل الانصراف بعد.',
+  locNote:'الوقت يُؤخذ من خادم الشركة، ويتم تسجيل موقعك مع كل تسجيل حضور.',
+  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',totalToday:'إجمالي اليوم',hours:'س',
+  thisCycle:'شهر الرواتب الحالي',noMonth:'لا يوجد حضور مسجل في شهر الرواتب الحالي.',
+  whereWork:'أين تعمل الآن؟',recent:'المواقع الأخيرة',searchSite:'اكتب كود أو اسم الموقع',typeMore:'اكتب حرفين أو رقمين على الأقل',noSites:'لم يتم العثور على موقع',
+  confirmIn:'تسجيل الحضور في',gettingLoc:'جارٍ تحديد موقعك…',noLoc:'تعذّر تحديد الموقع — تم الحفظ بدونه',
+  doneIn:'تم تسجيل الحضور ✓',doneOut:'تم تسجيل الانصراف ✓',doneSwitch:'تم تغيير الموقع ✓',confirmOut:'تسجيل الانصراف الآن؟',yes:'نعم',cancel:'إلغاء',
+  alreadyIn:'أنت مسجّل حضور في هذا الموقع بالفعل.',notInErr:'أنت غير مسجّل حضور.',lockedPeriod:'تم اعتماد وقفل رواتب هذا الشهر. تواصل مع الموارد البشرية.',
+  annualLeft:'رصيد الإجازة السنوية',permsUsed:'الأذونات هذا الشهر',openReq:'قيد المراجعة',
+  reqLeave:'طلب إجازة',reqPerm:'إذن تأخير / انصراف مبكر',reqOther:'طلب آخر من الموارد البشرية',myRequests:'طلباتي',noRequests:'لم تقدّم أي طلبات بعد.',
+  cancelReq:'إلغاء',cancelQ:'هل تريد إلغاء هذا الطلب؟',cancelled:'تم إلغاء الطلب',cantCancel:'لم يعد بالإمكان إلغاء هذا الطلب.',
+  type:'النوع',from:'من',to:'إلى',days:'أيام العمل',reason:'السبب',date:'التاريخ',hoursL:'عدد الساعات',details:'التفاصيل',send:'إرسال الطلب',sent:'تم إرسال الطلب إلى الموارد البشرية ✓',
+  wd:'{c} يوم تقويمي · {w} يوم عمل (لا تُحتسب العطلات الأسبوعية والرسمية)',balAfter:'رصيد الإجازة السنوية بعد هذا الطلب',over:'أكثر من رصيدك — قد يتم رفض الطلب',
+  overlap:'هذه التواريخ تتداخل مع إجازة أخرى لك.',past:'هذه التواريخ في الماضي — ستراجعها الموارد البشرية.',unpaidNote:'الإجازة بدون أجر تُخصم من راتبك.',sickNote:'احتفظ بالتقرير الطبي — قد تطلبه الموارد البشرية.',
+  noDays:'لا توجد أيام عمل في هذا الطلب — راجع التواريخ.',toBefore:'تاريخ «إلى» قبل تاريخ «من».',
+  permCycle:'شهر الرواتب {p}: تم اعتماد {u} من {l} أذونات',permFull:'استخدمت كل الأذونات المتاحة هذا الشهر — سيتم رفض الطلب.',
+  hoursRange:'يجب أن يكون عدد الساعات بين ٠٫٢٥ و{m}.',dupPerm:'لديك نفس الطلب لهذا التاريخ بالفعل.',needDetails:'يرجى كتابة التفاصيل التي تحتاجها الموارد البشرية.',
+  noSlips:'لا توجد قسائم رواتب معتمدة بعد. ستظهر هنا بعد اعتماد الرواتب.',gross:'الإجمالي',ded:'الاستقطاعات',net:'صافي الراتب',additions:'الإضافات',deductions:'الاستقطاعات',approvedSlip:'قسيمة راتب معتمدة',
+  code:'كود الموظف',job:'الوظيفة',dept:'الإدارة',unit:'الوحدة',manager:'المدير المباشر',hired:'تاريخ التعيين',mobile:'الموبايل',email:'البريد الإلكتروني',entity:'الشركة',nidL:'الرقم القومي',
+  changePass:'تغيير كلمة المرور',passChanged:'تم تغيير كلمة المرور ✓',install:'تثبيت التطبيق',installAndroid:'أضف تطبيق بتروكيما إلى الشاشة الرئيسية لفتحه بضغطة واحدة.',installBtn:'تثبيت',
+  installIos:'على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».',configMissing:'التطبيق غير مُعدّ بعد. يجب على المسؤول إضافة مفتاح Supabase.',
+  st:{Pending:'قيد المراجعة',Approved:'مقبول',Rejected:'مرفوض',Cancelled:'ملغي','In progress':'جارٍ التنفيذ',Completed:'تم','Waiting for manager':'في انتظار مديرك المباشر','Waiting for HR':'وافق المدير — في انتظار الموارد البشرية'},
+  lt:{Annual:'سنوية',Casual:'عارضة',Sick:'مرضية',Unpaid:'بدون أجر','Other paid':'أخرى مدفوعة'},
+  pt:{'Late arrival':'تأخير صباحي','Early leave':'انصراف مبكر'},
+  ht:{'HR letter':'خطاب من الموارد البشرية','Salary certificate':'شهادة راتب','Experience certificate':'شهادة خبرة','Update my personal data':'تحديث بياناتي الشخصية','Payslip copy':'نسخة قسيمة راتب','Loan request':'طلب سلفة','Other':'أخرى'},
+  leaveTitle:'إجازة {t}',attempts:'(متبقي {n} محاولات)',langBtn:'English',
+  noProject:'بدون مشروع',inNoProject:'تسجيل حضور بدون مشروع',inSite:'تسجيل حضور في موقع',orSite:'أو اختر موقعاً',
+  installTitle:'ثبّت التطبيق أولاً',installText:'لأسباب أمنية، يجب تثبيت تطبيق بتروكيما على الشاشة الرئيسية قبل تسجيل الدخول.',
+  iosSteps:'١. اضغط زر المشاركة ⬆︎ أسفل متصفح سفاري\n٢. اختر «إضافة إلى الشاشة الرئيسية»\n٣. افتح بتروكيما من الشاشة الرئيسية وسجّل الدخول',
+  otherDevice:'كود الموظف الخاص بك مسجّل على هاتف آخر. إذا غيّرت هاتفك، اطلب من الموارد البشرية إعادة تعيين الهاتف المسجّل.',
+  deviceTaken:'هذا الهاتف مسجّل بالفعل لموظف آخر. كل هاتف يُستخدم لموظف واحد فقط.',
+  deviceMismatch:'هذا الهاتف ليس الهاتف المسجّل لكود الموظف الخاص بك. تواصل مع الموارد البشرية.',
+  badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
+  phoneReg:'الهاتف المسجّل',thisPhone:'هذا الهاتف مسجّل باسمك',back:'رجوع',
+  locTitle:'تحديد الموقع مطلوب',locDenied:'تسجيل الحضور يتطلب موقعك، وهذا الهاتف لا يشارك موقعه مع تطبيق بتروكيما.',
+  locIos:'آيفون — راجع الإعدادين:\n١. الإعدادات ← الخصوصية والأمان ← خدمات الموقع ← تشغيل ← «مواقع سفاري» ← «أثناء استخدام التطبيق».\n٢. الإعدادات ← التطبيقات ← سفاري ← إعدادات المواقع ← الموقع ← اجعل petrokima.github.io (و«مواقع أخرى») على «السماح» أو «السؤال».\nثم أغلق بتروكيما تماماً (اسحبه لأعلى) وافتحه مرة أخرى. ما زال محظوراً؟ تواصل مع الموارد البشرية — قد يلزم إضافة التطبيق إلى الشاشة الرئيسية من جديد.',
+  locAndroid:'أندرويد: افتح إعدادات الهاتف ← الموقع ← شغّله. ثم في كروم اضغط ⋮ ← الإعدادات ← إعدادات المواقع ← الموقع ← اسمح لهذا الموقع (أو اضغط مطولاً على أيقونة بتروكيما ← معلومات التطبيق ← الأذونات ← الموقع ← سماح).',
+  locTimeout:'تعذّر تحديد موقعك. اقترب من نافذة أو اخرج إلى مكان مفتوح، انتظر قليلاً ثم حاول مرة أخرى.',tryAgain:'حاول مرة أخرى',
+  queued:'تم الحفظ على هاتفك ✓ — سيتم الإرسال تلقائياً عند عودة الإنترنت',
+  waiting:'{n} تسجيل محفوظ على هذا الهاتف في انتظار الإنترنت',waitingOne:'في انتظار الإرسال',
+  sentNow:'تم إرسال {n} تسجيل محفوظ ✓',notRecorded:'تعذّر تسجيل أحد التسجيلات المحفوظة — راجع التفاصيل في الشاشة الرئيسية',
+  failedItem:'لم يُسجَّل',discard:'حذف',discardQ:'حذف هذا التسجيل المحفوظ؟ ستحتاج الموارد البشرية إلى تسجيله يدوياً.',sendNow:'إرسال الآن',
+  tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
+  offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
+  noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',mgrNote:'ملاحظتك',
+  approvedFinal:'تمت الموافقة ✓',teamTitle:'بدل المشروع لفريقك',teamNote:'محسوب من حضورهم في المشروعات. لا يُصرف أي مبلغ إلا بعد موافقتك ثم موافقة الموارد البشرية.',
+  approve:'موافقة',reject:'رفض',rejectWhy:'سبب الرفض',approvedMsg:'تمت الموافقة — أُرسل إلى الموارد البشرية ✓',rejectedMsg:'تم الرفض',noTeam:'لا توجد طلبات للموافقة',
+  aaWait:'في انتظار موافقتك',aaHR:'وافقت عليه — في انتظار الموارد البشرية',aaOk:'معتمد — سيُصرف',aaNo:'مرفوض',day:'يوم',daysW:'أيام',at:'في',
+  locAppAndroid:'أندرويد: افتح إعدادات الهاتف ← التطبيقات ← بتروكيما ← الأذونات ← الموقع ← «السماح فقط أثناء استخدام التطبيق». وتأكد أيضاً من تشغيل الموقع من الإعدادات السريعة.',
+  locAppIos:'آيفون: افتح الإعدادات ← بتروكيما ← الموقع ← «أثناء استخدام التطبيق»، وشغّل «الموقع الدقيق».',
+  updateAvail:'يتوفر إصدار جديد من التطبيق',updateBtn:'تنزيل التحديث',
+  refresh:'تحديث',refreshed:'تم التحديث ✓',updated:'آخر تحديث {t}',pull:'اسحب للأسفل للتحديث',release:'اترك للتحديث',refreshing:'جارٍ التحديث…'}
+};
+let LANG = localStorage.getItem('pk_lang') || 'ar';   // Arabic by default; one tap switches to English
+const t = (k, vars) => { let s = (T[LANG][k] ?? T.en[k] ?? k); if (vars) Object.entries(vars).forEach(([a,b]) => s = s.replace('{'+a+'}', b)); return s; };
+const tm = (group, k) => (T[LANG][group] && T[LANG][group][k]) || k;
+function applyLang(){
+  document.documentElement.lang = LANG; document.documentElement.dir = LANG==='ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
+  document.querySelectorAll('[data-lang]').forEach(el => el.textContent = t('langBtn'));
+  if ($('ios-steps')) $('ios-steps').textContent = t('iosSteps');
+  if (APP.ready) renderAll();
+}
+
+// ═════════════════════════════════════════════════════════
+//  HELPERS
+// ═════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
+const pad = n => String(n).padStart(2,'0');
+const loc = () => LANG==='ar' ? 'ar-EG' : 'en-GB';
+const fmt = v => num(v).toLocaleString(loc(), { maximumFractionDigits:2 });
+const fmtH = v => num(v).toLocaleString(loc(), { maximumFractionDigits:2 }) + ' ' + t('hours');
+function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function dObj(s){ const [y,m,d]=String(s).split('-').map(Number); return new Date(y, m-1, d); }
+function dStr(o){ return `${o.getFullYear()}-${pad(o.getMonth()+1)}-${pad(o.getDate())}`; }
+function niceDate(s){ return s ? dObj(s).toLocaleDateString(loc(), { weekday:'short', day:'numeric', month:'short' }) : ''; }
+function toMin(x){ const [h,m]=String(x||'0:0').split(':').map(Number); return h*60+m; }
+let toastT;
+function toast(msg, bad){ const el=$('toast'); el.textContent=msg; el.className = 'on' + (bad?' bad':''); clearTimeout(toastT); toastT=setTimeout(()=>el.className='',3200); }
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); $('boot').style.display='none'; }
+function sheet(html){ $('sheet-body').innerHTML = html; $('sheet').classList.add('on'); }
+function closeSheet(){ $('sheet').classList.remove('on'); }
+function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
+function friendly(msg){
+  msg = String(msg||'');
+  if (/OFFLINE_TOO_OLD/.test(msg)) return t('tooOld');
+  if (/OFFLINE_ORDER/.test(msg)) return t('wrongOrder');
+  if (/ALREADY_IN/.test(msg)) return t('alreadyIn');
+  if (/NOT_IN/.test(msg)) return t('notInErr');
+  if (/DEVICE/.test(msg)) return t('deviceMismatch');
+  if (/NO_LOCATION/.test(msg)) return t('locDenied');
+  if (/approved and locked/i.test(msg)) return t('lockedPeriod');
+  if (/Failed to fetch|NetworkError|network/i.test(msg)) return t('offline');
+  return msg.replace(/^[A-Z_]+:\s*/, '');
+}
+
+// Payroll rules shared with the HR system
+let S = { weekendDays:[5,6], cycleStartDay:21, permissionsPerMonth:2, permissionMaxHours:2, annualLeaveDefault:21, casualCountsAnnual:'yes', hoursPerDay:8 };
+let HOL = new Set();
+function isWorkday(s){ return !(S.weekendDays||[]).includes(dObj(s).getDay()) && !HOL.has(s); }
+function workdays(a,b){ if(!a||!b||b<a) return 0; let n=0,d=dObj(a),e=dObj(b),g=0; while(d<=e && g++<800){ if(isWorkday(dStr(d))) n++; d.setDate(d.getDate()+1); } return n; }
+function cycleDay(){ const d=Math.round(num(S.cycleStartDay)); return (d>=2&&d<=28)?d:1; }
+function periodStart(p){ const sd=cycleDay(),[y,m]=p.split('-').map(Number); if(sd===1) return `${p}-01`; const d=new Date(y,m-2,sd); return dStr(d); }
+function periodEnd(p){ const sd=cycleDay(),[y,m]=p.split('-').map(Number); return sd===1 ? `${p}-${pad(new Date(y,m,0).getDate())}` : `${p}-${pad(sd-1)}`; }
+function cycleOf(date){ const sd=cycleDay(),[y,m,d]=String(date).split('-').map(Number); if(sd===1||d<sd) return `${y}-${pad(m)}`; const n=new Date(y,m,1); return `${n.getFullYear()}-${pad(n.getMonth()+1)}`; }
+function periodLabel(p){ const [y,m]=p.split('-').map(Number); return new Date(y,m-1,1).toLocaleDateString(loc(),{month:'long',year:'numeric'}); }
+function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?l.date_to:b; if(e<s) return 0; const full=workdays(l.date_from,l.date_to); if(!full) return 0; return Math.round(num(l.days)*workdays(s,e)/full*100)/100; }
+
+// ═════════════════════════════════════════════════════════
+//  SIGN-IN
+// ═════════════════════════════════════════════════════════
+const APP = { ready:false, me:null, emp:null, status:null, statusAt:0, leaves:[], perms:[], reqs:[], slips:[], att:[], manager:null, view:'home' };
+let sb = null, tempPass = '';
+// ── things kept on the phone so the app works without internet ──
+const store = { get:(k,d)=>{ try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch(e){ return d; } }, set:(k,v)=>{ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
+const queue = () => store.get('pk_queue', []);
+const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+const isNetErr = e => !navigator.onLine || /Failed to fetch|NetworkError|network|Load failed|fetch/i.test(String((e && e.message) || e || ''));
+function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, me:APP.me, emp:APP.emp, status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, slips:APP.slips, att:APP.att, manager:APP.manager }); }
+function useCache(uid){
+  const c = store.get('pk_cache', null); if (!c || (uid && c.uid !== uid)) return false;
+  APP.me=c.me; APP.emp=c.emp; APP.status=c.status; APP.statusAt=c.statusAt||Date.now(); S={...S,...(c.S||{})}; HOL=new Set(c.hol||[]);
+  APP.leaves=c.leaves||[]; APP.perms=c.perms||[]; APP.reqs=c.reqs||[]; APP.slips=c.slips||[]; APP.att=c.att||[]; APP.manager=c.manager; APP.offline=true; APP.updatedAt=c.updatedAt; APP.team=c.team||[]; APP.teamReq=c.teamReq||[];
+  return true;
+}
+// Server time minus phone time, measured each time we are online
+function clockOffset(){ return store.get('pk_offset', { off:0 }).off || 0; }
+function serverNowMs(){ return Date.now() + clockOffset(); }
+function localParts(ms){
+  const tz = (APP.status && APP.status.tz) || 'Africa/Cairo';
+  const f = new Intl.DateTimeFormat('en-GB', { timeZone:tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date(ms));
+  const g = k => (f.find(p=>p.type===k)||{}).value;
+  return { date:`${g('year')}-${g('month')}-${g('day')}`, time:`${g('hour')==='24'?'00':g('hour')}:${g('minute')}` };
+}
+// A random identity created once on this phone and kept in the app's storage
+function deviceId(){
+  let id = localStorage.getItem('pk_device');
+  if (!id || id.length < 16){
+    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'd-' + Date.now().toString(36) + '-' + Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');
+    localStorage.setItem('pk_device', id);
+    const P = nativePlugin('Preferences'); if (P) P.set({ key:'pk_device', value:id }).catch(()=>{});
+  }
+  return id;
+}
+async function restoreDeviceId(){
+  const P = nativePlugin('Preferences'); if (!P) return;
+  try {
+    const { value } = await P.get({ key:'pk_device' });
+    const local = localStorage.getItem('pk_device');
+    if (value && value !== local) localStorage.setItem('pk_device', value);
+    else if (!value && local) await P.set({ key:'pk_device', value:local });
+  } catch(e){}
+}
+function deviceLabel(){
+  const u = navigator.userAgent || '';
+  if (/iPhone/.test(u)) return 'iPhone'; if (/iPad/.test(u)) return 'iPad';
+  const m = u.match(/Android [\d.]+;\s*([^;)]+)/); if (m) return 'Android · ' + m[1].trim();
+  if (/Android/.test(u)) return 'Android'; if (/Windows/.test(u)) return 'Windows PC'; if (/Macintosh/.test(u)) return 'Mac';
+  return 'Browser';
+}
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
+function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
+async function doLogin(){
+  const code=$('li-code').value.trim(), pass=$('li-pass').value;
+  if (!code || !pass) return errBox('li-err', t('fillLogin'));
+  const b=$('li-go'); b.disabled=true; b.innerHTML='<div class="spin"></div>';
+  const { data, error } = await sb.auth.signInWithPassword({ email: loginName(code), password: pass });
+  b.disabled=false; b.textContent=t('signIn');
+  if (error) return errBox('li-err', /invalid/i.test(error.message) ? t('wrongLogin') : friendly(error.message));
+  errBox('li-err'); tempPass = pass; $('li-pass').value=''; localStorage.setItem('pk_code', code);
+  await afterLogin(data.user);
+}
+function message(txt){ $('msg-body').textContent = txt; show('scr-msg'); }
+async function afterLogin(user){
+  if (!navigator.onLine){ if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('noCache')); }
+  const { data, error: meErr } = await sb.from('app_users').select('*').eq('id', user.id);
+  if (meErr && isNetErr(meErr) && useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; }
+  const me = data && data[0];
+  if (!me || !me.role) return message(t('noRole'));
+  if (!me.active) return message(t('inactive'));
+  if (!me.emp_id) return message(t('notLinked'));
+  APP.me = me;
+  if (me.must_change_password){ ['fl-nid','fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
+  const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
+  if (regErr || !['ok','registered'].includes(reg)){
+    const txt = reg==='other_device' ? t('otherDevice') : reg==='device_taken' ? t('deviceTaken') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
+    try { await sb.auth.signOut(); } catch(e){}
+    return message(txt);
+  }
+  show('scr-main');
+  try { await loadAll(); } catch(e){ if (!useCache(user.id)) throw e; }
+  APP.ready = true; renderAll(); flushQueue(); checkAppUpdate();
+}
+async function firstLogin(){
+  const nid=$('fl-nid').value.trim(), a=$('fl-p1').value, b=$('fl-p2').value;
+  if (!/^\d{4}$/.test(nid)) return errBox('fl-err', t('need4'));
+  if (a.length < 8) return errBox('fl-err', t('short'));
+  if (a !== b) return errBox('fl-err', t('nomatch'));
+  if (a === tempPass) return errBox('fl-err', t('sameTemp'));
+  const btn=$('fl-go'); btn.disabled=true;
+  const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:nid, p_new_password:a });
+  btn.disabled=false;
+  if (error) return errBox('fl-err', friendly(error.message));
+  if (data !== 'ok') return errBox('fl-err', /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data);
+  tempPass=''; toast(t('passSet'));
+  const { data: s } = await sb.auth.getSession(); await afterLogin(s.session.user);
+}
+async function signOut(){ try { await sb.auth.signOut(); } catch(e){} APP.ready=false; location.reload(); }
+
+// ═════════════════════════════════════════════════════════
+//  DATA
+// ═════════════════════════════════════════════════════════
+async function loadAll(){
+  const id = APP.me.emp_id;
+  const all = async (q) => { const r = await q; return r.data || []; };
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm] = await Promise.all([
+    all(sb.from('settings').select('*').eq('key','payroll')),
+    all(sb.from('public_holidays').select('date')),
+    all(sb.from('employees').select('*').eq('id', id)),
+    all(sb.from('employee_leaves').select('*').eq('emp_id', id).order('date_from', { ascending:false })),
+    all(sb.from('attendance_permissions').select('*').eq('emp_id', id).order('date', { ascending:false })),
+    all(sb.from('hr_requests').select('*').eq('emp_id', id).order('created_at', { ascending:false })),
+    all(sb.from('payroll_run_lines').select('*').eq('emp_id', id).order('period', { ascending:false })),
+    sb.rpc('my_manager').then(r => r.data || [], () => []),
+    all(sb.from('allowance_approvals').select('*').eq('manager_id', id).order('submitted_at', { ascending:false })),
+    all(sb.from('employee_leaves').select('*').eq('manager_id', id).order('date_from', { ascending:false }).limit(60)),
+    all(sb.from('attendance_permissions').select('*').eq('manager_id', id).order('date', { ascending:false }).limit(60)) ]);
+  if (set[0] && set[0].value) S = { ...S, ...set[0].value };
+  HOL = new Set(hol.map(h => h.date));
+  APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || [];
+  APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
+  await loadStatus();
+}
+async function loadStatus(){
+  const { data, error } = await sb.rpc('my_clock_status');
+  if (error) throw error;
+  APP.status = data; APP.statusAt = Date.now(); APP.offline = false; APP.updatedAt = Date.now();
+  if (data && data.server_ts) store.set('pk_offset', { off: Number(data.server_ts) - Date.now(), at: Date.now() });
+  applyQueueToStatus();
+  const cyc = cycleOf(APP.status ? APP.status.date : todayStr());
+  const r = await sb.from('attendance').select('*').eq('emp_id', APP.me.emp_id).gte('date', periodStart(cyc)).lte('date', periodEnd(cyc)).order('date', { ascending:false });
+  APP.att = r.data || [];
+  saveCache();
+}
+
+// ═════════════════════════════════════════════════════════
+//  HOME — check in / out
+// ═════════════════════════════════════════════════════════
+function serverNowMin(){ const st=APP.status; if(!st) return null; if (APP.offline) { const p=localParts(serverNowMs()); return toMin(p.time) + new Date().getSeconds()/60; } return toMin(st.now) + (Date.now()-APP.statusAt)/60000; }
+function tick(){
+  const m = serverNowMin();
+  if (m !== null){ const mm=Math.floor(m)%1440; $('clk-time').textContent = `${pad(Math.floor(mm/60))}:${pad(mm%60)}`; }
+  const o = APP.status && APP.status.open, el = $('clk-dur');
+  if (o && el && m !== null){ const dayOff = Math.round((dObj(APP.status.date) - dObj(o.date))/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
+}
+function renderHome(){
+  const st = APP.status || {}, o = st.open;
+  $('clk-upd').textContent = APP.updatedAt ? t('updated', { t: new Date(APP.updatedAt).toLocaleTimeString(loc(), { hour:'2-digit', minute:'2-digit' }) }) : '';
+  $('clk-date').textContent = st.date ? dObj(st.date).toLocaleDateString(loc(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '';
+  if (o){
+    const notToday = o.date !== st.date;
+    $('clk-state').innerHTML = `<div class="state ${notToday?'warn':'on'}">${notToday ? esc(t('openFrom',{ d:niceDate(o.date), t:o.in })) + '<br>' : ''}
+      ${esc(t('checkedIn'))} <b>${esc(o.code ? (o.name || o.code) : t('noProject'))}</b><br>${esc(t('since'))} <b class="num">${esc(o.in)}</b> · ${esc(t('hSince'))} <b class="num" id="clk-dur"></b></div>`;
+    $('clk-btns').innerHTML = `<div class="row"><button class="btn ghost big" data-act="switch">🔁 ${esc(t('switchSite'))}</button><button class="btn red big" data-act="out">⏹ ${esc(t('checkOut'))}</button></div>`;
+  } else {
+    $('clk-state').innerHTML = `<div class="state off">${esc(t('notIn'))}</div>`;
+    $('clk-btns').innerHTML = st.no_project
+      ? `<div style="display:grid;gap:10px"><button class="btn green big" data-act="in">🏗 ${esc(t('inSite'))}</button>
+           <button class="btn big" id="noproj-home" style="background:#0f6f9d">▶ ${esc(t('inNoProject'))}</button></div>`
+      : `<button class="btn green big" data-act="in">▶ ${esc(t('checkIn'))}</button>`;
+  }
+  const q = queue(), pend = q.length;
+  const saved = pend ? `<div class="state warn" style="margin-top:0;text-align:start">⏳ ${esc(t('waiting', { n: pend }))}
+      ${q.map(ev => `<div style="margin-top:6px;font-size:13.5px">${ev.event_type==='in' ? '▶' : '⏹'} <b class="num">${esc(localParts(new Date(ev.client_at).getTime() + clockOffset()).time)}</b>
+        ${ev.event_type==='in' ? esc(ev.project_code ? (ev._name || ev.project_code) : t('noProject')) : esc(t('checkOut'))}
+        ${ev._err ? `<div class="neg" style="font-weight:700">✖ ${esc(t('failedItem'))}: ${esc(ev._err)} <button class="btn ghost small" data-discard="${esc(ev.client_id)}" style="margin-inline-start:6px">${esc(t('discard'))}</button></div>` : ''}</div>`).join('')}
+      ${navigator.onLine && !q[0]._err ? `<button class="btn ghost small" data-act="sync" style="margin-top:8px">${esc(t('sendNow'))}</button>` : ''}</div>` : '';
+  $('clk-state').insertAdjacentHTML('afterbegin', (APP.offline ? `<div class="state warn" style="margin-top:0">📴 ${esc(t('offlineMode'))}</div>` : '') + saved);
+  const today = st.today || [];
+  const tot = today.reduce((s,x)=>s+num(x.hours),0);
+  $('today-list').innerHTML = today.length ? today.map(x => `<div class="it"><div class="grow"><div class="t1">${esc(x.code ? (x.name || x.code) : t('noProject'))}</div><div class="t2">${esc(x.code || '—')}</div></div>
+      <div class="num" style="font-size:14px">${x.pending?'⏳ ':''}${esc(x.in)} – ${x.out ? esc(x.out) : `<span class="chip c-green">${esc(t('openLine'))}</span>`}</div>
+      <div class="num" style="min-width:52px;text-align:end">${x.out ? fmtH(x.hours) : ''}</div></div>`).join('')
+      + `<div class="it"><div class="grow t1">${esc(t('totalToday'))}</div><div class="num">${fmtH(tot)}</div></div>`
+    : `<div class="empty">${esc(t('noToday'))}</div>`;
+  const cyc = cycleOf(st.date || todayStr());
+  $('month-title').textContent = `${t('thisCycle')} — ${periodLabel(cyc)}`;
+  const days = APP.att.filter(a => a.date !== st.date);
+  $('month-list').innerHTML = days.length ? days.map(a => `<div class="it"><div class="grow"><div class="t1">${esc(niceDate(a.date))}</div>
+      <div class="t2">${(a.projects||[]).map(x=>esc(x.code || t('noProject'))).join(' · ') || esc(tm('st',a.status)||a.status)}</div></div>
+      <div class="num" style="font-size:13.5px">${esc(a.check_in||'')}${a.check_out?' – '+esc(a.check_out):''}</div>
+      <div class="num" style="min-width:52px;text-align:end">${fmtH(a.total_hours)}</div></div>`).join('')
+    : `<div class="empty">${esc(t('noMonth'))}</div>`;
+  tick();
+}
+// site picker
+let pickSel = null, searchT;
+function openSitePicker(mode){
+  pickSel = null; const fromHome = mode === 'in';
+  const recent = (APP.status && APP.status.recent) || [], openCode = APP.status && APP.status.open && APP.status.open.code;
+  const noProj = APP.status && APP.status.no_project && openCode !== '';
+  const openIsNone = APP.status && APP.status.open && APP.status.open.code === '';
+  sheet(`<h2>${esc(t('whereWork'))}</h2>
+    ${APP.status && APP.status.no_project && !openIsNone && !fromHome ? `<button class="btn green big" id="noproj-go" style="margin-bottom:14px">▶ ${esc(t('inNoProject'))}</button><div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('orSite'))}</div>` : ''}
+    ${recent.length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('recent'))}</div>${recent.filter(r=>r.code!==openCode).map(siteBtn).join('')}` : ''}
+    ${navigator.onLine ? `<div class="field" style="margin-top:12px"><input id="site-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
+    <div id="site-res"><div class="hint">${esc(t('typeMore'))}</div></div>` : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}
+    <button class="btn green big" id="site-go" disabled data-mode="${mode}">▶ ${esc(t('checkIn'))}</button>`);
+  if ($('site-q')) $('site-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(searchSites, 300); });
+}
+function siteBtn(s){ return `<button class="site" data-site="${esc(s.code||s.id)}" data-name="${esc(s.name||'')}"><b>${esc(s.name || s.code || s.id)}</b><span>${esc(s.code||s.id)}${s.location?' · '+esc(s.location):''}</span></button>`; }
+async function searchSites(){
+  const q = $('site-q').value.trim(), box = $('site-res');
+  if (q.length < 2){ box.innerHTML = `<div class="hint">${esc(t('typeMore'))}</div>`; return; }
+  const { data, error } = await sb.rpc('search_sites', { p_q:q });
+  if (error) { box.innerHTML = `<div class="hint neg">${esc(friendly(error.message))}</div>`; return; }
+  const openCode = APP.status && APP.status.open && APP.status.open.code;
+  box.innerHTML = (data||[]).filter(s=>s.id!==openCode).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`;
+}
+function selectSite(btn){
+  document.querySelectorAll('.site').forEach(b=>b.classList.toggle('sel', b===btn));
+  pickSel = { code: btn.dataset.site, name: btn.dataset.name };
+  const go=$('site-go'); go.disabled=false; go.textContent = `▶ ${t('confirmIn')} ${pickSel.name || pickSel.code}`;
+}
+async function nativeLocation(){
+  const G = nativePlugin('Geolocation');
+  try {
+    let perm = await G.checkPermissions();
+    if (perm.location !== 'granted') perm = await G.requestPermissions({ permissions:['location'] });
+    if (perm.location === 'denied') return { err:1 };
+    const p = await G.getCurrentPosition({ enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge:60000 });
+    return { lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy) };
+  } catch(e){
+    const m = String((e && (e.message || e.code)) || e);
+    return { err: /denied|permission/i.test(m) ? 1 : /disabled|services|not enabled/i.test(m) ? 1 : /time/i.test(m) ? 3 : 2 };
+  }
+}
+function getLocation(){
+  if (NATIVE && nativePlugin('Geolocation')) return nativeLocation();
+  return new Promise(res => {
+    if (!navigator.geolocation) return res({ err:1 });
+    navigator.geolocation.getCurrentPosition(p => res({ lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy) }),
+      e => res({ err: (e && e.code) || 2 }), { enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge:60000 });
+  });
+}
+function locationHelp(code, retry){
+  const denied = code === 1;
+  sheet(`<h2>📍 ${esc(t('locTitle'))}</h2>
+    <div class="hint" style="color:var(--text)">${esc(denied ? t('locDenied') : t('locTimeout'))}</div>
+    ${denied ? `<div class="hint" style="white-space:pre-line">${esc(NATIVE ? (PLATFORM==='ios' ? t('locAppIos') : t('locAppAndroid')) : (isIOS() ? t('locIos') : t('locAndroid')))}</div>` : ''}
+    <button class="btn" id="loc-retry">${esc(t('tryAgain'))}</button>`);
+  $('loc-retry').onclick = retry;
+}
+async function clock(type, code, btn){
+  const wasOpen = !!(APP.status && APP.status.open), label = btn ? btn.textContent : '';
+  if (btn){ btn.disabled=true; btn.innerHTML = `<div class="spin"></div> ${esc(t('gettingLoc'))}`; }
+  const g = await getLocation();
+  if (btn){ btn.disabled=false; btn.textContent = label; }
+  if (g.err && !(APP.status && APP.status.no_location_ok)) return locationHelp(g.err, () => { closeSheet(); clock(type, code, null); });
+  if (g.err) { g.lat = null; g.lng = null; g.accuracy = null; }       // allowed by an exception the admin set — the server marks it
+  const rec = { client_id: uid(), emp_id: APP.me.emp_id, event_type:type, project_code: code || null, device_id: deviceId(), lat:g.lat, lng:g.lng, accuracy:g.accuracy,
+                device: (navigator.userAgent || '').slice(0, 150) };
+  const pendingBefore = queue().length;
+  if (navigator.onLine && !pendingBefore){
+    const { error } = await sb.from('clock_events').insert(rec);
+    if (!error){ closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
+    if (!isNetErr(error)) return toast(friendly(error.message), true);
+  }
+  // no internet (or older check-ins still waiting): keep it on the phone, in order
+  const q = queue();
+  q.push({ ...rec, offline:true, client_at: new Date().toISOString(), _name: code ? ((pickSel && pickSel.name) || code) : '' });
+  store.set('pk_queue', q);
+  applyEvent(APP.status, q[q.length-1]); saveCache(); closeSheet(); renderHome();
+  toast(t('queued'));
+  if (navigator.onLine) flushQueue();
+}
+// Show saved-but-unsent check-ins on the home screen as if they were already recorded
+// Apply ONE saved check-in to what the home screen shows
+function applyEvent(st, ev){
+  if (!st) return; st.today = st.today || [];
+  const p = localParts(new Date(ev.client_at).getTime() + clockOffset());
+  const close = () => { if (st.open){ const seg = st.today.find(x => x.in === st.open.in && (x.code||'') === (st.open.code||'') && !x.out); if (seg){ seg.out = p.time; seg.hours = Math.max(0, (toMin(p.time)-toMin(seg.in))/60); } st.open = null; } };
+  if (ev.event_type === 'in'){ close(); const seg = { code: ev.project_code || '', name: ev._name || null, in: p.time, out: null, hours: 0, pending: true };
+    st.today.push(seg); st.open = { ...seg, date: p.date }; }
+  else close();
+}
+// After fresh data arrives from the server, re-apply everything still waiting to be sent
+function applyQueueToStatus(){ queue().forEach(ev => applyEvent(APP.status, ev)); }
+let refreshing = false;
+async function doRefresh(){
+  if (refreshing || !APP.ready) return;
+  if (!navigator.onLine) return toast(t('offline'), true);
+  refreshing = true; $('rf-ic').classList.add('spinning');
+  try { await flushQueue(); await loadAll(); renderAll(); toast(t('refreshed')); }
+  catch(e){ toast(friendly(e.message), true); }
+  refreshing = false; $('rf-ic').classList.remove('spinning');
+}
+// Pull down on the screen to refresh (the iPhone home-screen app has no built-in pull-to-refresh)
+(function pullToRefresh(){
+  let y0 = null, dy = 0;
+  const ptr = () => $('ptr'), sheetOpen = () => $('sheet').classList.contains('on');
+  document.addEventListener('touchstart', e => { if (!APP.ready || sheetOpen() || window.scrollY > 0 || !$('scr-main').classList.contains('on')) { y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, { passive:true });
+  document.addEventListener('touchmove', e => { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy <= 0) { ptr().style.height='0'; return; }
+    const h = Math.min(70, dy * 0.5); ptr().style.height = h + 'px'; $('ptr-tx').textContent = dy > 110 ? t('release') : t('pull'); $('ptr-ic').style.transform = `rotate(${dy*2}deg)`; }, { passive:true });
+  document.addEventListener('touchend', async () => { if (y0 === null) return; const go = dy > 110; y0 = null;
+    if (!go) { ptr().style.height='0'; return; }
+    $('ptr-tx').textContent = t('refreshing'); $('ptr-ic').classList.add('spinning');
+    await doRefresh(); $('ptr-ic').classList.remove('spinning'); ptr().style.height='0'; });
+})();
+let flushing = false;
+async function flushQueue(){
+  if (flushing || !navigator.onLine || !sb || !APP.me) return;
+  let q = queue(); if (!q.length || q[0]._err) return;
+  flushing = true; let sent = 0, failed = false;
+  try {
+    while (q.length && !q[0]._err){
+      const { _name, _err, _off, _applied, ...rec } = q[0];
+      const { error } = await sb.from('clock_events').insert({ ...rec, device_now: new Date().toISOString() });   // the server compares the clocks
+      if (error && isNetErr(error)) break;                                  // still no connection: try later
+      if (error){ q[0]._err = friendly(error.message); store.set('pk_queue', q); failed = true; break; }   // keep it visible, stop here
+      q.shift(); store.set('pk_queue', q); sent++;
+    }
+  } catch(e){ /* offline again — everything stays saved */ }
+  flushing = false;
+  if (sent || failed){
+    try { await loadStatus(); } catch(e){}
+    renderHome();
+    toast(failed ? t('notRecorded') : t('sentNow', { n: sent }), failed);
+  }
+}
+function discardSaved(id){
+  sheet(`<h2>${esc(t('discardQ'))}</h2><div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="disc-go" data-id="${esc(id)}">${esc(t('discard'))}</button></div>`);
+}
+function confirmOut(){
+  const o = APP.status && APP.status.open;
+  sheet(`<h2>${esc(t('confirmOut'))}</h2><div class="hint">${esc(t('checkedIn'))} <b>${esc(o ? (o.code ? (o.name||o.code) : t('noProject')) : '')}</b> ${esc(t('since'))} <b class="num">${esc(o ? o.in : '')}</b></div>
+    <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="out-go">⏹ ${esc(t('checkOut'))}</button></div>`);
+}
+
+// ═════════════════════════════════════════════════════════
+//  REQUESTS
+// ═════════════════════════════════════════════════════════
+const annualTypes = () => S.casualCountsAnnual==='no' ? ['Annual'] : ['Annual','Casual'];
+function yearDays(types, status){ const y=todayStr().slice(0,4); return APP.leaves.filter(l=>types.includes(l.leave_type)&&l.status===status).reduce((s,l)=>s+leaveDaysIn(l,`${y}-01-01`,`${y}-12-31`),0); }
+function entitlement(){ const e=APP.emp; return (e && e.annual_leave_days!==null && e.annual_leave_days!==undefined && e.annual_leave_days!=='') ? num(e.annual_leave_days) : num(S.annualLeaveDefault); }
+const reqStage = r => r.status==='Pending' && r.manager_status==='Pending' ? 'Waiting for manager' : r.status==='Pending' && r.manager_status==='Approved' ? 'Waiting for HR' : r.status;
+function renderRequests(){
+  const ent=entitlement(), taken=yearDays(annualTypes(),'Approved'), pend=yearDays(annualTypes(),'Pending');
+  const cyc=cycleOf(todayStr()), lim=num(S.permissionsPerMonth)||2, used=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
+  const open = APP.leaves.filter(l=>l.status==='Pending').length + APP.perms.filter(p=>p.status==='Pending').length + APP.reqs.filter(r=>r.status==='Pending'||r.status==='In progress').length;
+  $('req-stats').innerHTML = `<div class="stat"><div class="v num">${fmt(ent-taken)}</div><div class="l">${esc(t('annualLeft'))}${pend?`<br>(${fmt(pend)} ${esc(tm('st','Pending'))})`:''}</div></div>
+    <div class="stat"><div class="v num">${used}/${lim}</div><div class="l">${esc(t('permsUsed'))}</div></div>
+    <div class="stat"><div class="v num">${open}</div><div class="l">${esc(t('openReq'))}</div></div>`;
+  const items = [
+    ...APP.leaves.map(l=>({ k:'leave', id:l.id, at:l.created_at, icon:'🌴', title:t('leaveTitle',{ t: tm('lt',l.leave_type) }), sub:`${niceDate(l.date_from)} → ${niceDate(l.date_to)} · ${fmt(l.days)} ${t('days')}`, st:reqStage(l), reply:[l.manager_note, l.decision_note].filter(Boolean).join(' · ') })),
+    ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmt(p.hours)} ${t('hours')}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
+    ...APP.reqs.map(r=>({ k:'req', id:r.id, at:r.created_at, icon:'📨', title:tm('ht',r.request_type), sub:r.details||'', st:r.status, reply:r.hr_response||'' })),
+  ].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  $('req-list').innerHTML = items.map(x => `<div class="it"><div style="font-size:22px">${x.icon}</div><div class="grow"><div class="t1">${esc(x.title)}</div>
+      <div class="t2">${esc(x.sub)}</div>${x.reply?`<div class="t2" style="color:var(--text)">💬 ${esc(x.reply)}</div>`:''}</div>
+      <div style="text-align:end">${chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
+    || `<div class="empty">${esc(t('noRequests'))}</div>`;
+}
+function opt(list, group){ return list.map(v=>`<option value="${esc(v)}">${esc(tm(group,v))}</option>`).join(''); }
+function leaveSheet(){
+  sheet(`<h2>🌴 ${esc(t('reqLeave'))}</h2>
+    <div class="field"><label>${esc(t('type'))}</label><select id="lv-t">${opt(['Annual','Casual','Sick','Unpaid','Other paid'],'lt')}</select></div>
+    <div class="row"><div class="field" style="flex:1"><label>${esc(t('from'))}</label><input type="date" id="lv-f" value="${todayStr()}"></div>
+      <div class="field" style="flex:1"><label>${esc(t('to'))}</label><input type="date" id="lv-to" value="${todayStr()}"></div></div>
+    <div class="field"><label>${esc(t('days'))}</label><input type="number" step="0.5" min="0.5" id="lv-d"></div>
+    <div class="field"><label>${esc(t('reason'))}</label><input id="lv-r"></div>
+    <div class="hint" id="lv-h"></div>
+    <button class="btn" id="lv-go">${esc(t('send'))}</button>`);
+  const re = () => { const f=$('lv-f').value, to=$('lv-to').value; if (f&&to&&to>=f) $('lv-d').value = workdays(f,to)||''; hint(); };
+  const hint = () => {
+    const f=$('lv-f').value, to=$('lv-to').value, ty=$('lv-t').value, d=num($('lv-d').value), out=[];
+    if (f&&to&&to<f) out.push(`<span class="neg">${esc(t('toBefore'))}</span>`);
+    if (f&&to&&to>=f) out.push(esc(t('wd',{ c: Math.round((dObj(to)-dObj(f))/86400000)+1, w: workdays(f,to) })));
+    if (f && f < todayStr()) out.push(esc(t('past')));
+    if (annualTypes().includes(ty)){ const left=entitlement()-yearDays(annualTypes(),'Approved')-yearDays(annualTypes(),'Pending')-d;
+      out.push(`${esc(t('balAfter'))}: <b class="num ${left<0?'neg':'pos'}">${fmt(left)}</b>${left<0?` — <span class="neg">${esc(t('over'))}</span>`:''}`); }
+    if (ty==='Unpaid') out.push(esc(t('unpaidNote'))); if (ty==='Sick') out.push(esc(t('sickNote')));
+    if (f&&to && APP.leaves.some(l=>(l.status==='Approved'||l.status==='Pending')&&l.date_from<=to&&l.date_to>=f)) out.push(`<span class="neg">${esc(t('overlap'))}</span>`);
+    $('lv-h').innerHTML = out.join('<br>');
+  };
+  ['lv-f','lv-to'].forEach(i=>$(i).addEventListener('change', re)); ['lv-t','lv-d'].forEach(i=>$(i).addEventListener('input', hint)); re();
+  $('lv-go').onclick = () => {
+    const f=$('lv-f').value, to=$('lv-to').value, d=num($('lv-d').value);
+    if (!f||!to||to<f) return toast(t('toBefore'), true);
+    if (d<=0) return toast(t('noDays'), true);
+    if (APP.leaves.some(l=>(l.status==='Approved'||l.status==='Pending')&&l.date_from<=to&&l.date_to>=f)) return toast(t('overlap'), true);
+    send('employee_leaves', { emp_id:APP.me.emp_id, leave_type:$('lv-t').value, date_from:f, date_to:to, days:d, status:'Pending', source:'Self-service',
+                              reason:$('lv-r').value.trim()||null, entered_by:APP.me.full_name||APP.me.emp_id }, $('lv-go'));
+  };
+}
+function permSheet(){
+  const max = num(S.permissionMaxHours)||2;
+  sheet(`<h2>✋ ${esc(t('reqPerm'))}</h2>
+    <div class="field"><label>${esc(t('type'))}</label><select id="pm-t">${opt(['Late arrival','Early leave'],'pt')}</select></div>
+    <div class="row"><div class="field" style="flex:1"><label>${esc(t('date'))}</label><input type="date" id="pm-d" value="${todayStr()}"></div>
+      <div class="field" style="flex:1"><label>${esc(t('hoursL'))}</label><input type="number" step="0.25" min="0.25" max="${max}" id="pm-h" value="${max}"></div></div>
+    <div class="field"><label>${esc(t('reason'))}</label><input id="pm-r"></div>
+    <div class="hint" id="pm-hint"></div>
+    <button class="btn" id="pm-go">${esc(t('send'))}</button>`);
+  const hint = () => { const d=$('pm-d').value; if(!d) return; const cyc=cycleOf(d), lim=num(S.permissionsPerMonth)||2, u=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
+    $('pm-hint').innerHTML = esc(t('permCycle',{ p:periodLabel(cyc), u, l:lim })) + (u>=lim ? `<br><span class="neg">${esc(t('permFull'))}</span>` : ''); };
+  $('pm-d').addEventListener('change', hint); hint();
+  $('pm-go').onclick = () => {
+    const d=$('pm-d').value, h=num($('pm-h').value), ty=$('pm-t').value;
+    if (h<=0 || h>max) return toast(t('hoursRange',{ m:max }), true);
+    if (APP.perms.some(p=>p.date===d && p.type===ty && (p.status==='Pending'||p.status==='Approved'))) return toast(t('dupPerm'), true);
+    send('attendance_permissions', { emp_id:APP.me.emp_id, date:d, type:ty, hours:h, reason:$('pm-r').value.trim()||null, status:'Pending', source:'Self-service' }, $('pm-go'));
+  };
+}
+function hrSheet(){
+  sheet(`<h2>📨 ${esc(t('reqOther'))}</h2>
+    <div class="field"><label>${esc(t('type'))}</label><select id="hq-t">${opt(['HR letter','Salary certificate','Experience certificate','Update my personal data','Payslip copy','Loan request','Other'],'ht')}</select></div>
+    <div class="field"><label>${esc(t('details'))}</label><textarea id="hq-d"></textarea></div>
+    <button class="btn" id="hq-go">${esc(t('send'))}</button>`);
+  $('hq-go').onclick = () => {
+    const ty=$('hq-t').value, d=$('hq-d').value.trim();
+    if (!d && ['Update my personal data','Loan request','Other','HR letter'].includes(ty)) return toast(t('needDetails'), true);
+    send('hr_requests', { emp_id:APP.me.emp_id, request_type:ty, details:d||null, status:'Pending' }, $('hq-go'));
+  };
+}
+async function send(table, rec, btn){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  btn.disabled = true;
+  const { data, error } = await sb.from(table).insert(rec).select();
+  btn.disabled = false;
+  if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+  closeSheet(); toast((table==='employee_leaves' || table==='attendance_permissions') && data[0].manager_status==='Pending' ? t('sentMgr') : t('sent')); await loadAll(); renderAll();
+}
+function askCancel(key){
+  sheet(`<h2>${esc(t('cancelQ'))}</h2><div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="cx-go">${esc(t('yes'))}</button></div>`);
+  $('cx-go').onclick = async () => {
+    const [k,id]=key.split(':'), table={ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' }[k];
+    const { data, error } = await sb.from(table).update({ status:'Cancelled' }).eq('id', id).select();
+    if (error || !(data && data.length)) return toast(t('cantCancel'), true);
+    closeSheet(); toast(t('cancelled')); await loadAll(); renderAll();
+  };
+}
+
+// ═════════════════════════════════════════════════════════
+//  PAYSLIPS & PROFILE
+// ═════════════════════════════════════════════════════════
+function renderPayslips(){
+  $('pay-list').innerHTML = APP.slips.map(l => `<div class="it" data-slip="${esc(l.period)}" style="cursor:pointer"><div style="font-size:22px">💰</div>
+      <div class="grow"><div class="t1">${esc(periodLabel(l.period))}</div><div class="t2">${esc(t('gross'))} <span class="num">${fmt(l.gross)}</span> · ${esc(t('ded'))} <span class="num">${fmt(l.deductions)}</span></div></div>
+      <div class="num pos" style="font-size:16px">${fmt(l.net)}</div></div>`).join('') || `<div class="empty">${esc(t('noSlips'))}</div>`;
+}
+function slipSheet(period){
+  const l = APP.slips.find(x=>x.period===period); if (!l) return;
+  const lines = l.lines || [], row = x => `<div class="kv"><span class="k">${esc(x.name)}${x.note?`<div style="font-size:11.5px">${esc(x.note)}</div>`:''}</span><span class="v num ${x.type==='Deduction'?'neg':''}">${x.type==='Deduction'?'−':''}${fmt(x.amount)}</span></div>`;
+  sheet(`<h2>💰 ${esc(periodLabel(period))}</h2><div class="hint">🔒 ${esc(t('approvedSlip'))}</div>
+    <div class="sec">${esc(t('additions'))}</div>${lines.filter(x=>x.type==='Addition').map(row).join('')}
+    <div class="kv"><span class="k"><b>${esc(t('gross'))}</b></span><span class="v num">${fmt(l.gross)}</span></div>
+    <div class="sec" style="margin-top:12px">${esc(t('deductions'))}</div>${lines.filter(x=>x.type==='Deduction').map(row).join('') || '<div class="hint">—</div>'}
+    <div class="kv"><span class="k"><b>${esc(t('ded'))}</b></span><span class="v num neg">${fmt(l.deductions)}</span></div>
+    <div class="kv" style="font-size:18px"><span class="k"><b>${esc(t('net'))}</b></span><span class="v num pos">${fmt(l.net)}</span></div>`);
+}
+function renderProfile(){
+  const e = APP.emp || {}, m = APP.manager;
+  const kv = (k,v,ltr) => v ? `<div class="kv"><span class="k">${esc(t(k))}</span><span class="v ${ltr?'num':''}">${esc(v)}</span></div>` : '';
+  $('prof-card').innerHTML = `<div class="sec" style="font-size:17px">${esc(LANG==='ar' ? (e.name_ar||e.name_en) : (e.name_en||e.name_ar))}</div>
+    ${kv('code', e.id, true)}${kv('job', e.job_name)}${kv('dept', e.department)}${kv('unit', e.unit)}${kv('manager', m ? (LANG==='ar' ? (m.name_ar||m.name_en) : (m.name_en||m.name_ar)) : '')}
+    ${kv('entity', e.entity)}${kv('hired', e.employment_date, true)}${kv('mobile', e.mobile, true)}${kv('email', e.email, true)}
+    ${kv('nidL', e.national_id ? '•••• ' + String(e.national_id).slice(-4) : '', true)}
+    ${APP.status && APP.status.device ? `<div class="kv"><span class="k">${esc(t('phoneReg'))}</span><span class="v">📱 ${esc(APP.status.device.label || '')} · ${esc(t('thisPhone'))}</span></div>` : ''}`;
+  const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const ic = $('install-card');
+  if (standalone || NATIVE) ic.style.display='none';
+  else if (installEvt) { ic.style.display=''; ic.innerHTML = `<div class="sec">📲 ${esc(t('install'))}</div><div class="hint">${esc(t('installAndroid'))}</div><button class="btn green" data-act="install">${esc(t('installBtn'))}</button>`; }
+  else if (ios) { ic.style.display=''; ic.innerHTML = `<div class="sec">📲 ${esc(t('install'))}</div><div class="hint" style="margin:0">${esc(t('installIos'))}</div>`; }
+  else ic.style.display='none';
+}
+function passSheet(){
+  sheet(`<h2>🔑 ${esc(t('changePass'))}</h2>
+    <div class="field"><label>${esc(t('newPass'))}</label><input type="password" id="cp1" autocomplete="new-password"></div>
+    <div class="field"><label>${esc(t('repeatPass'))}</label><input type="password" id="cp2" autocomplete="new-password"></div>
+    <button class="btn" id="cp-go">${esc(t('changePass'))}</button>`);
+  $('cp-go').onclick = async () => {
+    const a=$('cp1').value, b=$('cp2').value;
+    if (a.length<8) return toast(t('short'), true); if (a!==b) return toast(t('nomatch'), true);
+    const { error } = await sb.auth.updateUser({ password:a });
+    if (error) return toast(friendly(error.message), true);
+    closeSheet(); toast(t('passChanged'));
+  };
+}
+function renderTeam(){
+  const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
+  const reqs = (APP.teamReq||[]).slice().sort((a,b) => (reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1));
+  const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
+  $('tab-team').style.display = (team.length || reqs.length) ? '' : 'none';
+  $('treq-list').innerHTML = reqs.slice(0,40).map(({kind, r}) => { const stg = reqStage(r), mine = stg==='Waiting for manager';
+    const what = kind==='leave' ? `🌴 ${t('leaveTitle',{ t: tm('lt', r.leave_type) })}` : `✋ ${tm('pt', r.type)}`;
+    const when = kind==='leave' ? `${niceDate(r.date_from)} → ${niceDate(r.date_to)} · ${fmt(r.days)} ${t('days')}` : `${niceDate(r.date)} · ${fmt(r.hours)} ${t('hours')}`;
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(r.emp_name || r.emp_id)} <span class="muted" style="font-size:12px">${esc(r.emp_id)}</span></div>
+      <div class="t2">${esc(what)} · ${esc(when)}</div>${r.reason ? `<div class="t2">💬 ${esc(r.reason)}</div>` : ''}
+      <div style="margin-top:6px">${chip(mine ? 'Pending' : stg==='Waiting for HR' ? 'Waiting for HR' : r.status)}</div>
+      ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-treq-ok="${kind}:${r.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-treq-no="${kind}:${r.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
+    || `<div class="empty">${esc(t('noTeamReq'))}</div>`;
+  $('team-badge').style.display = waiting ? '' : 'none'; $('team-badge').textContent = waiting;
+  const st = { 'Pending manager':['c-orange','aaWait'], 'Pending HR':['c-blue','aaHR'], 'Approved':['c-green','aaOk'], 'Rejected':['c-red','aaNo'] };
+  $('team-list').innerHTML = team.map(a => { const c = st[a.status] || ['c-grey','aaNo'];
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(a.emp_name || a.emp_id)} <span class="muted" style="font-size:12px">${esc(a.emp_id)}</span></div>
+      <div class="t2">${esc(periodLabel(a.period))}${a.job_name ? ' · ' + esc(a.job_name) : ''}</div>
+      <div class="t2">${(a.details||[]).map(x => `${x.days} ${x.days===1?t('day'):t('daysW')} × <span class="num">${fmt(x.rate)}</span> ${t('at')} ${esc(x.project_name || x.project)}`).join('<br>')}</div>
+      <div style="margin-top:6px"><span class="chip ${c[0]}">${esc(t(c[1]))}</span></div>
+      ${a.status==='Pending manager' ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-team-ok="${a.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-team-no="${a.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div>
+      <div class="num" style="font-size:17px">${fmt(a.amount)}</div></div>`; }).join('') || `<div class="empty">${esc(t('noTeam'))}</div>`;
+}
+async function teamReqDecide(key, approve, note){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const [kind, id] = key.split(':');
+  const { data, error } = await sb.rpc('manager_decide_request', { p_kind:kind, p_id:id, p_approve:approve, p_note: note || null });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(!approve ? t('rejectedMsg') : /final/.test(data||'') ? t('approvedFinal') : t('approvedMsg'));
+  await loadAll(); renderAll();
+}
+async function teamDecide(id, approve, note){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('manager_decide_allowance', { p_id:id, p_approve:approve, p_note: note || null });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(approve ? t('approvedMsg') : t('rejectedMsg'));
+  const r = await sb.from('allowance_approvals').select('*').eq('manager_id', APP.me.emp_id).order('submitted_at', { ascending:false });
+  APP.team = r.data || APP.team; saveCache(); renderTeam();
+}
+async function checkAppUpdate(){
+  if (!NATIVE || PLATFORM !== 'android' || !APK_REPO || !APP_BUILD || !navigator.onLine) return;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${APK_REPO}/releases/latest`, { headers:{ Accept:'application/vnd.github+json' } });
+    if (!r.ok) return;
+    const j = await r.json(), latest = Number(String(j.tag_name || '').split('.').pop());
+    if (latest > APP_BUILD && !$('upd-bar')){
+      document.body.insertAdjacentHTML('afterbegin', `<div id="upd-bar" style="background:var(--brand);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:14px;font-weight:700;padding-top:calc(10px + env(safe-area-inset-top,0px))">
+        <span style="flex:1">⬆ ${esc(t('updateAvail'))}</span><a href="https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk" style="background:#fff;color:var(--brand);padding:7px 12px;border-radius:10px;text-decoration:none">${esc(t('updateBtn'))}</a></div>`);
+    }
+  } catch(e){}
+}
+function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
+  $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
+  $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
+  renderHome(); renderRequests(); renderTeam(); renderPayslips(); renderProfile(); }
+function go(view){ APP.view=view; document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+
+// ═════════════════════════════════════════════════════════
+//  EVENTS & START-UP
+// ═════════════════════════════════════════════════════════
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (APP.ready) renderProfile(); });
+document.addEventListener('click', async ev => {
+  const x = ev.target;
+  if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG); return applyLang(); }
+  const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
+  if (x === $('sheet')) return closeSheet();
+  const s = x.closest('.site'); if (s) return selectSite(s);
+  const sl = x.closest('[data-slip]'); if (sl) return slipSheet(sl.dataset.slip);
+  const cx = x.closest('[data-cancel]'); if (cx) return askCancel(cx.dataset.cancel);
+  const rok = x.closest('[data-treq-ok]'); if (rok) { rok.disabled = true; return teamReqDecide(rok.dataset.treqOk, true); }
+  const rno = x.closest('[data-treq-no]'); if (rno) { const key = rno.dataset.treqNo;
+    sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="rno-note"></textarea></div>
+      <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="rno-go">${esc(t('reject'))}</button></div>`);
+    $('rno-go').onclick = () => teamReqDecide(key, false, $('rno-note').value.trim()); return; }
+  const tok = x.closest('[data-team-ok]'); if (tok) { tok.disabled = true; return teamDecide(tok.dataset.teamOk, true); }
+  const tno = x.closest('[data-team-no]'); if (tno) { const id = tno.dataset.teamNo;
+    sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="tno-note"></textarea></div>
+      <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="tno-go">${esc(t('reject'))}</button></div>`);
+    $('tno-go').onclick = () => teamDecide(id, false, $('tno-note').value.trim()); return; }
+  if (x.id === 'site-go' && pickSel) return clock('in', pickSel.code, x);
+  if (x.id === 'disc-go') { store.set('pk_queue', queue().filter(ev => ev.client_id !== x.dataset.id)); closeSheet(); try { await loadStatus(); } catch(e){} return renderHome(); }
+  const dsc = x.closest('[data-discard]'); if (dsc) return discardSaved(dsc.dataset.discard);
+  if (x.id === 'noproj-go') return clock('in', null, x);
+  const nph = x.closest('#noproj-home'); if (nph) return clock('in', null, nph);
+  if (x.id === 'out-go') return clock('out', null, x);
+  const a = x.closest('[data-act]'); if (!a) return;
+  const act = a.dataset.act;
+  if (act==='in' || act==='switch') return openSitePicker(act);
+  if (act==='out') return confirmOut();
+  if (act==='close') return closeSheet();
+  if (act==='sync') return flushQueue();
+  if (act==='refresh') return doRefresh();
+  if (act==='req-leave') return leaveSheet();
+  if (act==='req-perm') return permSheet();
+  if (act==='req-hr') return hrSheet();
+  if (act==='chpass') return passSheet();
+  if (act==='signout') return signOut();
+  if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
+});
+$('li-go').addEventListener('click', doLogin);
+['li-code','li-pass'].forEach(i => $(i).addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); }));
+$('fl-go').addEventListener('click', firstLogin);
+const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
+window.addEventListener('online', net); window.addEventListener('offline', net);
+document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); } });
+setInterval(() => { if (APP.ready) tick(); }, 15000);
+setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 60000);
+
+(async function boot(){
+  applyLang(); net();
+  if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if (NATIVE) await restoreDeviceId();
+  if (!window.supabase || !SUPABASE_KEY || SUPABASE_KEY.startsWith('PASTE')) return message(t('configMissing'));
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  $('li-code').value = localStorage.getItem('pk_code') || '';
+  if (isIOS() && !isStandalone()) { $('ios-steps').textContent = t('iosSteps'); show('scr-install'); return; }
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session) await afterLogin(data.session.user); else show('scr-login');
+  } catch(e){ console.warn('Petrokima start-up:', e && e.message); const c = store.get('pk_cache', null); if (c && useCache(c.uid)) { show('scr-main'); APP.ready=true; renderAll(); } else show('scr-login'); }
+})();
+</script>
+</body>
+</html>
