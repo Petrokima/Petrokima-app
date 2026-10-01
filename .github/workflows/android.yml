@@ -17,6 +17,17 @@ jobs:
       - name: Get the project files
         uses: actions/checkout@v4
 
+      - name: Arrange the files into their folders (in case they were uploaded without folders)
+        run: |
+          mkdir -p scripts web assets
+          for f in prepare-web.js patch-android.js patch-ios.js; do if [ -f "$f" ]; then mv -f "$f" scripts/; fi; done
+          for f in index.html manifest.webmanifest sw.js icon-192.png icon-512.png icon-maskable-512.png apple-touch-icon.png; do if [ -f "$f" ]; then mv -f "$f" web/; fi; done
+          for f in icon-only.png icon-foreground.png icon-background.png splash.png splash-dark.png; do if [ -f "$f" ]; then mv -f "$f" assets/; fi; done
+          echo "scripts: $(ls scripts | tr '\n' ' ')"; echo "web: $(ls web | tr '\n' ' ')"; echo "assets: $(ls assets | tr '\n' ' ')"
+          for f in scripts/prepare-web.js scripts/patch-android.js web/index.html assets/icon-only.png assets/icon-foreground.png assets/icon-background.png assets/splash.png; do
+            if [ ! -f "$f" ]; then echo "::error::The file $(basename "$f") is missing from the repository — please upload it"; exit 1; fi
+          done
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
