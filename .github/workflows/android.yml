@@ -29,8 +29,15 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Install the Android tools
-        uses: android-actions/setup-android@v3
+      - name: Check the Android tools (already installed on GitHub's computers)
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          if [ -z "$SDK" ] || [ ! -d "$SDK" ]; then echo "::error::Android tools were not found on this computer"; exit 1; fi
+          echo "Android tools found at $SDK"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          SDKM=$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
+          if [ -n "$SDKM" ]; then yes | "$SDKM" --licenses > /dev/null 2>&1 || true; fi
 
       - name: Install the app libraries
         run: npm ci
