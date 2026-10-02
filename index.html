@@ -282,7 +282,12 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',mgrNote:'Your note',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',sentMgr:'Request sent to your direct manager ✓',
+  sentAt:'Sent',lateRule:'Late arrival must be requested before {time} on the same day.',
+  leaveRules:'Annual leave: request at least {n} day(s) before it starts. Emergency (casual) leave: the same day is fine.',
+  lateReqErr:'Too late — a late-arrival permission must be requested before {time} on that day.',
+  annualNoticeErr:'Annual leave must be requested at least {n} day(s) before it starts. For today, choose emergency (casual) leave.',
+  pastDateErr:'Emergency leave can be requested for today or a later day, not for past days.',mgrNote:'Your note',
   approvedFinal:'Approved ✓',teamTitle:'Project Allowance for your team',teamNote:'Calculated from their attendance at projects. Nothing is paid until you approve and HR then approves.',
   approve:'Approve',reject:'Reject',rejectWhy:'Reason for rejecting',approvedMsg:'Approved — sent to HR ✓',rejectedMsg:'Rejected',noTeam:'Nothing to approve',
   aaWait:'Waiting for you',aaHR:'Approved by you — waiting for HR',aaOk:'Approved — will be paid',aaNo:'Rejected',day:'day',daysW:'days',at:'at',
@@ -346,7 +351,12 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',mgrNote:'ملاحظتك',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',
+  sentAt:'أُرسل',lateRule:'إذن التأخير الصباحي يُطلب قبل الساعة {time} من نفس اليوم.',
+  leaveRules:'الإجازة السنوية: تُطلب قبل بدايتها بـ {n} يوم على الأقل. الإجازة العارضة: يمكن طلبها في نفس اليوم.',
+  lateReqErr:'انتهى وقت الطلب — إذن التأخير يُطلب قبل الساعة {time} من نفس اليوم.',
+  annualNoticeErr:'الإجازة السنوية تُطلب قبل بدايتها بـ {n} يوم على الأقل. لليوم نفسه اختر إجازة عارضة.',
+  pastDateErr:'الإجازة العارضة تُطلب لليوم أو لأيام قادمة، وليس لأيام سابقة.',mgrNote:'ملاحظتك',
   approvedFinal:'تمت الموافقة ✓',teamTitle:'بدل المشروع لفريقك',teamNote:'محسوب من حضورهم في المشروعات. لا يُصرف أي مبلغ إلا بعد موافقتك ثم موافقة الموارد البشرية.',
   approve:'موافقة',reject:'رفض',rejectWhy:'سبب الرفض',approvedMsg:'تمت الموافقة — أُرسل إلى الموارد البشرية ✓',rejectedMsg:'تم الرفض',noTeam:'لا توجد طلبات للموافقة',
   aaWait:'في انتظار موافقتك',aaHR:'وافقت عليه — في انتظار الموارد البشرية',aaOk:'معتمد — سيُصرف',aaNo:'مرفوض',day:'يوم',daysW:'أيام',at:'في',
@@ -389,6 +399,9 @@ function closeSheet(){ $('sheet').classList.remove('on'); }
 function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
 function friendly(msg){
   msg = String(msg||'');
+  if (/LATE_REQUEST/.test(msg)) return t('lateReqErr', { time: (msg.match(/before (\d\d:\d\d)/) || [])[1] || lateDeadline() });
+  if (/ADVANCE_NOTICE/.test(msg)) return t('annualNoticeErr', { n: Number(S.annualNoticeDays) || 1 });
+  if (/PAST_DATE/.test(msg)) return t('pastDateErr');
   if (/OFFLINE_TOO_OLD/.test(msg)) return t('tooOld');
   if (/OFFLINE_ORDER/.test(msg)) return t('wrongOrder');
   if (/ALREADY_IN/.test(msg)) return t('alreadyIn');
@@ -770,6 +783,11 @@ const annualTypes = () => S.casualCountsAnnual==='no' ? ['Annual'] : ['Annual','
 function yearDays(types, status){ const y=todayStr().slice(0,4); return APP.leaves.filter(l=>types.includes(l.leave_type)&&l.status===status).reduce((s,l)=>s+leaveDaysIn(l,`${y}-01-01`,`${y}-12-31`),0); }
 function entitlement(){ const e=APP.emp; return (e && e.annual_leave_days!==null && e.annual_leave_days!==undefined && e.annual_leave_days!=='') ? num(e.annual_leave_days) : num(S.annualLeaveDefault); }
 const reqStage = r => r.status==='Pending' && r.manager_status==='Pending' ? 'Waiting for manager' : r.status==='Pending' && r.manager_status==='Approved' ? 'Waiting for HR' : r.status;
+// when a request was sent, in the phone's language
+const sentAt = ts => ts ? new Date(ts).toLocaleString(LANG==='ar' ? 'ar-EG' : 'en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+// latest time to ask for a late-arrival permission: shift start + the allowed minutes (Settings)
+function lateDeadline(){ const [h,m] = String(S.shiftStart || '08:00').split(':').map(Number); const tot = h*60 + m + (Number(S.permDeadlineMin) || 30);
+  return `${String(Math.floor(tot/60)%24).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`; }
 function renderRequests(){
   const ent=entitlement(), taken=yearDays(annualTypes(),'Approved'), pend=yearDays(annualTypes(),'Pending');
   const cyc=cycleOf(todayStr()), lim=num(S.permissionsPerMonth)||2, used=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
@@ -783,7 +801,7 @@ function renderRequests(){
     ...APP.reqs.map(r=>({ k:'req', id:r.id, at:r.created_at, icon:'📨', title:tm('ht',r.request_type), sub:r.details||'', st:r.status, reply:r.hr_response||'' })),
   ].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
   $('req-list').innerHTML = items.map(x => `<div class="it"><div style="font-size:22px">${x.icon}</div><div class="grow"><div class="t1">${esc(x.title)}</div>
-      <div class="t2">${esc(x.sub)}</div>${x.reply?`<div class="t2" style="color:var(--text)">💬 ${esc(x.reply)}</div>`:''}</div>
+      <div class="t2">${esc(x.sub)}</div>${x.at?`<div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(x.at))}</div>`:''}${x.reply?`<div class="t2" style="color:var(--text)">💬 ${esc(x.reply)}</div>`:''}</div>
       <div style="text-align:end">${chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
     || `<div class="empty">${esc(t('noRequests'))}</div>`;
 }
@@ -793,6 +811,7 @@ function leaveSheet(){
     <div class="field"><label>${esc(t('type'))}</label><select id="lv-t">${opt(['Annual','Casual','Sick','Unpaid','Other paid'],'lt')}</select></div>
     <div class="row"><div class="field" style="flex:1"><label>${esc(t('from'))}</label><input type="date" id="lv-f" value="${todayStr()}"></div>
       <div class="field" style="flex:1"><label>${esc(t('to'))}</label><input type="date" id="lv-to" value="${todayStr()}"></div></div>
+    <div class="hint">ℹ ${esc(t('leaveRules', { n: Number(S.annualNoticeDays) || 1 }))}</div>
     <div class="field"><label>${esc(t('days'))}</label><input type="number" step="0.5" min="0.5" id="lv-d"></div>
     <div class="field"><label>${esc(t('reason'))}</label><input id="lv-r"></div>
     <div class="hint" id="lv-h"></div>
@@ -826,6 +845,7 @@ function permSheet(){
     <div class="row"><div class="field" style="flex:1"><label>${esc(t('date'))}</label><input type="date" id="pm-d" value="${todayStr()}"></div>
       <div class="field" style="flex:1"><label>${esc(t('hoursL'))}</label><input type="number" step="0.25" min="0.25" max="${max}" id="pm-h" value="${max}"></div></div>
     <div class="field"><label>${esc(t('reason'))}</label><input id="pm-r"></div>
+    <div class="hint">ℹ ${esc(t('lateRule', { time: lateDeadline() }))}</div>
     <div class="hint" id="pm-hint"></div>
     <button class="btn" id="pm-go">${esc(t('send'))}</button>`);
   const hint = () => { const d=$('pm-d').value; if(!d) return; const cyc=cycleOf(d), lim=num(S.permissionsPerMonth)||2, u=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
@@ -923,7 +943,7 @@ function renderTeam(){
     const what = kind==='leave' ? `🌴 ${t('leaveTitle',{ t: tm('lt', r.leave_type) })}` : `✋ ${tm('pt', r.type)}`;
     const when = kind==='leave' ? `${niceDate(r.date_from)} → ${niceDate(r.date_to)} · ${fmt(r.days)} ${t('days')}` : `${niceDate(r.date)} · ${fmt(r.hours)} ${t('hours')}`;
     return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(r.emp_name || r.emp_id)} <span class="muted" style="font-size:12px">${esc(r.emp_id)}</span></div>
-      <div class="t2">${esc(what)} · ${esc(when)}</div>${r.reason ? `<div class="t2">💬 ${esc(r.reason)}</div>` : ''}
+      <div class="t2">${esc(what)} · ${esc(when)}</div><div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(r.created_at || r.requested_at))}</div>${r.reason ? `<div class="t2">💬 ${esc(r.reason)}</div>` : ''}
       <div style="margin-top:6px">${chip(mine ? 'Pending' : stg==='Waiting for HR' ? 'Waiting for HR' : r.status)}</div>
       ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-treq-ok="${kind}:${r.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-treq-no="${kind}:${r.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
     || `<div class="empty">${esc(t('noTeamReq'))}</div>`;
