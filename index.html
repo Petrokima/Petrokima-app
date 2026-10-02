@@ -274,7 +274,8 @@ const T = {
   locIos:'iPhone — check both:\n1. Settings → Privacy & Security → Location Services → ON → “Safari Websites” → “While Using the App”.\n2. Settings → Apps → Safari → Settings for Websites → Location → set petrokima.github.io (and “Other Websites”) to Allow or Ask.\nThen close Petrokima completely (swipe it away) and open it again. Still blocked? Ask HR — the app may need to be added to the home screen again.',
   locAndroid:'Android: open the phone Settings → Location → turn it ON. Then in Chrome tap ⋮ → Settings → Site settings → Location → allow this site (or long-press the Petrokima icon → App info → Permissions → Location → Allow).',
   locTimeout:'Your location could not be found. Move near a window or outside, wait a few seconds and try again.',tryAgain:'Try again',
-  queued:'Saved on your phone ✓ — it will be sent automatically when you are back online',
+  queued:'Saved on your phone ✓ — it will be sent automatically as soon as the connection works',sending:'Sending…',
+  serverDown:'The server cannot be reached right now. Please try again in a few minutes.',
   waiting:'{n} check-in(s) saved on this phone, waiting for internet',waitingOne:'waiting to send',
   sentNow:'{n} saved check-in(s) sent ✓',notRecorded:'A saved check-in could not be recorded — see the details on the home screen',
   failedItem:'Not recorded',discard:'Discard',discardQ:'Discard this saved check-in? HR will need to record it manually.',sendNow:'Send now',
@@ -337,7 +338,8 @@ const T = {
   locIos:'آيفون — راجع الإعدادين:\n١. الإعدادات ← الخصوصية والأمان ← خدمات الموقع ← تشغيل ← «مواقع سفاري» ← «أثناء استخدام التطبيق».\n٢. الإعدادات ← التطبيقات ← سفاري ← إعدادات المواقع ← الموقع ← اجعل petrokima.github.io (و«مواقع أخرى») على «السماح» أو «السؤال».\nثم أغلق بتروكيما تماماً (اسحبه لأعلى) وافتحه مرة أخرى. ما زال محظوراً؟ تواصل مع الموارد البشرية — قد يلزم إضافة التطبيق إلى الشاشة الرئيسية من جديد.',
   locAndroid:'أندرويد: افتح إعدادات الهاتف ← الموقع ← شغّله. ثم في كروم اضغط ⋮ ← الإعدادات ← إعدادات المواقع ← الموقع ← اسمح لهذا الموقع (أو اضغط مطولاً على أيقونة بتروكيما ← معلومات التطبيق ← الأذونات ← الموقع ← سماح).',
   locTimeout:'تعذّر تحديد موقعك. اقترب من نافذة أو اخرج إلى مكان مفتوح، انتظر قليلاً ثم حاول مرة أخرى.',tryAgain:'حاول مرة أخرى',
-  queued:'تم الحفظ على هاتفك ✓ — سيتم الإرسال تلقائياً عند عودة الإنترنت',
+  queued:'تم الحفظ على هاتفك ✓ — سيتم الإرسال تلقائياً فور عودة الاتصال',sending:'جارٍ الإرسال…',
+  serverDown:'لا يمكن الوصول إلى الخادم الآن. يرجى المحاولة بعد دقائق.',
   waiting:'{n} تسجيل محفوظ على هذا الهاتف في انتظار الإنترنت',waitingOne:'في انتظار الإرسال',
   sentNow:'تم إرسال {n} تسجيل محفوظ ✓',notRecorded:'تعذّر تسجيل أحد التسجيلات المحفوظة — راجع التفاصيل في الشاشة الرئيسية',
   failedItem:'لم يُسجَّل',discard:'حذف',discardQ:'حذف هذا التسجيل المحفوظ؟ ستحتاج الموارد البشرية إلى تسجيله يدوياً.',sendNow:'إرسال الآن',
@@ -419,7 +421,19 @@ let sb = null, tempPass = '';
 const store = { get:(k,d)=>{ try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch(e){ return d; } }, set:(k,v)=>{ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
 const queue = () => store.get('pk_queue', []);
 const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
-const isNetErr = e => !navigator.onLine || /Failed to fetch|NetworkError|network|Load failed|fetch/i.test(String((e && e.message) || e || ''));
+const isNetErr = e => !navigator.onLine || /Failed to fetch|NetworkError|network|Load failed|fetch|abort|timeout|timed out|upstream|bad gateway|gateway time|service unavailable|<!doctype|<html/i.test(String((e && (e.message || e.details)) || e || ''));
+// A server outage: no connection, no answer in time, or the server answers with an error page (5xx) — not a business rule refusing the check-in
+const serverDown = r => !!r && (isNetErr(r.error) || r.status === 0 || r.status === 408 || r.status === 429 || r.status >= 500);
+// Never wait for ever: give up after `ms` and treat it as an outage (the request may still arrive — the check-in's unique id prevents doubles)
+const withTimeout = (p, ms) => Promise.race([ Promise.resolve(p), new Promise(res => setTimeout(() => res({ data:null, status:0, error:{ message:'timeout: no answer from the server' } }), ms)) ]);
+// The server already has this check-in (it arrived earlier but the answer was lost)
+const alreadyHave = e => !!e && (e.code === '23505' || /duplicate key/i.test(String(e.message||''))) && /client_id/i.test(String((e.message||'') + ' ' + (e.details||'')));
+// every request from the app gives up after 20 seconds instead of hanging
+const timedFetch = (input, init = {}) => {
+  if (init.signal) return fetch(input, init);
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
+  return fetch(input, { ...init, signal: ac.signal }).finally(() => clearTimeout(t));
+};
 function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, me:APP.me, emp:APP.emp, status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, slips:APP.slips, att:APP.att, manager:APP.manager }); }
 function useCache(uid){
   const c = store.get('pk_cache', null); if (!c || (uid && c.uid !== uid)) return false;
@@ -479,8 +493,9 @@ async function doLogin(){
 function message(txt){ $('msg-body').textContent = txt; show('scr-msg'); }
 async function afterLogin(user){
   if (!navigator.onLine){ if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('noCache')); }
-  const { data, error: meErr } = await sb.from('app_users').select('*').eq('id', user.id);
-  if (meErr && isNetErr(meErr) && useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; }
+  const meRes = await withTimeout(sb.from('app_users').select('*').eq('id', user.id), 15000);
+  const { data, error: meErr } = meRes;
+  if (serverDown(meRes)) { if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('serverDown')); }
   const me = data && data[0];
   if (!me || !me.role) return message(t('noRole'));
   if (!me.active) return message(t('inactive'));
@@ -664,17 +679,20 @@ async function clock(type, code, btn){
   if (btn){ btn.disabled=false; btn.textContent = label; }
   if (g.err && !(APP.status && APP.status.no_location_ok)) return locationHelp(g.err, () => { closeSheet(); clock(type, code, null); });
   if (g.err) { g.lat = null; g.lng = null; g.accuracy = null; }       // allowed by an exception the admin set — the server marks it
+  const tapAt = new Date().toISOString();          // the moment the employee checked in (not when the server answered)
   const rec = { client_id: uid(), emp_id: APP.me.emp_id, event_type:type, project_code: code || null, device_id: deviceId(), lat:g.lat, lng:g.lng, accuracy:g.accuracy,
                 device: (navigator.userAgent || '').slice(0, 150) };
   const pendingBefore = queue().length;
   if (navigator.onLine && !pendingBefore){
-    const { error } = await sb.from('clock_events').insert(rec);
-    if (!error){ closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
-    if (!isNetErr(error)) return toast(friendly(error.message), true);
+    if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`; }
+    const res = await withTimeout(sb.from('clock_events').insert(rec), 15000);
+    if (btn){ btn.disabled = false; btn.textContent = label; }
+    if (!res.error){ closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
+    if (!serverDown(res)) return toast(friendly(res.error.message), true);          // a real refusal (wrong site, no location…) — tell the employee
   }
-  // no internet (or older check-ins still waiting): keep it on the phone, in order
+  // no internet, server not reachable, or older check-ins still waiting: keep it on the phone, in order
   const q = queue();
-  q.push({ ...rec, offline:true, client_at: new Date().toISOString(), _name: code ? ((pickSel && pickSel.name) || code) : '' });
+  q.push({ ...rec, offline:true, client_at: tapAt, _name: code ? ((pickSel && pickSel.name) || code) : '' });
   store.set('pk_queue', q);
   applyEvent(APP.status, q[q.length-1]); saveCache(); closeSheet(); renderHome();
   toast(t('queued'));
@@ -721,8 +739,10 @@ async function flushQueue(){
   try {
     while (q.length && !q[0]._err){
       const { _name, _err, _off, _applied, ...rec } = q[0];
-      const { error } = await sb.from('clock_events').insert({ ...rec, device_now: new Date().toISOString() });   // the server compares the clocks
-      if (error && isNetErr(error)) break;                                  // still no connection: try later
+      const res = await withTimeout(sb.from('clock_events').insert({ ...rec, device_now: new Date().toISOString() }), 15000);   // the server compares the clocks
+      const error = res.error;
+      if (error && alreadyHave(error)) { q.shift(); store.set('pk_queue', q); sent++; continue; }   // it arrived earlier — the answer was lost
+      if (error && serverDown(res)) break;                                  // still no connection / server still down: try later
       if (error){ q[0]._err = friendly(error.message); store.set('pk_queue', q); failed = true; break; }   // keep it visible, stop here
       q.shift(); store.set('pk_queue', q); sent++;
     }
@@ -1001,14 +1021,14 @@ const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'bl
 window.addEventListener('online', net); window.addEventListener('offline', net);
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); } });
 setInterval(() => { if (APP.ready) tick(); }, 15000);
-setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 60000);
+setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 30000);
 
 (async function boot(){
   applyLang(); net();
   if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (NATIVE) await restoreDeviceId();
   if (!window.supabase || !SUPABASE_KEY || SUPABASE_KEY.startsWith('PASTE')) return message(t('configMissing'));
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: timedFetch } });
   $('li-code').value = localStorage.getItem('pk_code') || '';
   if (isIOS() && !isStandalone()) { $('ios-steps').textContent = t('iosSteps'); show('scr-install'); return; }
   try {
