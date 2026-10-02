@@ -267,6 +267,7 @@ const T = {
   iosSteps:'1. Tap the Share button ⬆︎ at the bottom of Safari\n2. Choose “Add to Home Screen”\n3. Open Petrokima from your home screen and sign in',
   otherDevice:'Your employee code is registered to another phone. If you changed your phone, ask HR to reset your registered phone.',
   deviceTaken:'This phone is already registered to another employee. Each phone can be used by one employee only.',
+  attemptLogged:'This attempt has been recorded and HR has been notified.',
   deviceMismatch:'This phone is not the phone registered to your employee code. Contact HR.',
   badDevice:'This phone could not be identified. Close the app and open it again.',
   phoneReg:'Registered phone',thisPhone:'This phone is registered to you',back:'Back',
@@ -336,6 +337,7 @@ const T = {
   iosSteps:'١. اضغط زر المشاركة ⬆︎ أسفل متصفح سفاري\n٢. اختر «إضافة إلى الشاشة الرئيسية»\n٣. افتح بتروكيما من الشاشة الرئيسية وسجّل الدخول',
   otherDevice:'كود الموظف الخاص بك مسجّل على هاتف آخر. إذا غيّرت هاتفك، اطلب من الموارد البشرية إعادة تعيين الهاتف المسجّل.',
   deviceTaken:'هذا الهاتف مسجّل بالفعل لموظف آخر. كل هاتف يُستخدم لموظف واحد فقط.',
+  attemptLogged:'تم تسجيل هذه المحاولة وإبلاغ الموارد البشرية.',
   deviceMismatch:'هذا الهاتف ليس الهاتف المسجّل لكود الموظف الخاص بك. تواصل مع الموارد البشرية.',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
   phoneReg:'الهاتف المسجّل',thisPhone:'هذا الهاتف مسجّل باسمك',back:'رجوع',
@@ -503,7 +505,7 @@ async function doLogin(){
   errBox('li-err'); tempPass = pass; $('li-pass').value=''; localStorage.setItem('pk_code', code);
   await afterLogin(data.user);
 }
-function message(txt){ $('msg-body').textContent = txt; show('scr-msg'); }
+function message(txt){ $('msg-body').textContent = txt; $('msg-body').style.whiteSpace = 'pre-line'; show('scr-msg'); }
 async function afterLogin(user){
   if (!navigator.onLine){ if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('noCache')); }
   const meRes = await withTimeout(sb.from('app_users').select('*').eq('id', user.id), 15000);
@@ -517,7 +519,7 @@ async function afterLogin(user){
   if (me.must_change_password){ ['fl-nid','fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
   const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
   if (regErr || !['ok','registered'].includes(reg)){
-    const txt = reg==='other_device' ? t('otherDevice') : reg==='device_taken' ? t('deviceTaken') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
+    const txt = reg==='other_device' ? t('otherDevice') + '\n\n' + t('attemptLogged') : reg==='device_taken' ? t('deviceTaken') + '\n\n' + t('attemptLogged') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
     try { await sb.auth.signOut(); } catch(e){}
     return message(txt);
   }
