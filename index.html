@@ -219,6 +219,7 @@ const SUPABASE_KEY = 'PASTE-YOUR-ANON-KEY-HERE';
 const LOGIN_DOMAIN = 'petrokima.local';
 const APP_BUILD = 0;            // set automatically by the Android / iPhone build — 0 on the web
 const APK_REPO  = '';           // GitHub repository that publishes the Android app (owner/name)
+const APK_DOWNLOAD = '';        // your own download address for the Android app (set by the build) — empty = GitHub's link
 // Running inside the Android or iPhone app?
 const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
 const PLATFORM = NATIVE ? window.Capacitor.getPlatform() : 'web';
@@ -1053,7 +1054,7 @@ async function checkAppUpdate(){
     const j = await r.json(), latest = Number(String(j.tag_name || '').split('.').pop());
     if (latest > APP_BUILD && !$('upd-bar')){
       document.body.insertAdjacentHTML('afterbegin', `<div id="upd-bar" style="background:var(--brand);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:14px;font-weight:700;padding-top:calc(10px + env(safe-area-inset-top,0px))">
-        <span style="flex:1">⬆ ${esc(t('updateAvail'))}</span><a href="https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk" style="background:#fff;color:var(--brand);padding:7px 12px;border-radius:10px;text-decoration:none">${esc(t('updateBtn'))}</a></div>`);
+        <span style="flex:1">⬆ ${esc(t('updateAvail'))}</span><a href="${APK_DOWNLOAD || `https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk`}" style="background:#fff;color:var(--brand);padding:7px 12px;border-radius:10px;text-decoration:none">${esc(t('updateBtn'))}</a></div>`);
     }
   } catch(e){}
 }

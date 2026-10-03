@@ -19,5 +19,6 @@ if (key) html = html.replace("'PASTE-YOUR-ANON-KEY-HERE'", JSON.stringify(key));
 else if (html.includes('PASTE-YOUR-ANON-KEY-HERE')) console.warn('⚠ SUPABASE_ANON_KEY is not set — the app will show "not configured". Add it as a GitHub secret.');
 html = html.replace('const APP_BUILD = 0;', `const APP_BUILD = ${Number(process.env.APP_BUILD || 1)};`);
 html = html.replace("const APK_REPO  = '';", `const APK_REPO  = ${JSON.stringify(process.env.APK_REPO || '')};`);
+html = html.replace("const APK_DOWNLOAD = '';", `const APK_DOWNLOAD = ${JSON.stringify(process.env.APK_DOWNLOAD || '')};`);
 fs.writeFileSync(path.join(out, 'index.html'), html);
 console.log(`✔ www prepared — build ${process.env.APP_BUILD || 1}${key ? ', Supabase key filled in' : ''}`);
