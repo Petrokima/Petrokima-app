@@ -115,6 +115,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
   <div class="card" style="margin-top:22px">
     <div class="field"><label data-t="empCode"></label><input id="li-code" inputmode="text" autocomplete="username" autocapitalize="off"></div>
     <div class="field"><label data-t="password"></label><input id="li-pass" type="password" autocomplete="current-password"></div>
+    <div class="hint" data-t="firstHint" style="margin:-4px 0 10px"></div>
     <button class="btn" id="li-go" data-t="signIn"></button>
     <div class="err" id="li-err"></div>
   </div>
@@ -126,7 +127,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <section class="screen" id="scr-first"><div class="center"><div style="width:100%;max-width:400px">
   <div class="logo">PK</div><h1 data-t="firstTitle"></h1><div class="sub" data-t="firstSub"></div>
   <div class="card" style="margin-top:22px">
-    <div class="field"><label data-t="nid4"></label><input id="fl-nid" inputmode="numeric" maxlength="4" autocomplete="off" style="direction:ltr;text-align:center;letter-spacing:6px;font-size:20px"></div>
+    <div class="hint" data-t="firstMustChange" style="margin-bottom:10px"></div>
     <div class="field"><label data-t="newPass"></label><input id="fl-p1" type="password" autocomplete="new-password"></div>
     <div class="field"><label data-t="repeatPass"></label><input id="fl-p2" type="password" autocomplete="new-password"></div>
     <button class="btn" id="fl-go" data-t="savePass"></button>
@@ -284,7 +285,9 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',firstHint:'First time? Your password is Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191).',
+  payLockTitle:'Your payslips are protected',payLockSub:'Enter your password to view them.',payUnlock:'Show my payslips',payWrongPass:'Wrong password',payNeedNet:'Connect to the internet to view your payslips.',payLock:'🔒 Lock',
+  firstMustChange:'Choose your own password now. It must be at least 8 characters and different from Petro@….',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
   teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
   projectsN:'{n} project(s)',noProjAssigned:'No projects — can check in at any project',addProject:'Add a project — type code or name…',projAdded:'Project added ✓',projRemoved:'Project removed',
   removeProjQ:'Remove this project from {name}?',sentMgr:'Request sent to your direct manager ✓',
@@ -357,7 +360,9 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',firstHint:'أول مرة؟ كلمة المرور هي Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191).',
+  payLockTitle:'مفرداتك محمية',payLockSub:'أدخل كلمة المرور لعرضها.',payUnlock:'عرض مفرداتي',payWrongPass:'كلمة المرور غير صحيحة',payNeedNet:'اتصل بالإنترنت لعرض مفرداتك.',payLock:'🔒 قفل',
+  firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن Petro@….',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
   projectsN:'{n} مشروع',noProjAssigned:'بدون مشروعات — يسجّل في أي مشروع',addProject:'أضف مشروعاً — اكتب الكود أو الاسم…',projAdded:'تمت إضافة المشروع ✓',projRemoved:'تم حذف المشروع',
   removeProjQ:'حذف هذا المشروع من {name}؟',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',
@@ -524,7 +529,7 @@ async function afterLogin(user){
   if (!me.active) return message(t('inactive'));
   if (!me.emp_id) return message(t('notLinked'));
   APP.me = me;
-  if (me.must_change_password){ ['fl-nid','fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
+  if (me.must_change_password){ ['fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
   const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
   if (regErr || !['ok','registered'].includes(reg)){
     const txt = reg==='other_device' ? t('otherDevice') + '\n\n' + t('attemptLogged') : reg==='device_taken' ? t('deviceTaken') + '\n\n' + t('attemptLogged') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
@@ -536,13 +541,12 @@ async function afterLogin(user){
   APP.ready = true; renderAll(); flushQueue(); checkAppUpdate();
 }
 async function firstLogin(){
-  const nid=$('fl-nid').value.trim(), a=$('fl-p1').value, b=$('fl-p2').value;
-  if (!/^\d{4}$/.test(nid)) return errBox('fl-err', t('need4'));
+  const a=$('fl-p1').value, b=$('fl-p2').value;
   if (a.length < 8) return errBox('fl-err', t('short'));
   if (a !== b) return errBox('fl-err', t('nomatch'));
   if (a === tempPass) return errBox('fl-err', t('sameTemp'));
   const btn=$('fl-go'); btn.disabled=true;
-  const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:nid, p_new_password:a });
+  const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:null, p_new_password:a });
   btn.disabled=false;
   if (error) return errBox('fl-err', friendly(error.message));
   if (data !== 'ok') return errBox('fl-err', /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data);
@@ -908,9 +912,30 @@ function askCancel(key){
 //  PAYSLIPS & PROFILE
 // ═════════════════════════════════════════════════════════
 function renderPayslips(){
-  $('pay-list').innerHTML = APP.slips.map(l => `<div class="it" data-slip="${esc(l.period)}" style="cursor:pointer"><div style="font-size:22px">💰</div>
+  if (!APP.payUnlocked){
+    $('pay-list').innerHTML = `<div style="text-align:center;padding:18px 6px"><div style="font-size:40px">🔒</div><div class="t1" style="margin-top:6px">${esc(t('payLockTitle'))}</div>
+      <div class="hint">${esc(t('payLockSub'))}</div>
+      <div class="field" style="margin-top:12px"><input id="pay-pass" type="password" autocomplete="current-password" placeholder="${esc(t('password'))}"></div>
+      <button class="btn" id="pay-go">${esc(t('payUnlock'))}</button><div class="err" id="pay-err"></div></div>`;
+    $('pay-go').onclick = unlockPayslips; $('pay-pass').onkeydown = e => { if (e.key === 'Enter') unlockPayslips(); };
+    return;
+  }
+  $('pay-list').innerHTML = `<div style="text-align:end;margin-bottom:6px"><button class="btn ghost small" id="pay-lock">${esc(t('payLock'))}</button></div>`;
+  $('pay-list').innerHTML += APP.slips.map(l => `<div class="it" data-slip="${esc(l.period)}" style="cursor:pointer"><div style="font-size:22px">💰</div>
       <div class="grow"><div class="t1">${esc(periodLabel(l.period))}</div><div class="t2">${esc(t('gross'))} <span class="num">${fmt(l.gross)}</span> · ${esc(t('ded'))} <span class="num">${fmt(l.deductions)}</span></div></div>
       <div class="num pos" style="font-size:16px">${fmt(l.net)}</div></div>`).join('') || `<div class="empty">${esc(t('noSlips'))}</div>`;
+  $('pay-lock').onclick = () => { APP.payUnlocked = false; renderPayslips(); };
+}
+// the payslips need the password every time they are opened
+async function unlockPayslips(){
+  const pw = $('pay-pass').value; if (!pw) return;
+  if (!navigator.onLine) return errBox('pay-err', t('payNeedNet'));
+  $('pay-go').disabled = true;
+  const email = ((((await sb.auth.getSession()).data || {}).session || {}).user || {}).email || (APP.me && APP.me.email);   // the account signed in right now
+  const { error } = await withTimeout(sb.auth.signInWithPassword({ email, password: pw }), 15000);
+  $('pay-go').disabled = false;
+  if (error) return errBox('pay-err', /invalid|credentials/i.test(error.message) ? t('payWrongPass') : friendly(error.message));
+  APP.payUnlocked = true; renderPayslips();
 }
 function slipSheet(period){
   const l = APP.slips.find(x=>x.period===period); if (!l) return;
@@ -1036,7 +1061,7 @@ function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
   $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
   $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
   renderHome(); renderRequests(); renderTeam(); renderPayslips(); renderProfile(); }
-function go(view){ APP.view=view; document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+function go(view){ if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP
@@ -1089,6 +1114,7 @@ $('li-go').addEventListener('click', doLogin);
 $('fl-go').addEventListener('click', firstLogin);
 const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; if (APP.ready) renderPayslips(); } });
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); } });
 setInterval(() => { if (APP.ready) tick(); }, 15000);
 setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 30000);
