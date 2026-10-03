@@ -182,6 +182,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     </div>
     <!-- TEAM APPROVALS (managers) -->
     <div class="view" id="v-team"><div class="card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
+      <div class="card" id="tproj-card" style="display:none"><div class="sec" data-t="teamProj"></div><div class="hint" data-t="teamProjNote"></div><div class="list" id="tproj-list"></div></div>
       <div class="card"><div class="sec" data-t="teamTitle"></div><div class="hint" data-t="teamNote"></div><div class="list" id="team-list"></div></div></div>
     <!-- PAYSLIPS -->
     <div class="view" id="v-pay"><div class="card"><div class="sec" data-t="payslips"></div><div class="list" id="pay-list"></div></div></div>
@@ -283,7 +284,10 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',sentMgr:'Request sent to your direct manager ✓',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
+  teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
+  projectsN:'{n} project(s)',noProjAssigned:'No projects — can check in at any project',addProject:'Add a project — type code or name…',projAdded:'Project added ✓',projRemoved:'Project removed',
+  removeProjQ:'Remove this project from {name}?',sentMgr:'Request sent to your direct manager ✓',
   sentAt:'Sent',lateRule:'Late arrival must be requested before {time} on the same day.',
   leaveRules:'Annual leave: request at least {n} day(s) before it starts. Emergency (casual) leave: the same day is fine.',
   lateReqErr:'Too late — a late-arrival permission must be requested before {time} on that day.',
@@ -353,7 +357,10 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
+  teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
+  projectsN:'{n} مشروع',noProjAssigned:'بدون مشروعات — يسجّل في أي مشروع',addProject:'أضف مشروعاً — اكتب الكود أو الاسم…',projAdded:'تمت إضافة المشروع ✓',projRemoved:'تم حذف المشروع',
+  removeProjQ:'حذف هذا المشروع من {name}؟',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',
   sentAt:'أُرسل',lateRule:'إذن التأخير الصباحي يُطلب قبل الساعة {time} من نفس اليوم.',
   leaveRules:'الإجازة السنوية: تُطلب قبل بدايتها بـ {n} يوم على الأقل. الإجازة العارضة: يمكن طلبها في نفس اليوم.',
   lateReqErr:'انتهى وقت الطلب — إذن التأخير يُطلب قبل الساعة {time} من نفس اليوم.',
@@ -401,6 +408,7 @@ function closeSheet(){ $('sheet').classList.remove('on'); }
 function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
 function friendly(msg){
   msg = String(msg||'');
+  if (/NOT_ASSIGNED/.test(msg)) return t('notAssigned');
   if (/LATE_REQUEST/.test(msg)) return t('lateReqErr', { time: (msg.match(/before (\d\d:\d\d)/) || [])[1] || lateDeadline() });
   if (/ADVANCE_NOTICE/.test(msg)) return t('annualNoticeErr', { n: Number(S.annualNoticeDays) || 1 });
   if (/PAST_DATE/.test(msg)) return t('pastDateErr');
@@ -449,11 +457,11 @@ const timedFetch = (input, init = {}) => {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
   return fetch(input, { ...init, signal: ac.signal }).finally(() => clearTimeout(t));
 };
-function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, me:APP.me, emp:APP.emp, status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, slips:APP.slips, att:APP.att, manager:APP.manager }); }
+function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, myProjects:APP.myProjects, myTeam:APP.myTeam, me:APP.me, emp:APP.emp, status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, slips:APP.slips, att:APP.att, manager:APP.manager }); }
 function useCache(uid){
   const c = store.get('pk_cache', null); if (!c || (uid && c.uid !== uid)) return false;
   APP.me=c.me; APP.emp=c.emp; APP.status=c.status; APP.statusAt=c.statusAt||Date.now(); S={...S,...(c.S||{})}; HOL=new Set(c.hol||[]);
-  APP.leaves=c.leaves||[]; APP.perms=c.perms||[]; APP.reqs=c.reqs||[]; APP.slips=c.slips||[]; APP.att=c.att||[]; APP.manager=c.manager; APP.offline=true; APP.updatedAt=c.updatedAt; APP.team=c.team||[]; APP.teamReq=c.teamReq||[];
+  APP.leaves=c.leaves||[]; APP.perms=c.perms||[]; APP.reqs=c.reqs||[]; APP.slips=c.slips||[]; APP.att=c.att||[]; APP.manager=c.manager; APP.offline=true; APP.updatedAt=c.updatedAt; APP.team=c.team||[]; APP.teamReq=c.teamReq||[]; APP.myProjects=c.myProjects||[]; APP.myTeam=c.myTeam||[];
   return true;
 }
 // Server time minus phone time, measured each time we are online
@@ -549,7 +557,7 @@ async function signOut(){ try { await sb.auth.signOut(); } catch(e){} APP.ready=
 async function loadAll(){
   const id = APP.me.emp_id;
   const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm] = await Promise.all([
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt] = await Promise.all([
     all(sb.from('settings').select('*').eq('key','payroll')),
     all(sb.from('public_holidays').select('date')),
     all(sb.from('employees').select('*').eq('id', id)),
@@ -560,10 +568,12 @@ async function loadAll(){
     sb.rpc('my_manager').then(r => r.data || [], () => []),
     all(sb.from('allowance_approvals').select('*').eq('manager_id', id).order('submitted_at', { ascending:false })),
     all(sb.from('employee_leaves').select('*').eq('manager_id', id).order('date_from', { ascending:false }).limit(60)),
-    all(sb.from('attendance_permissions').select('*').eq('manager_id', id).order('date', { ascending:false }).limit(60)) ]);
+    all(sb.from('attendance_permissions').select('*').eq('manager_id', id).order('date', { ascending:false }).limit(60)),
+    sb.rpc('my_projects').then(r => r.data || [], () => []),
+    sb.rpc('my_team').then(r => r.data || [], () => []) ]);
   if (set[0] && set[0].value) S = { ...S, ...set[0].value };
   HOL = new Set(hol.map(h => h.date));
-  APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || [];
+  APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
   await loadStatus();
 }
@@ -638,11 +648,16 @@ function openSitePicker(mode){
   const openIsNone = APP.status && APP.status.open && APP.status.open.code === '';
   sheet(`<h2>${esc(t('whereWork'))}</h2>
     ${APP.status && APP.status.no_project && !openIsNone && !fromHome ? `<button class="btn green big" id="noproj-go" style="margin-bottom:14px">▶ ${esc(t('inNoProject'))}</button><div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('orSite'))}</div>` : ''}
-    ${recent.length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('recent'))}</div>${recent.filter(r=>r.code!==openCode).map(siteBtn).join('')}` : ''}
+    ${(APP.myProjects||[]).length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('myProjects'))}</div>
+      ${APP.myProjects.length > 8 ? `<div class="field"><input id="myp-q" placeholder="${esc(t('filterProj'))}" autocomplete="off"></div>` : ''}
+      <div id="myp-list">${APP.myProjects.filter(p => p.id !== openCode).map(siteBtn).join('')}</div>`
+    : `${recent.length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('recent'))}</div>${recent.filter(r=>r.code!==openCode).map(siteBtn).join('')}` : ''}
     ${navigator.onLine ? `<div class="field" style="margin-top:12px"><input id="site-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
-    <div id="site-res"><div class="hint">${esc(t('typeMore'))}</div></div>` : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}
+    <div id="site-res"><div class="hint">${esc(t('typeMore'))}</div></div>` : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}`}
     <button class="btn green big" id="site-go" disabled data-mode="${mode}">▶ ${esc(t('checkIn'))}</button>`);
   if ($('site-q')) $('site-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(searchSites, 300); });
+  if ($('myp-q')) $('myp-q').addEventListener('input', () => { const q = $('myp-q').value.trim().toLowerCase();
+    $('myp-list').innerHTML = APP.myProjects.filter(p => p.id !== openCode && (!q || (p.id + ' ' + (p.name||'')).toLowerCase().includes(q))).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`; });
 }
 function siteBtn(s){ return `<button class="site" data-site="${esc(s.code||s.id)}" data-name="${esc(s.name||'')}"><b>${esc(s.name || s.code || s.id)}</b><span>${esc(s.code||s.id)}${s.location?' · '+esc(s.location):''}</span></button>`; }
 async function searchSites(){
@@ -940,7 +955,11 @@ function renderTeam(){
   const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
   const reqs = (APP.teamReq||[]).slice().sort((a,b) => (reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1));
   const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
-  $('tab-team').style.display = (team.length || reqs.length) ? '' : 'none';
+  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length) ? '' : 'none';
+  $('tproj-card').style.display = (APP.myTeam||[]).length ? '' : 'none';
+  $('tproj-list').innerHTML = (APP.myTeam||[]).map(m => `<div class="it"><div class="grow"><div class="t1">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></div>
+      <div class="t2">${esc(m.job_name || '')}</div><div class="t2">${m.projects ? '📌 ' + esc(t('projectsN', { n: m.projects })) : esc(t('noProjAssigned'))}</div></div>
+      <button class="btn ghost small" data-tproj="${esc(m.id)}">${esc(t('manage'))}</button></div>`).join('');
   $('treq-list').innerHTML = reqs.slice(0,40).map(({kind, r}) => { const stg = reqStage(r), mine = stg==='Waiting for manager';
     const what = kind==='leave' ? `🌴 ${t('leaveTitle',{ t: tm('lt', r.leave_type) })}` : `✋ ${tm('pt', r.type)}`;
     const when = kind==='leave' ? `${niceDate(r.date_from)} → ${niceDate(r.date_to)} · ${fmt(r.days)} ${t('days')}` : `${niceDate(r.date)} · ${fmt(r.hours)} ${t('hours')}`;
@@ -958,6 +977,32 @@ function renderTeam(){
       <div style="margin-top:6px"><span class="chip ${c[0]}">${esc(t(c[1]))}</span></div>
       ${a.status==='Pending manager' ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-team-ok="${a.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-team-no="${a.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div>
       <div class="num" style="font-size:17px">${fmt(a.amount)}</div></div>`; }).join('') || `<div class="empty">${esc(t('noTeam'))}</div>`;
+}
+// the manager manages one team member's projects
+async function teamProjSheet(empId){
+  const m = (APP.myTeam||[]).find(x => x.id === empId) || { id:empId }, nm = (LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || empId;
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { data, error } = await sb.rpc('team_projects', { p_emp: empId });
+  if (error) return toast(friendly(error.message), true);
+  sheet(`<h2>📌 ${esc(nm)}</h2>
+    <div class="list">${(data||[]).map(p => `<div class="it"><div class="grow"><div class="t1">${esc(p.name || p.id)}</div><div class="t2">${esc(p.id)} · ${esc(p.assigned_by || '')}</div></div>
+      <button class="btn ghost small" data-tproj-rm="${esc(empId)}|${esc(p.id)}">✕</button></div>`).join('') || `<div class="empty">${esc(t('noProjAssigned'))}</div>`}</div>
+    <div class="field" style="margin-top:12px"><input id="tproj-q" placeholder="${esc(t('addProject'))}" autocomplete="off"></div><div id="tproj-res"></div>
+    <button class="btn ghost" data-act="close" style="margin-top:8px">${esc(t('cancel'))}</button>`);
+  $('tproj-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(async () => {
+    const q = $('tproj-q').value.trim(); if (q.length < 2) { $('tproj-res').innerHTML = ''; return; }
+    const r = await sb.rpc('find_projects', { p_q:q }); const have = new Set((data||[]).map(p => p.id));
+    $('tproj-res').innerHTML = (r.data||[]).filter(p => !have.has(p.id)).map(p => `<button class="site" data-tproj-add="${esc(empId)}|${esc(p.id)}"><b>＋ ${esc(p.name || p.id)}</b><span>${esc(p.id)}${p.location ? ' · ' + esc(p.location) : ''}</span></button>`).join('') || `<div class="hint">${esc(t('noSites'))}</div>`;
+  }, 300); });
+}
+async function teamProjChange(key, add){
+  const [empId, code] = key.split('|');
+  const res = add ? await sb.from('employee_projects').insert({ emp_id: empId, project_code: code }).select()
+                  : await sb.from('employee_projects').delete().eq('emp_id', empId).eq('project_code', code).select();
+  if (res.error) return toast(friendly(res.error.message), true);
+  if (!(res.data && res.data.length)) return toast(t('notAllowed'), true);
+  toast(add ? t('projAdded') : t('projRemoved'));
+  const r = await sb.rpc('my_team'); APP.myTeam = r.data || APP.myTeam; saveCache(); renderTeam(); teamProjSheet(empId);
 }
 async function teamReqDecide(key, approve, note){
   if (!navigator.onLine) return toast(t('offline'), true);
@@ -1003,9 +1048,12 @@ document.addEventListener('click', async ev => {
   if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG); return applyLang(); }
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
   if (x === $('sheet')) return closeSheet();
-  const s = x.closest('.site'); if (s) return selectSite(s);
+  const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
   const sl = x.closest('[data-slip]'); if (sl) return slipSheet(sl.dataset.slip);
   const cx = x.closest('[data-cancel]'); if (cx) return askCancel(cx.dataset.cancel);
+  const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(tp.dataset.tproj);
+  const tpa = x.closest('[data-tproj-add]'); if (tpa) return teamProjChange(tpa.dataset.tprojAdd, true);
+  const tpr = x.closest('[data-tproj-rm]'); if (tpr) return teamProjChange(tpr.dataset.tprojRm, false);
   const rok = x.closest('[data-treq-ok]'); if (rok) { rok.disabled = true; return teamReqDecide(rok.dataset.treqOk, true); }
   const rno = x.closest('[data-treq-no]'); if (rno) { const key = rno.dataset.treqNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="rno-note"></textarea></div>
