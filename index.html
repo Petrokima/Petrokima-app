@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Petrokima HR — تحميل التطبيق</title>
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{--navy:#0f1f3d;--blue:#1f4fb5;--teal:#0b7f63;--ink:#16213a;--muted:#56627a;--bg:#f3f5fa}
+  *{box-sizing:border-box} body{margin:0;font-family:Cairo,'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:var(--navy);color:#f5f7fc;padding:40px 20px 56px;text-align:center}
+  .logo{width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#1f4fb5,#0f9d7a);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff}
+  h1{margin:14px 0 6px;font-size:26px} header p{margin:0;color:#c9d4ea}
+  main{max-width:560px;margin:-32px auto 40px;padding:0 16px;display:flex;flex-direction:column;gap:16px}
+  .card{background:#fff;border:1px solid #dce2ee;border-radius:18px;padding:22px}
+  .card h2{margin:0 0 10px;font-size:20px} .card p,.card li{color:var(--muted);line-height:1.7;font-size:15px}
+  .btn{display:block;text-align:center;background:var(--blue);color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:14px;border-radius:14px;margin-top:8px}
+  .btn.alt{background:var(--teal)} ol{padding-inline-start:20px;margin:6px 0} .en{direction:ltr;text-align:left}
+  .lang{position:absolute;top:14px;inset-inline-start:14px;background:#ffffff22;color:#fff;border:0;border-radius:10px;padding:6px 12px;font-family:inherit;cursor:pointer}
+</style></head>
+<body>
+<header style="position:relative"><button class="lang" onclick="sw()">English</button>
+  <div class="logo">PK</div><h1 data-ar="تطبيق بتروكيما للموارد البشرية" data-en="Petrokima HR app">تطبيق بتروكيما للموارد البشرية</h1>
+  <p data-ar="الحضور والطلبات ومفردات الراتب — على هاتفك" data-en="Attendance, requests and payslips — on your phone">الحضور والطلبات ومفردات الراتب — على هاتفك</p></header>
+<main>
+  <div class="card"><h2>🤖 <span data-ar="أندرويد" data-en="Android">أندرويد</span></h2>
+    <ol><li data-ar="اضغط الزر أدناه لتنزيل التطبيق." data-en="Tap the button below to download the app.">اضغط الزر أدناه لتنزيل التطبيق.</li>
+      <li data-ar="افتح الملف Petrokima.apk واسمح بالتثبيت إذا طُلب منك." data-en="Open Petrokima.apk and allow the installation if asked.">افتح الملف Petrokima.apk واسمح بالتثبيت إذا طُلب منك.</li>
+      <li data-ar="إذا ظهر تحذير: «مزيد من التفاصيل» ← «التثبيت على أي حال»." data-en="If a warning appears: More details → Install anyway.">إذا ظهر تحذير: «مزيد من التفاصيل» ← «التثبيت على أي حال».</li></ol>
+    <a class="btn" href="Petrokima.apk" data-ar="⬇ تنزيل تطبيق أندرويد" data-en="⬇ Download for Android">⬇ تنزيل تطبيق أندرويد</a></div>
+  <div class="card"><h2>🍎 <span data-ar="آيفون" data-en="iPhone">آيفون</span></h2>
+    <ol><li data-ar="افتح الرابط أدناه في متصفح سفاري." data-en="Open the link below in Safari.">افتح الرابط أدناه في متصفح سفاري.</li>
+      <li data-ar="اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»." data-en="Tap Share, then “Add to Home Screen”.">اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».</li>
+      <li data-ar="افتح التطبيق دائماً من الأيقونة الجديدة." data-en="Always open the app from the new icon.">افتح التطبيق دائماً من الأيقونة الجديدة.</li></ol>
+    <a class="btn alt" href="https://app.petrokima-hr.com/" data-ar="فتح التطبيق على آيفون" data-en="Open the app on iPhone">فتح التطبيق على آيفون</a></div>
+  <div class="card"><h2>🔑 <span data-ar="أول تسجيل دخول" data-en="First sign-in">أول تسجيل دخول</span></h2>
+    <p data-ar="كود الموظف + كلمة المرور الأولى: Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191). بعدها اختر كلمة مرور خاصة بك."
+       data-en="Employee code + first password: Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191). Then choose your own password.">كود الموظف + كلمة المرور الأولى: Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191). بعدها اختر كلمة مرور خاصة بك.</p></div>
+  <p style="text-align:center;color:var(--muted);font-size:13px" data-ar="الإصدار 1.0.13" data-en="Version 1.0.13">الإصدار 1.0.13</p>
+</main>
+<script>
+  let L = 'ar';
+  function sw(){ L = L === 'ar' ? 'en' : 'ar'; document.documentElement.lang = L; document.documentElement.dir = L === 'ar' ? 'rtl' : 'ltr';
+    document.querySelectorAll('[data-ar]').forEach(e => e.textContent = e.dataset[L]); document.querySelector('.lang').textContent = L === 'ar' ? 'English' : 'العربية'; }
+</script>
+</body></html>
