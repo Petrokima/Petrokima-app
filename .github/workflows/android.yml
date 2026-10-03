@@ -58,6 +58,7 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           APP_BUILD: ${{ github.run_number }}
           APK_REPO: ${{ github.repository }}
+          APK_DOWNLOAD: ${{ vars.DOWNLOAD_DOMAIN && format('https://{0}/Petrokima.apk', vars.DOWNLOAD_DOMAIN) || '' }}
         run: node scripts/prepare-web.js
 
       - name: Create the Android project
@@ -94,6 +95,27 @@ jobs:
 
       - name: Name the file
         run: cp android/app/build/outputs/apk/release/app-release.apk Petrokima.apk
+
+      - name: Build the download page
+        run: |
+          mkdir -p site
+          cp Petrokima.apk site/Petrokima.apk
+          PAGE=$(ls download-page.html download/download-page.html 2>/dev/null | head -1)
+          if [ -z "$PAGE" ]; then echo "::error::download-page.html is missing from the repository"; exit 1; fi
+          sed -e "s#__APP_URL__#${APP_URL:-https://petrokima.github.io/hr/}#g" -e "s#__VERSION__#1.0.${{ github.run_number }}#g" "$PAGE" > site/index.html
+          cp web/icon-192.png site/icon-192.png 2>/dev/null || true
+          if [ -n "${DOWNLOAD_DOMAIN}" ]; then echo "${DOWNLOAD_DOMAIN}" > site/CNAME; fi
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          DOWNLOAD_DOMAIN: ${{ vars.DOWNLOAD_DOMAIN }}
+
+      - name: Publish the download page (GitHub Pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
 
       - name: Publish the download
         uses: softprops/action-gh-release@v2
