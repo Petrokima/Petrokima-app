@@ -128,6 +128,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
   <div class="logo">PK</div><h1 data-t="firstTitle"></h1><div class="sub" data-t="firstSub"></div>
   <div class="card" style="margin-top:22px">
     <div class="hint" data-t="firstMustChange" style="margin-bottom:10px"></div>
+    <div class="field"><label data-t="birthYear"></label><input id="fl-year" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1988" style="direction:ltr;text-align:center;letter-spacing:6px;font-size:20px"></div>
     <div class="field"><label data-t="newPass"></label><input id="fl-p1" type="password" autocomplete="new-password"></div>
     <div class="field"><label data-t="repeatPass"></label><input id="fl-p2" type="password" autocomplete="new-password"></div>
     <button class="btn" id="fl-go" data-t="savePass"></button>
@@ -275,7 +276,7 @@ const T = {
   badDevice:'This phone could not be identified. Close the app and open it again.',
   phoneReg:'Registered phone',thisPhone:'This phone is registered to you',back:'Back',
   locTitle:'Location is required',locDenied:'Check-in needs your location, and this phone is not sharing it with Petrokima.',
-  locIos:'iPhone — check both:\n1. Settings → Privacy & Security → Location Services → ON → “Safari Websites” → “While Using the App”.\n2. Settings → Apps → Safari → Settings for Websites → Location → set petrokima.github.io (and “Other Websites”) to Allow or Ask.\nThen close Petrokima completely (swipe it away) and open it again. Still blocked? Ask HR — the app may need to be added to the home screen again.',
+  locIos:'iPhone — check both:\n1. Settings → Privacy & Security → Location Services → ON → “Safari Websites” → “While Using the App”.\n2. Settings → Apps → Safari → Settings for Websites → Location → set app.petrokima-hr.com (and “Other Websites”) to Allow or Ask.\nThen close Petrokima completely (swipe it away) and open it again. Still blocked? Ask HR — the app may need to be added to the home screen again.',
   locAndroid:'Android: open the phone Settings → Location → turn it ON. Then in Chrome tap ⋮ → Settings → Site settings → Location → allow this site (or long-press the Petrokima icon → App info → Permissions → Location → Allow).',
   locTimeout:'Your location could not be found. Move near a window or outside, wait a few seconds and try again.',tryAgain:'Try again',
   queued:'Saved on your phone ✓ — it will be sent automatically as soon as the connection works',sending:'Sending…',
@@ -286,7 +287,7 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',firstHint:'First time? Your password is Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191).',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',birthYear:'Your year of birth',yearWrong:'The year of birth does not match our records ({n} left).',acctLockedYear:'Too many wrong answers — your account is locked. Ask HR to reset it.',needYear:'Enter the year you were born (4 digits, e.g. 1988).',firstHint:'First time? Your password is Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191).',
   payLockTitle:'Your payslips are protected',payLockSub:'Enter your password to view them.',payUnlock:'Show my payslips',payWrongPass:'Wrong password',payNeedNet:'Connect to the internet to view your payslips.',payLock:'🔒 Lock',
   firstMustChange:'Choose your own password now. It must be at least 8 characters and different from Petro@….',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
   teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
@@ -350,7 +351,7 @@ const T = {
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
   phoneReg:'الهاتف المسجّل',thisPhone:'هذا الهاتف مسجّل باسمك',back:'رجوع',
   locTitle:'تحديد الموقع مطلوب',locDenied:'تسجيل الحضور يتطلب موقعك، وهذا الهاتف لا يشارك موقعه مع تطبيق بتروكيما.',
-  locIos:'آيفون — راجع الإعدادين:\n١. الإعدادات ← الخصوصية والأمان ← خدمات الموقع ← تشغيل ← «مواقع سفاري» ← «أثناء استخدام التطبيق».\n٢. الإعدادات ← التطبيقات ← سفاري ← إعدادات المواقع ← الموقع ← اجعل petrokima.github.io (و«مواقع أخرى») على «السماح» أو «السؤال».\nثم أغلق بتروكيما تماماً (اسحبه لأعلى) وافتحه مرة أخرى. ما زال محظوراً؟ تواصل مع الموارد البشرية — قد يلزم إضافة التطبيق إلى الشاشة الرئيسية من جديد.',
+  locIos:'آيفون — راجع الإعدادين:\n١. الإعدادات ← الخصوصية والأمان ← خدمات الموقع ← تشغيل ← «مواقع سفاري» ← «أثناء استخدام التطبيق».\n٢. الإعدادات ← التطبيقات ← سفاري ← إعدادات المواقع ← الموقع ← اجعل app.petrokima-hr.com (و«مواقع أخرى») على «السماح» أو «السؤال».\nثم أغلق بتروكيما تماماً (اسحبه لأعلى) وافتحه مرة أخرى. ما زال محظوراً؟ تواصل مع الموارد البشرية — قد يلزم إضافة التطبيق إلى الشاشة الرئيسية من جديد.',
   locAndroid:'أندرويد: افتح إعدادات الهاتف ← الموقع ← شغّله. ثم في كروم اضغط ⋮ ← الإعدادات ← إعدادات المواقع ← الموقع ← اسمح لهذا الموقع (أو اضغط مطولاً على أيقونة بتروكيما ← معلومات التطبيق ← الأذونات ← الموقع ← سماح).',
   locTimeout:'تعذّر تحديد موقعك. اقترب من نافذة أو اخرج إلى مكان مفتوح، انتظر قليلاً ثم حاول مرة أخرى.',tryAgain:'حاول مرة أخرى',
   queued:'تم الحفظ على هاتفك ✓ — سيتم الإرسال تلقائياً فور عودة الاتصال',sending:'جارٍ الإرسال…',
@@ -361,7 +362,7 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',firstHint:'أول مرة؟ كلمة المرور هي Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191).',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',birthYear:'سنة ميلادك',yearWrong:'سنة الميلاد غير مطابقة لسجلاتنا (متبقٍ {n} محاولات).',acctLockedYear:'تجاوزت عدد المحاولات — تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',needYear:'أدخل سنة ميلادك (٤ أرقام، مثال: 1988).',firstHint:'أول مرة؟ كلمة المرور هي Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191).',
   payLockTitle:'مفرداتك محمية',payLockSub:'أدخل كلمة المرور لعرضها.',payUnlock:'عرض مفرداتي',payWrongPass:'كلمة المرور غير صحيحة',payNeedNet:'اتصل بالإنترنت لعرض مفرداتك.',payLock:'🔒 قفل',
   firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن Petro@….',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
@@ -414,6 +415,8 @@ function closeSheet(){ $('sheet').classList.remove('on'); }
 function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
 function friendly(msg){
   msg = String(msg||'');
+  if (/year of birth does not match/i.test(msg)) return t('yearWrong', { n: (msg.match(/\((\d+)/) || [])[1] || '' });
+  if (/Too many wrong answers|account is (now )?locked/i.test(msg)) return t('acctLockedYear');
   if (/NOT_ASSIGNED/.test(msg)) return t('notAssigned');
   if (/LATE_REQUEST/.test(msg)) return t('lateReqErr', { time: (msg.match(/before (\d\d:\d\d)/) || [])[1] || lateDeadline() });
   if (/ADVANCE_NOTICE/.test(msg)) return t('annualNoticeErr', { n: Number(S.annualNoticeDays) || 1 });
@@ -530,7 +533,7 @@ async function afterLogin(user){
   if (!me.active) return message(t('inactive'));
   if (!me.emp_id) return message(t('notLinked'));
   APP.me = me;
-  if (me.must_change_password){ ['fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
+  if (me.must_change_password){ ['fl-year','fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
   const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
   if (regErr || !['ok','registered'].includes(reg)){
     const txt = reg==='other_device' ? t('otherDevice') + '\n\n' + t('attemptLogged') : reg==='device_taken' ? t('deviceTaken') + '\n\n' + t('attemptLogged') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
@@ -542,14 +545,16 @@ async function afterLogin(user){
   APP.ready = true; renderAll(); flushQueue(); checkAppUpdate();
 }
 async function firstLogin(){
-  const a=$('fl-p1').value, b=$('fl-p2').value;
+  const yr=$('fl-year').value.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), a=$('fl-p1').value, b=$('fl-p2').value;
+  if (!/^\d{4}$/.test(yr)) return errBox('fl-err', t('needYear'));
   if (a.length < 8) return errBox('fl-err', t('short'));
   if (a !== b) return errBox('fl-err', t('nomatch'));
   if (a === tempPass) return errBox('fl-err', t('sameTemp'));
   const btn=$('fl-go'); btn.disabled=true;
-  const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:null, p_new_password:a });
+  const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:null, p_new_password:a, p_birth_year:yr });
   btn.disabled=false;
   if (error) return errBox('fl-err', friendly(error.message));
+  if (data !== 'ok' && /year of birth|wrong answers|year you were born/i.test(data)) return errBox('fl-err', friendly(data).replace(/^Enter the year.*$/, t('needYear')));
   if (data !== 'ok') return errBox('fl-err', /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data);
   tempPass=''; toast(t('passSet'));
   const { data: s } = await sb.auth.getSession(); await afterLogin(s.session.user);
