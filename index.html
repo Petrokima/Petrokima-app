@@ -161,6 +161,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
   <main>
     <!-- HOME -->
     <div class="view on" id="v-home">
+      <div id="bday-box"></div>
       <div class="card clock">
         <div class="time" id="clk-time">--:--</div>
         <div class="date" id="clk-date"></div>
@@ -179,11 +180,20 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <button class="btn" data-act="req-leave">🌴 <span data-t="reqLeave"></span></button>
         <button class="btn" data-act="req-perm">✋ <span data-t="reqPerm"></span></button>
         <button class="btn ghost" data-act="req-hr">📨 <span data-t="reqOther"></span></button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn ghost" data-act="fb-complaint">⚠️ <span data-t="complaint"></span></button><button class="btn ghost" data-act="fb-suggestion">💡 <span data-t="suggestion"></span></button></div>
       </div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div class="list" id="req-list"></div></div>
+      <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
     </div>
+    <!-- NEWS: announcements & decisions -->
+    <div class="view" id="v-news"><div class="card"><div class="sec" data-t="newsTitle"></div><div class="list" id="news-list"></div></div></div>
     <!-- TEAM APPROVALS (managers) -->
-    <div class="view" id="v-team"><div class="card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
+    <div class="view" id="v-team">
+      <div class="card" id="inbox-card" style="display:none"><div class="sec" data-t="inboxTitle"></div><div class="list" id="inbox-list"></div></div>
+      <div class="card" id="treq-card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
+      <div class="card" id="mreq-card" style="display:none"><div class="sec" data-t="hrReqTitle"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><button class="btn ghost" data-act="req-hire">👥 <span data-t="reqHire"></span></button><button class="btn ghost" data-act="req-train">🎓 <span data-t="reqTrain"></span></button></div>
+        <div class="list" id="mreq-list"></div></div>
       <div class="card" id="tproj-card" style="display:none"><div class="sec" data-t="teamProj"></div><div class="hint" data-t="teamProjNote"></div><div class="list" id="tproj-list"></div></div>
       <div class="card"><div class="sec" data-t="teamTitle"></div><div class="hint" data-t="teamNote"></div><div class="list" id="team-list"></div></div></div>
     <!-- PAYSLIPS -->
@@ -201,6 +211,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
   <nav class="tabbar">
     <button class="tab on" data-view="home"><span class="ic">⏱</span><span data-t="home"></span></button>
     <button class="tab" data-view="req"><span class="ic">📋</span><span data-t="requests"></span></button>
+    <button class="tab" data-view="news" style="position:relative"><span class="ic">📢</span><span data-t="news"></span><span id="news-badge" style="display:none;position:absolute;top:2px;inset-inline-end:14px;background:#d64545;color:#fff;border-radius:9px;font-size:10px;padding:1px 6px"></span></button>
     <button class="tab" data-view="team" id="tab-team" style="display:none;position:relative"><span class="ic">✅</span><span data-t="approvals"></span><span id="team-badge" style="display:none;position:absolute;top:2px;inset-inline-end:14px;background:var(--danger);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px"></span></button>
     <button class="tab" data-view="pay"><span class="ic">💰</span><span data-t="payslips"></span></button>
     <button class="tab" data-view="prof"><span class="ic">👤</span><span data-t="profile"></span></button>
@@ -287,7 +298,14 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',birthYear:'Your year of birth',yearWrong:'The year of birth does not match our records ({n} left).',acctLockedYear:'Too many wrong answers — your account is locked. Ask HR to reset it.',needYear:'Enter the year you were born (4 digits, e.g. 1988).',firstHint:'First time? Your password is Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191).',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',news:'News',newsTitle:'Announcements & decisions',noNews:'No announcements yet',annKind:'Announcement',decKind:'Administrative decision',openAtt:'Open attachment',
+  bday:'Petrokima family wishes you a happy birthday 🎉',bdaySub:'Wishing you a wonderful year ahead.',
+  complaint:'Complaint',suggestion:'Suggestion',fbNote:'Seen only by HR and the board member.',subject:'Subject',myFeedback:'My complaints & suggestions',noFeedback:'Nothing sent yet',
+  fbSent:'Sent to HR and the board member ✓',needSubject:'Write a subject and the details',reply:'Reply',
+  hrReqTitle:'Requests to HR',reqHire:'Request new employees',reqTrain:'Request training',howMany:'Number of employees',jobName:'Job name',jobDesc:'Job description',
+  neededBy:'Needed by (optional)',notes:'Notes (optional)',needJob:'Job name and job description are required',topic:'Training topic',whoTrain:'Who needs the training',
+  prefDate:'Preferred date (optional)',needTrain:'Choose at least one employee and write the training topic',sentHR:'Sent to HR ✓',noMgrReq:'No requests sent yet',
+  hireLine:'{n} × {job}',trainLine:'{topic} — {n} employee(s)',inboxTitle:'📥 Complaints & suggestions',noInbox:'Nothing received',status:'Status',saveReply:'Save',from:'From',birthYear:'Your year of birth',yearWrong:'The year of birth does not match our records ({n} left).',acctLockedYear:'Too many wrong answers — your account is locked. Ask HR to reset it.',needYear:'Enter the year you were born (4 digits, e.g. 1988).',firstHint:'First time? Your password is Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191).',
   payLockTitle:'Your payslips are protected',payLockSub:'Enter your password to view them.',payUnlock:'Show my payslips',payWrongPass:'Wrong password',payNeedNet:'Connect to the internet to view your payslips.',payLock:'🔒 Lock',
   firstMustChange:'Choose your own password now. It must be at least 8 characters and different from Petro@….',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
   teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
@@ -362,7 +380,14 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',birthYear:'سنة ميلادك',yearWrong:'سنة الميلاد غير مطابقة لسجلاتنا (متبقٍ {n} محاولات).',acctLockedYear:'تجاوزت عدد المحاولات — تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',needYear:'أدخل سنة ميلادك (٤ أرقام، مثال: 1988).',firstHint:'أول مرة؟ كلمة المرور هي Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191).',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',news:'الأخبار',newsTitle:'الإعلانات والقرارات',noNews:'لا توجد إعلانات بعد',annKind:'إعلان',decKind:'قرار إداري',openAtt:'فتح المرفق',
+  bday:'عائلة بتروكيما تتمنى لك عيد ميلاد سعيد 🎉',bdaySub:'نتمنى لك عاماً رائعاً.',
+  complaint:'شكوى',suggestion:'اقتراح',fbNote:'لا يطّلع عليها إلا الموارد البشرية وعضو مجلس الإدارة.',subject:'الموضوع',myFeedback:'شكاواي واقتراحاتي',noFeedback:'لم ترسل شيئاً بعد',
+  fbSent:'تم الإرسال إلى الموارد البشرية وعضو مجلس الإدارة ✓',needSubject:'اكتب الموضوع والتفاصيل',reply:'الرد',
+  hrReqTitle:'طلبات إلى الموارد البشرية',reqHire:'طلب تعيين موظفين جدد',reqTrain:'طلب تدريب',howMany:'عدد الموظفين',jobName:'المسمى الوظيفي',jobDesc:'الوصف الوظيفي',
+  neededBy:'مطلوب قبل (اختياري)',notes:'ملاحظات (اختياري)',needJob:'المسمى الوظيفي والوصف الوظيفي مطلوبان',topic:'موضوع التدريب',whoTrain:'من يحتاج التدريب',
+  prefDate:'التاريخ المفضل (اختياري)',needTrain:'اختر موظفاً واحداً على الأقل واكتب موضوع التدريب',sentHR:'تم الإرسال إلى الموارد البشرية ✓',noMgrReq:'لم ترسل طلبات بعد',
+  hireLine:'{n} × {job}',trainLine:'{topic} — {n} موظف',inboxTitle:'📥 الشكاوى والاقتراحات',noInbox:'لا يوجد شيء',status:'الحالة',saveReply:'حفظ',from:'من',birthYear:'سنة ميلادك',yearWrong:'سنة الميلاد غير مطابقة لسجلاتنا (متبقٍ {n} محاولات).',acctLockedYear:'تجاوزت عدد المحاولات — تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',needYear:'أدخل سنة ميلادك (٤ أرقام، مثال: 1988).',firstHint:'أول مرة؟ كلمة المرور هي Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191).',
   payLockTitle:'مفرداتك محمية',payLockSub:'أدخل كلمة المرور لعرضها.',payUnlock:'عرض مفرداتي',payWrongPass:'كلمة المرور غير صحيحة',payNeedNet:'اتصل بالإنترنت لعرض مفرداتك.',payLock:'🔒 قفل',
   firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن Petro@….',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
@@ -567,7 +592,7 @@ async function signOut(){ try { await sb.auth.signOut(); } catch(e){} APP.ready=
 async function loadAll(){
   const id = APP.me.emp_id;
   const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt] = await Promise.all([
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday] = await Promise.all([
     all(sb.from('settings').select('*').eq('key','payroll')),
     all(sb.from('public_holidays').select('date')),
     all(sb.from('employees').select('*').eq('id', id)),
@@ -580,10 +605,19 @@ async function loadAll(){
     all(sb.from('employee_leaves').select('*').eq('manager_id', id).order('date_from', { ascending:false }).limit(60)),
     all(sb.from('attendance_permissions').select('*').eq('manager_id', id).order('date', { ascending:false }).limit(60)),
     sb.rpc('my_projects').then(r => r.data || [], () => []),
-    sb.rpc('my_team').then(r => r.data || [], () => []) ]);
+    sb.rpc('my_team').then(r => r.data || [], () => []),
+    all(sb.from('announcements').select('*').order('created_at', { ascending:false }).limit(60)),
+    all(sb.from('announcement_reads').select('ann_id').eq('emp_id', id)),
+    all(sb.from('feedback').select('*').order('created_at', { ascending:false }).limit(200)),
+    all(sb.from('hiring_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
+    all(sb.from('training_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
+    sb.rpc('my_birthday_today').then(r => !!r.data, () => false) ]);
   if (set[0] && set[0].value) S = { ...S, ...set[0].value };
   HOL = new Set(hol.map(h => h.date));
   APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
+  APP.news = ann || []; APP.newsRead = new Set((rd || []).map(x => x.ann_id)); APP.birthday = !!bday;
+  APP.myFeedback = (fb || []).filter(x => x.emp_id === id); APP.inbox = APP.me.receives_feedback ? (fb || []).filter(x => x.emp_id !== id) : [];
+  APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
   await loadStatus();
 }
@@ -610,6 +644,7 @@ function tick(){
   if (o && el && m !== null){ const dayOff = Math.round((dObj(APP.status.date) - dObj(o.date))/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
 }
 function renderHome(){
+  $('bday-box').innerHTML = birthdayCard();
   const st = APP.status || {}, o = st.open;
   $('clk-upd').textContent = APP.updatedAt ? t('updated', { t: new Date(APP.updatedAt).toLocaleTimeString(loc(), { hour:'2-digit', minute:'2-digit' }) }) : '';
   $('clk-date').textContent = st.date ? dObj(st.date).toLocaleDateString(loc(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '';
@@ -986,7 +1021,8 @@ function renderTeam(){
   const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
   const reqs = (APP.teamReq||[]).slice().sort((a,b) => (reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1));
   const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
-  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length) ? '' : 'none';
+  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback) ? '' : 'none';
+  $('treq-card').style.display = (team.length || reqs.length || (APP.myTeam||[]).length) ? '' : 'none';
   $('tproj-card').style.display = (APP.myTeam||[]).length ? '' : 'none';
   $('tproj-list').innerHTML = (APP.myTeam||[]).map(m => `<div class="it"><div class="grow"><div class="t1">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></div>
       <div class="t2">${esc(m.job_name || '')}</div><div class="t2">${m.projects ? '📌 ' + esc(t('projectsN', { n: m.projects })) : esc(t('noProjAssigned'))}</div></div>
@@ -1066,8 +1102,121 @@ async function checkAppUpdate(){
 function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
   $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
   $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
-  renderHome(); renderRequests(); renderTeam(); renderPayslips(); renderProfile(); }
-function go(view){ if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+  renderHome(); renderRequests(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
+// ═════════════════════════════════════════════════════════
+//  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
+// ═════════════════════════════════════════════════════════
+const dShort = ts => ts ? new Date(ts).toLocaleDateString(LANG==='ar' ? 'ar-EG' : 'en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+const stLbl = s => ({ New:{en:'New',ar:'جديد'}, 'In review':{en:'In review',ar:'قيد المراجعة'}, Closed:{en:'Closed',ar:'مغلق'}, 'In progress':{en:'In progress',ar:'جارٍ التنفيذ'}, Done:{en:'Done',ar:'تم'}, Rejected:{en:'Rejected',ar:'مرفوض'} }[s] || {en:s,ar:s})[LANG==='ar'?'ar':'en'];
+const stChip = s => `<span class="chip ${({New:'c-orange','In review':'c-blue','In progress':'c-blue',Closed:'c-green',Done:'c-green',Rejected:'c-red'})[s]||'c-grey'}">${esc(stLbl(s))}</span>`;
+function renderNews(){
+  const L = APP.news || [], unread = L.filter(a => !APP.newsRead.has(a.id)).length;
+  $('news-badge').style.display = unread ? '' : 'none'; $('news-badge').textContent = unread;
+  $('news-list').innerHTML = L.map(a => `<div class="it" style="display:block${APP.newsRead.has(a.id) ? '' : ';border-inline-start:4px solid #d64545'}">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span class="chip ${a.kind==='decision'?'c-blue':'c-green'}">${a.kind==='decision' ? '📜 ' + esc(t('decKind')) : '📢 ' + esc(t('annKind'))}</span><span class="muted" style="font-size:12px">${esc(dShort(a.created_at))}</span></div>
+      <div class="t1">${esc(a.title)}</div>${a.body ? `<div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(a.body)}</div>` : ''}
+      ${a.attachment_path ? `<button class="btn ghost small" style="margin-top:8px" data-att="${esc(a.attachment_path)}">📎 ${esc(t('openAtt'))} — ${esc(a.attachment_name || '')}</button>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noNews'))}</div>`;
+}
+async function markNewsRead(){
+  const unread = (APP.news || []).filter(a => !APP.newsRead.has(a.id)); if (!unread.length || !navigator.onLine) return;
+  unread.forEach(a => APP.newsRead.add(a.id)); renderNews();
+  await sb.from('announcement_reads').insert(unread.map(a => ({ ann_id:a.id, emp_id:APP.me.emp_id }))).then(() => {}, () => {});
+}
+async function openAttachment(path){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { data, error } = await sb.storage.from('announcements').createSignedUrl(path, 600);
+  if (error || !data) return toast(friendly(error ? error.message : 'Not allowed'), true);
+  window.open(data.signedUrl, '_blank');
+}
+function birthdayCard(){
+  return APP.birthday ? `<div class="card" style="background:linear-gradient(135deg,#ee2624,#b4151a);color:#fff;text-align:center;padding:22px 16px">
+      <div style="font-size:44px">🎂</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.5">${esc(t('bday'))}</div><div style="opacity:.9;margin-top:4px">${esc(t('bdaySub'))}</div></div>` : '';
+}
+function renderVoice(){
+  const fb = APP.myFeedback || [];
+  $('fb-card').style.display = fb.length ? '' : 'none';
+  $('fb-list').innerHTML = fb.map(f => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
+      <div class="t2">${esc(dShort(f.created_at))}</div>${f.reply ? `<div class="t2" style="margin-top:6px;background:rgba(31,79,181,.08);padding:8px;border-radius:8px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('');
+  const mgr = (APP.myTeam || []).length > 0;
+  $('mreq-card').style.display = mgr ? '' : 'none';
+  $('mreq-list').innerHTML = (APP.mgrReqs || []).map(({kind, r}) => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
+      <div class="t1">${kind==='hire' ? '👥 ' + esc(t('hireLine', { n:r.headcount, job:r.job_name })) : '🎓 ' + esc(t('trainLine', { topic:r.topic, n:(r.emp_ids||[]).length }))}</div>${stChip(r.status)}</div>
+      <div class="t2">${esc(dShort(r.created_at))}</div>${r.hr_note ? `<div class="t2" style="margin-top:6px"><b>HR:</b> ${esc(r.hr_note)}</div>` : ''}</div>`).join('') || (mgr ? `<div class="empty">${esc(t('noMgrReq'))}</div>` : '');
+  const inbox = APP.inbox || [];
+  $('inbox-card').style.display = APP.me.receives_feedback ? '' : 'none';
+  $('inbox-list').innerHTML = inbox.map(f => `<div class="it" style="display:block" data-inbox="${esc(f.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
+      <div class="t2">${esc(t('from'))}: ${esc(f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id)} · ${esc(dShort(f.created_at))}</div><div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(f.body)}</div>
+      ${f.reply ? `<div class="t2" style="margin-top:6px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noInbox'))}</div>`;
+}
+function feedbackSheet(kind){
+  sheet(`<h2>${kind==='complaint'?'⚠️ ' + esc(t('complaint')):'💡 ' + esc(t('suggestion'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('fbNote'))}</div>
+    <div class="field"><label>${esc(t('subject'))}</label><input id="fb-s" maxlength="120"></div>
+    <div class="field"><label>${esc(t('details'))}</label><textarea id="fb-b" rows="5"></textarea></div>
+    <button class="btn" id="fb-go">${esc(t('send'))}</button>`);
+  $('fb-go').onclick = async () => {
+    const sj = $('fb-s').value.trim(), bd = $('fb-b').value.trim(); if (!sj || !bd) return toast(t('needSubject'), true);
+    if (!navigator.onLine) return toast(t('offline'), true);
+    $('fb-go').disabled = true; const { data, error } = await sb.from('feedback').insert({ kind, emp_id:APP.me.emp_id, subject:sj, body:bd }).select(); $('fb-go').disabled = false;
+    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+    closeSheet(); toast(t('fbSent')); APP.myFeedback = [data[0], ...(APP.myFeedback || [])]; renderVoice();
+  };
+}
+function hireSheet(){
+  sheet(`<h2>👥 ${esc(t('reqHire'))}</h2>
+    <div class="field"><label>${esc(t('howMany'))}</label><input id="hr-n" type="number" min="1" max="100" value="1" inputmode="numeric"></div>
+    <div class="field"><label>${esc(t('jobName'))} *</label><input id="hr-j" maxlength="120"></div>
+    <div class="field"><label>${esc(t('jobDesc'))} *</label><textarea id="hr-d" rows="5"></textarea></div>
+    <div class="field"><label>${esc(t('neededBy'))}</label><input id="hr-by" type="date"></div>
+    <div class="field"><label>${esc(t('notes'))}</label><textarea id="hr-x" rows="2"></textarea></div>
+    <button class="btn" id="hr-go">${esc(t('send'))}</button>`);
+  $('hr-go').onclick = async () => {
+    const n = parseInt($('hr-n').value, 10), j = $('hr-j').value.trim(), d = $('hr-d').value.trim();
+    if (!j || !d) return toast(t('needJob'), true); if (!(n >= 1 && n <= 100)) return toast(t('howMany'), true);
+    if (!navigator.onLine) return toast(t('offline'), true);
+    $('hr-go').disabled = true;
+    const { data, error } = await sb.from('hiring_requests').insert({ manager_emp:APP.me.emp_id, headcount:n, job_name:j, job_description:d, needed_by:$('hr-by').value || null, notes:$('hr-x').value.trim() || null }).select();
+    $('hr-go').disabled = false;
+    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+    closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'hire', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
+  };
+}
+function trainSheet(){
+  const team = APP.myTeam || [];
+  sheet(`<h2>🎓 ${esc(t('reqTrain'))}</h2>
+    <div class="field"><label>${esc(t('whoTrain'))}</label><div style="max-height:200px;overflow:auto;border:1px solid var(--line,#ddd);border-radius:10px;padding:6px">${team.map(m => `<label style="display:flex;gap:8px;align-items:center;padding:6px 4px"><input type="checkbox" data-tr="${esc(m.id)}"> ${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></label>`).join('')}</div></div>
+    <div class="field"><label>${esc(t('topic'))} *</label><input id="tr-t" maxlength="150"></div>
+    <div class="field"><label>${esc(t('details'))}</label><textarea id="tr-d" rows="3"></textarea></div>
+    <div class="field"><label>${esc(t('prefDate'))}</label><input id="tr-dt" type="date"></div>
+    <button class="btn" id="tr-go">${esc(t('send'))}</button>`);
+  $('tr-go').onclick = async () => {
+    const ids = [...document.querySelectorAll('[data-tr]:checked')].map(c => c.dataset.tr), tp = $('tr-t').value.trim();
+    if (!ids.length || !tp) return toast(t('needTrain'), true); if (!navigator.onLine) return toast(t('offline'), true);
+    $('tr-go').disabled = true;
+    const { data, error } = await sb.from('training_requests').insert({ manager_emp:APP.me.emp_id, emp_ids:ids, topic:tp, details:$('tr-d').value.trim() || null, preferred_date:$('tr-dt').value || null }).select();
+    $('tr-go').disabled = false;
+    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+    closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'train', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
+  };
+}
+function inboxSheet(id){
+  const f = (APP.inbox || []).find(x => x.id === id); if (!f) return;
+  sheet(`<h2>${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</h2><div class="hint">${esc(t('from'))}: ${esc(f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id)} · ${esc(dShort(f.created_at))}</div>
+    <div class="t2" style="white-space:pre-wrap;margin:10px 0">${esc(f.body)}</div>
+    <div class="field"><label>${esc(t('status'))}</label><select id="ib-s">${['New','In review','Closed'].map(s => `<option value="${s}" ${s===f.status?'selected':''}>${esc(stLbl(s))}</option>`).join('')}</select></div>
+    <div class="field"><label>${esc(t('reply'))}</label><textarea id="ib-r" rows="4">${esc(f.reply || '')}</textarea></div>
+    <button class="btn" id="ib-go">${esc(t('saveReply'))}</button>`);
+  $('ib-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const { data, error } = await sb.from('feedback').update({ status:$('ib-s').value, reply:$('ib-r').value.trim() || null }).eq('id', id).select();
+    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+    Object.assign(f, data[0]); closeSheet(); toast('✓'); renderVoice();
+  };
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-att]'); if (a) return openAttachment(a.dataset.att);
+  const ib = e.target.closest('[data-inbox]'); if (ib) return inboxSheet(ib.dataset.inbox);
+});
+function go(view){ if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP
@@ -1111,6 +1260,10 @@ document.addEventListener('click', async ev => {
   if (act==='req-leave') return leaveSheet();
   if (act==='req-perm') return permSheet();
   if (act==='req-hr') return hrSheet();
+  if (act==='fb-complaint') return feedbackSheet('complaint');
+  if (act==='fb-suggestion') return feedbackSheet('suggestion');
+  if (act==='req-hire') return hireSheet();
+  if (act==='req-train') return trainSheet();
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
