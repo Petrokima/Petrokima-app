@@ -189,10 +189,12 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     <div class="view" id="v-news"><div class="card"><div class="sec" data-t="newsTitle"></div><div class="list" id="news-list"></div></div></div>
     <!-- TEAM APPROVALS (managers) -->
     <div class="view" id="v-team">
+      <div class="card" id="board-card" style="display:none"><div class="sec" data-t="boardTitle"></div><div class="list" id="board-list"></div></div>
       <div class="card" id="inbox-card" style="display:none"><div class="sec" data-t="inboxTitle"></div><div class="list" id="inbox-list"></div></div>
       <div class="card" id="treq-card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
       <div class="card" id="mreq-card" style="display:none"><div class="sec" data-t="hrReqTitle"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><button class="btn ghost" data-act="req-hire">👥 <span data-t="reqHire"></span></button><button class="btn ghost" data-act="req-train">🎓 <span data-t="reqTrain"></span></button></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><button class="btn ghost" data-act="req-hire">👥 <span data-t="reqHire"></span></button><button class="btn ghost" data-act="req-train">🎓 <span data-t="reqTrain"></span></button>
+          <button class="btn ghost" data-act="req-penalty">⚖️ <span data-t="reqPenalty"></span></button><button class="btn ghost" data-act="req-incentive">🏅 <span data-t="reqIncentive"></span></button></div>
         <div class="list" id="mreq-list"></div></div>
       <div class="card" id="tproj-card" style="display:none"><div class="sec" data-t="teamProj"></div><div class="hint" data-t="teamProjNote"></div><div class="list" id="tproj-list"></div></div>
       <div class="card"><div class="sec" data-t="teamTitle"></div><div class="hint" data-t="teamNote"></div><div class="list" id="team-list"></div></div></div>
@@ -298,7 +300,13 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',news:'News',newsTitle:'Announcements & decisions',noNews:'No announcements yet',annKind:'Announcement',decKind:'Administrative decision',openAtt:'Open attachment',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',anonymous:'Anonymous',sendAnon:'Send anonymously — HR and the board member will not see your name',anonMine:'🕶 Sent anonymously',
+  reqPenalty:'Request a penalty',reqIncentive:'Request an incentive',employee:'Employee',penType:'Penalty type',penAmount:'Fixed amount (EGP)',penHours:'Hours of pay',penDays:'Days of pay',
+  quantity:'Quantity',incAmount:'Incentive amount (EGP)',payMonth:'Payroll month',incDate:'Date of the incident',reason:'Reason',needReason:'Choose the employee, enter the quantity and write the reason',
+  actFlow:'Goes to the board member for approval, then HR.',penLine:'⚖️ Penalty — {emp}: {q} {u}',incLine:'🏅 Incentive — {emp}: {q} EGP',u_Amount:'EGP',u_Hours:'hour(s)',u_Days:'day(s)',
+  cancelReq:'Cancel',cancelled:'Request cancelled',boardTitle:'⚖️ Penalties & incentives — your approval',noBoard:'Nothing waiting for your approval',
+  approve:'Approve',reject:'Reject',noteOpt:'Note (optional)',reqBy:'Requested by',stWB:'Waiting for board member',stWHR:'Waiting for HR',
+  agreeClose:'✔ Agree to close',closeNote:'Closing note (optional)',closedBoth:'Closed by HR and you',waitHrClose:'You agreed — waiting for HR to confirm',waitMgrClose:'HR wants to close it — confirm if you agree',news:'News',newsTitle:'Announcements & decisions',noNews:'No announcements yet',annKind:'Announcement',decKind:'Administrative decision',openAtt:'Open attachment',
   bday:'Petrokima family wishes you a happy birthday 🎉',bdaySub:'Wishing you a wonderful year ahead.',
   complaint:'Complaint',suggestion:'Suggestion',fbNote:'Seen only by HR and the board member.',subject:'Subject',myFeedback:'My complaints & suggestions',noFeedback:'Nothing sent yet',
   fbSent:'Sent to HR and the board member ✓',needSubject:'Write a subject and the details',reply:'Reply',
@@ -380,7 +388,13 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',news:'الأخبار',newsTitle:'الإعلانات والقرارات',noNews:'لا توجد إعلانات بعد',annKind:'إعلان',decKind:'قرار إداري',openAtt:'فتح المرفق',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',anonymous:'مجهول',sendAnon:'إرسال دون ذكر اسمي — لن تعرف الموارد البشرية ولا عضو مجلس الإدارة من أرسلها',anonMine:'🕶 أُرسلت دون ذكر الاسم',
+  reqPenalty:'طلب جزاء',reqIncentive:'طلب حافز',employee:'الموظف',penType:'نوع الجزاء',penAmount:'مبلغ ثابت (جنيه)',penHours:'ساعات من الأجر',penDays:'أيام من الأجر',
+  quantity:'الكمية',incAmount:'قيمة الحافز (جنيه)',payMonth:'شهر الرواتب',incDate:'تاريخ الواقعة',reason:'السبب',needReason:'اختر الموظف وأدخل الكمية واكتب السبب',
+  actFlow:'يُرسل إلى عضو مجلس الإدارة للموافقة ثم الموارد البشرية.',penLine:'⚖️ جزاء — {emp}: {q} {u}',incLine:'🏅 حافز — {emp}: {q} جنيه',u_Amount:'جنيه',u_Hours:'ساعة',u_Days:'يوم',
+  cancelReq:'إلغاء',cancelled:'تم إلغاء الطلب',boardTitle:'⚖️ الجزاءات والحوافز — بانتظار موافقتك',noBoard:'لا توجد طلبات بانتظار موافقتك',
+  approve:'موافقة',reject:'رفض',noteOpt:'ملاحظة (اختياري)',reqBy:'مقدم من',stWB:'بانتظار عضو مجلس الإدارة',stWHR:'بانتظار الموارد البشرية',
+  agreeClose:'✔ أوافق على الإغلاق',closeNote:'ملاحظة الإغلاق (اختياري)',closedBoth:'أُغلق بموافقة الموارد البشرية وموافقتك',waitHrClose:'وافقت — بانتظار تأكيد الموارد البشرية',waitMgrClose:'الموارد البشرية تطلب الإغلاق — أكّد إن كنت موافقاً',news:'الأخبار',newsTitle:'الإعلانات والقرارات',noNews:'لا توجد إعلانات بعد',annKind:'إعلان',decKind:'قرار إداري',openAtt:'فتح المرفق',
   bday:'عائلة بتروكيما تتمنى لك عيد ميلاد سعيد 🎉',bdaySub:'نتمنى لك عاماً رائعاً.',
   complaint:'شكوى',suggestion:'اقتراح',fbNote:'لا يطّلع عليها إلا الموارد البشرية وعضو مجلس الإدارة.',subject:'الموضوع',myFeedback:'شكاواي واقتراحاتي',noFeedback:'لم ترسل شيئاً بعد',
   fbSent:'تم الإرسال إلى الموارد البشرية وعضو مجلس الإدارة ✓',needSubject:'اكتب الموضوع والتفاصيل',reply:'الرد',
@@ -592,7 +606,7 @@ async function signOut(){ try { await sb.auth.signOut(); } catch(e){} APP.ready=
 async function loadAll(){
   const id = APP.me.emp_id;
   const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday] = await Promise.all([
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts] = await Promise.all([
     all(sb.from('settings').select('*').eq('key','payroll')),
     all(sb.from('public_holidays').select('date')),
     all(sb.from('employees').select('*').eq('id', id)),
@@ -608,16 +622,19 @@ async function loadAll(){
     sb.rpc('my_team').then(r => r.data || [], () => []),
     all(sb.from('announcements').select('*').order('created_at', { ascending:false }).limit(60)),
     all(sb.from('announcement_reads').select('ann_id').eq('emp_id', id)),
-    all(sb.from('feedback').select('*').order('created_at', { ascending:false }).limit(200)),
+    all(sb.from('feedback').select('*').eq('emp_id', id).order('created_at', { ascending:false }).limit(100)),
     all(sb.from('hiring_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
     all(sb.from('training_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
-    sb.rpc('my_birthday_today').then(r => !!r.data, () => false) ]);
+    sb.rpc('my_birthday_today').then(r => !!r.data, () => false),
+    APP.me.receives_feedback ? sb.rpc('feedback_inbox').then(r => r.data || [], () => []) : Promise.resolve([]),
+    all(sb.from('manager_actions').select('*').order('created_at', { ascending:false }).limit(100)) ]);
   if (set[0] && set[0].value) S = { ...S, ...set[0].value };
   HOL = new Set(hol.map(h => h.date));
   APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
   APP.news = ann || []; APP.newsRead = new Set((rd || []).map(x => x.ann_id)); APP.birthday = !!bday;
-  APP.myFeedback = (fb || []).filter(x => x.emp_id === id); APP.inbox = APP.me.receives_feedback ? (fb || []).filter(x => x.emp_id !== id) : [];
-  APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
+  APP.myFeedback = fb || []; APP.inbox = inbox || [];
+  APP.myActions = (acts || []).filter(a => a.manager_emp === id); APP.boardActions = APP.me.board_approver ? (acts || []).filter(a => a.manager_emp !== id && a.emp_id !== id) : [];
+  APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r })), ...(APP.myActions || []).map(r => ({ kind:'act', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
   await loadStatus();
 }
@@ -1021,7 +1038,7 @@ function renderTeam(){
   const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
   const reqs = (APP.teamReq||[]).slice().sort((a,b) => (reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1));
   const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
-  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback) ? '' : 'none';
+  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback || APP.me.board_approver) ? '' : 'none';
   $('treq-card').style.display = (team.length || reqs.length || (APP.myTeam||[]).length) ? '' : 'none';
   $('tproj-card').style.display = (APP.myTeam||[]).length ? '' : 'none';
   $('tproj-list').innerHTML = (APP.myTeam||[]).map(m => `<div class="it"><div class="grow"><div class="t1">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></div>
@@ -1107,8 +1124,8 @@ function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
 // ═════════════════════════════════════════════════════════
 const dShort = ts => ts ? new Date(ts).toLocaleDateString(LANG==='ar' ? 'ar-EG' : 'en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
-const stLbl = s => ({ New:{en:'New',ar:'جديد'}, 'In review':{en:'In review',ar:'قيد المراجعة'}, Closed:{en:'Closed',ar:'مغلق'}, 'In progress':{en:'In progress',ar:'جارٍ التنفيذ'}, Done:{en:'Done',ar:'تم'}, Rejected:{en:'Rejected',ar:'مرفوض'} }[s] || {en:s,ar:s})[LANG==='ar'?'ar':'en'];
-const stChip = s => `<span class="chip ${({New:'c-orange','In review':'c-blue','In progress':'c-blue',Closed:'c-green',Done:'c-green',Rejected:'c-red'})[s]||'c-grey'}">${esc(stLbl(s))}</span>`;
+const stLbl = s => ({ 'Waiting for board':{en:'Waiting for board member',ar:'بانتظار عضو مجلس الإدارة'}, 'Waiting for HR':{en:'Waiting for HR',ar:'بانتظار الموارد البشرية'}, Approved:{en:'Approved',ar:'تمت الموافقة'}, Cancelled:{en:'Cancelled',ar:'ملغي'}, New:{en:'New',ar:'جديد'}, 'In review':{en:'In review',ar:'قيد المراجعة'}, Closed:{en:'Closed',ar:'مغلق'}, 'In progress':{en:'In progress',ar:'جارٍ التنفيذ'}, Done:{en:'Done',ar:'تم'}, Rejected:{en:'Rejected',ar:'مرفوض'} }[s] || {en:s,ar:s})[LANG==='ar'?'ar':'en'];
+const stChip = s => `<span class="chip ${({'Waiting for board':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Cancelled:'c-grey',New:'c-orange','In review':'c-blue','In progress':'c-blue',Closed:'c-green',Done:'c-green',Rejected:'c-red'})[s]||'c-grey'}">${esc(stLbl(s))}</span>`;
 function renderNews(){
   const L = APP.news || [], unread = L.filter(a => !APP.newsRead.has(a.id)).length;
   $('news-badge').style.display = unread ? '' : 'none'; $('news-badge').textContent = unread;
@@ -1136,27 +1153,41 @@ function renderVoice(){
   const fb = APP.myFeedback || [];
   $('fb-card').style.display = fb.length ? '' : 'none';
   $('fb-list').innerHTML = fb.map(f => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
-      <div class="t2">${esc(dShort(f.created_at))}</div>${f.reply ? `<div class="t2" style="margin-top:6px;background:rgba(31,79,181,.08);padding:8px;border-radius:8px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('');
+      <div class="t2">${esc(dShort(f.created_at))}${f.anonymous ? ' · ' + esc(t('anonMine')) : ''}</div>${f.reply ? `<div class="t2" style="margin-top:6px;background:rgba(31,79,181,.08);padding:8px;border-radius:8px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('');
   const mgr = (APP.myTeam || []).length > 0;
   $('mreq-card').style.display = mgr ? '' : 'none';
   $('mreq-list').innerHTML = (APP.mgrReqs || []).map(({kind, r}) => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
-      <div class="t1">${kind==='hire' ? '👥 ' + esc(t('hireLine', { n:r.headcount, job:r.job_name })) : '🎓 ' + esc(t('trainLine', { topic:r.topic, n:(r.emp_ids||[]).length }))}</div>${stChip(r.status)}</div>
-      <div class="t2">${esc(dShort(r.created_at))}</div>${r.hr_note ? `<div class="t2" style="margin-top:6px"><b>HR:</b> ${esc(r.hr_note)}</div>` : ''}</div>`).join('') || (mgr ? `<div class="empty">${esc(t('noMgrReq'))}</div>` : '');
+      <div class="t1">${kind==='hire' ? '👥 ' + esc(t('hireLine', { n:r.headcount, job:r.job_name })) : kind==='train' ? '🎓 ' + esc(t('trainLine', { topic:r.topic, n:(r.emp_ids||[]).length }))
+        : esc(t(r.kind==='penalty' ? 'penLine' : 'incLine', { emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) }))}</div>${stChip(r.status)}</div>
+      <div class="t2">${esc(dShort(r.created_at))}${kind==='act' ? ' · ' + esc(r.apply_period) : ''}</div>${kind==='act' ? `<div class="t2">${esc(r.reason)}</div>` : ''}
+      ${r.board_note ? `<div class="t2" style="margin-top:4px"><b>${esc(r.board_by || '')}:</b> ${esc(r.board_note)}</div>` : ''}${r.hr_note ? `<div class="t2" style="margin-top:6px"><b>HR:</b> ${esc(r.hr_note)}</div>` : ''}
+      ${kind==='hire' && r.status !== 'Closed' && (r.hr_closed || r.mgr_closed) ? `<div class="t2" style="margin-top:4px">${esc(t(r.mgr_closed ? 'waitHrClose' : 'waitMgrClose'))}</div>` : ''}
+      ${kind==='hire' && r.status === 'Closed' ? `<div class="t2" style="margin-top:4px">✔ ${esc(t('closedBoth'))}</div>` : ''}
+      ${kind==='hire' && r.status !== 'Closed' && !r.mgr_closed ? `<button class="btn ghost small" style="margin-top:8px" data-close-hire="${esc(r.id)}">${esc(t('agreeClose'))}</button>` : ''}
+      ${kind==='act' && r.status === 'Waiting for board' ? `<button class="btn ghost small" style="margin-top:8px" data-cancel-act="${esc(r.id)}">${esc(t('cancelReq'))}</button>` : ''}</div>`).join('') || (mgr ? `<div class="empty">${esc(t('noMgrReq'))}</div>` : '');
+  const ba = APP.boardActions || [];
+  $('board-card').style.display = APP.me.board_approver ? '' : 'none';
+  const waitB = ba.filter(a => a.status === 'Waiting for board');
+  $('board-list').innerHTML = [...waitB, ...ba.filter(a => a.status !== 'Waiting for board').slice(0, 10)].map(a => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
+      <div class="t1">${esc(t(a.kind==='penalty' ? 'penLine' : 'incLine', { emp: a.emp_name || a.emp_id, q: a.quantity, u: t('u_' + a.action_type) }))}</div>${stChip(a.status)}</div>
+      <div class="t2">${esc(t('reqBy'))}: ${esc(a.manager_name || a.manager_emp)} · ${esc(a.apply_period)}</div><div class="t2">${esc(a.reason)}</div>
+      ${a.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-board="${esc(a.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-board="${esc(a.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noBoard'))}</div>`;
   const inbox = APP.inbox || [];
   $('inbox-card').style.display = APP.me.receives_feedback ? '' : 'none';
   $('inbox-list').innerHTML = inbox.map(f => `<div class="it" style="display:block" data-inbox="${esc(f.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
-      <div class="t2">${esc(t('from'))}: ${esc(f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id)} · ${esc(dShort(f.created_at))}</div><div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(f.body)}</div>
+      <div class="t2">${esc(t('from'))}: ${esc(f.anonymous ? '🕶 ' + t('anonymous') : (f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id))} · ${esc(dShort(f.created_at))}</div><div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(f.body)}</div>
       ${f.reply ? `<div class="t2" style="margin-top:6px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noInbox'))}</div>`;
 }
 function feedbackSheet(kind){
   sheet(`<h2>${kind==='complaint'?'⚠️ ' + esc(t('complaint')):'💡 ' + esc(t('suggestion'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('fbNote'))}</div>
     <div class="field"><label>${esc(t('subject'))}</label><input id="fb-s" maxlength="120"></div>
     <div class="field"><label>${esc(t('details'))}</label><textarea id="fb-b" rows="5"></textarea></div>
+    ${kind==='complaint' ? `<label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="fb-anon" style="margin-top:3px"> ${esc(t('sendAnon'))}</label>` : ''}
     <button class="btn" id="fb-go">${esc(t('send'))}</button>`);
   $('fb-go').onclick = async () => {
     const sj = $('fb-s').value.trim(), bd = $('fb-b').value.trim(); if (!sj || !bd) return toast(t('needSubject'), true);
     if (!navigator.onLine) return toast(t('offline'), true);
-    $('fb-go').disabled = true; const { data, error } = await sb.from('feedback').insert({ kind, emp_id:APP.me.emp_id, subject:sj, body:bd }).select(); $('fb-go').disabled = false;
+    $('fb-go').disabled = true; const { data, error } = await sb.from('feedback').insert({ kind, emp_id:APP.me.emp_id, subject:sj, body:bd, anonymous: !!($('fb-anon') && $('fb-anon').checked) }).select(); $('fb-go').disabled = false;
     if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
     closeSheet(); toast(t('fbSent')); APP.myFeedback = [data[0], ...(APP.myFeedback || [])]; renderVoice();
   };
@@ -1198,18 +1229,70 @@ function trainSheet(){
     closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'train', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
   };
 }
+function actionSheet(kind){
+  const team = APP.myTeam || [], per = (S.period || todayStr().slice(0,7));
+  sheet(`<h2>${kind==='penalty' ? '⚖️ ' + esc(t('reqPenalty')) : '🏅 ' + esc(t('reqIncentive'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('actFlow'))}</div>
+    <div class="field"><label>${esc(t('employee'))}</label><select id="ma-e"><option value=""></option>${team.map(m => `<option value="${esc(m.id)}">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} (${esc(m.id)})</option>`).join('')}</select></div>
+    ${kind==='penalty' ? `<div class="field"><label>${esc(t('penType'))}</label><select id="ma-t"><option value="Days">${esc(t('penDays'))}</option><option value="Hours">${esc(t('penHours'))}</option><option value="Amount">${esc(t('penAmount'))}</option></select></div>
+      <div class="field"><label>${esc(t('quantity'))}</label><input id="ma-q" type="number" min="0" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label>${esc(t('incDate'))}</label><input id="ma-d" type="date" value="${todayStr()}"></div>`
+    : `<div class="field"><label>${esc(t('incAmount'))}</label><input id="ma-q" type="number" min="0" step="1" inputmode="decimal"></div>`}
+    <div class="field"><label>${esc(t('payMonth'))}</label><input id="ma-p" type="month" value="${esc(per)}"></div>
+    <div class="field"><label>${esc(t('reason'))} *</label><textarea id="ma-r" rows="3"></textarea></div>
+    <button class="btn" id="ma-go">${esc(t('send'))}</button>`);
+  $('ma-go').onclick = async () => {
+    const e = $('ma-e').value, q = Number($('ma-q').value), r = $('ma-r').value.trim(), p = $('ma-p').value;
+    if (!e || !(q > 0) || !r || !/^\d{4}-\d{2}$/.test(p)) return toast(t('needReason'), true);
+    if (!navigator.onLine) return toast(t('offline'), true);
+    $('ma-go').disabled = true;
+    const rec = { kind, manager_emp:APP.me.emp_id, emp_id:e, action_type: kind==='penalty' ? $('ma-t').value : 'Amount', quantity:q, apply_period:p, reason:r, incident_date: kind==='penalty' ? ($('ma-d').value || null) : null };
+    const { data, error } = await sb.from('manager_actions').insert(rec).select();
+    $('ma-go').disabled = false;
+    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+    closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'act', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
+  };
+}
+function boardSheet(id, ok){
+  const a = (APP.boardActions || []).find(x => x.id === id); if (!a) return;
+  sheet(`<h2>${ok ? '✅ ' + esc(t('approve')) : '❌ ' + esc(t('reject'))}</h2><div class="t2" style="margin-bottom:8px">${esc(t(a.kind==='penalty' ? 'penLine' : 'incLine', { emp: a.emp_name || a.emp_id, q: a.quantity, u: t('u_' + a.action_type) }))}</div>
+    <div class="t2" style="margin-bottom:10px">${esc(a.reason)}</div><div class="field"><label>${esc(t('noteOpt'))}</label><textarea id="bd-n" rows="3"></textarea></div>
+    <button class="btn" id="bd-go">${esc(ok ? t('approve') : t('reject'))}</button>`);
+  $('bd-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const { data, error } = await sb.rpc('decide_manager_action', { p_id:id, p_approve: !!ok, p_note:$('bd-n').value.trim() || null });
+    if (error) return toast(friendly(error.message), true);
+    a.status = ok ? 'Waiting for HR' : 'Rejected'; closeSheet(); toast('✓'); renderVoice();
+  };
+}
+function closeHireSheet(id){
+  sheet(`<h2>${esc(t('agreeClose'))}</h2><div class="field"><label>${esc(t('closeNote'))}</label><textarea id="ch-n" rows="3"></textarea></div><button class="btn" id="ch-go">${esc(t('agreeClose'))}</button>`);
+  $('ch-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const { data, error } = await sb.rpc('close_hiring_request', { p_id:id, p_note:$('ch-n').value.trim() || null });
+    if (error) return toast(friendly(error.message), true);
+    const x = (APP.mgrReqs || []).find(m => m.kind==='hire' && m.r.id === id); if (x){ x.r.mgr_closed = true; if (data === 'Closed') x.r.status = 'Closed'; }
+    closeSheet(); toast(data === 'Closed' ? t('closedBoth') : t('waitHrClose')); renderVoice();
+  };
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-board]'); if (b) return boardSheet(b.dataset.board, b.dataset.ok === '1');
+  const c = e.target.closest('[data-close-hire]'); if (c) return closeHireSheet(c.dataset.closeHire);
+  const x = e.target.closest('[data-cancel-act]'); if (x){
+    const { error } = await sb.rpc('cancel_manager_action', { p_id:x.dataset.cancelAct }); if (error) return toast(friendly(error.message), true);
+    const m = (APP.mgrReqs || []).find(m => m.kind==='act' && m.r.id === x.dataset.cancelAct); if (m) m.r.status = 'Cancelled'; toast(t('cancelled')); renderVoice(); }
+});
 function inboxSheet(id){
   const f = (APP.inbox || []).find(x => x.id === id); if (!f) return;
-  sheet(`<h2>${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</h2><div class="hint">${esc(t('from'))}: ${esc(f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id)} · ${esc(dShort(f.created_at))}</div>
+  sheet(`<h2>${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</h2><div class="hint">${esc(t('from'))}: ${esc(f.anonymous ? '🕶 ' + t('anonymous') : (f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id))} · ${esc(dShort(f.created_at))}</div>
     <div class="t2" style="white-space:pre-wrap;margin:10px 0">${esc(f.body)}</div>
     <div class="field"><label>${esc(t('status'))}</label><select id="ib-s">${['New','In review','Closed'].map(s => `<option value="${s}" ${s===f.status?'selected':''}>${esc(stLbl(s))}</option>`).join('')}</select></div>
     <div class="field"><label>${esc(t('reply'))}</label><textarea id="ib-r" rows="4">${esc(f.reply || '')}</textarea></div>
     <button class="btn" id="ib-go">${esc(t('saveReply'))}</button>`);
   $('ib-go').onclick = async () => {
     if (!navigator.onLine) return toast(t('offline'), true);
-    const { data, error } = await sb.from('feedback').update({ status:$('ib-s').value, reply:$('ib-r').value.trim() || null }).eq('id', id).select();
-    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-    Object.assign(f, data[0]); closeSheet(); toast('✓'); renderVoice();
+    const { error } = await sb.rpc('answer_feedback', { p_id:id, p_status:$('ib-s').value, p_reply:$('ib-r').value.trim() || null });
+    if (error) return toast(friendly(error.message), true);
+    Object.assign(f, { status:$('ib-s').value, reply:$('ib-r').value.trim() || null }); closeSheet(); toast('✓'); renderVoice();
   };
 }
 document.addEventListener('click', e => {
@@ -1264,6 +1347,8 @@ document.addEventListener('click', async ev => {
   if (act==='fb-suggestion') return feedbackSheet('suggestion');
   if (act==='req-hire') return hireSheet();
   if (act==='req-train') return trainSheet();
+  if (act==='req-penalty') return actionSheet('penalty');
+  if (act==='req-incentive') return actionSheet('incentive');
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
