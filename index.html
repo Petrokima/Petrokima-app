@@ -300,7 +300,7 @@ const T = {
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
   offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose a recent site or search the saved list',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',offlineList:'No internet — searching the saved project list',noSiteCache:'No internet and no saved project list yet — open the app once with internet',reqElement:'Request a variable element',element:'Element',reqType:'By',byAmount:'Amount (EGP)',byDays:'Days',byHours:'Hours',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'Anonymous',sendAnon:'Send anonymously — HR and the board member will not see your name',anonMine:'🕶 Sent anonymously',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',salLine:'💼 Basic salary — {emp}',salFromTo:'{cur} → {new} EGP from {d}',salBy:'Requested by {by}',offlineList:'No internet — searching the saved project list',noSiteCache:'No internet and no saved project list yet — open the app once with internet',reqElement:'Request a variable element',element:'Element',reqType:'By',byAmount:'Amount (EGP)',byDays:'Days',byHours:'Hours',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'Anonymous',sendAnon:'Send anonymously — HR and the board member will not see your name',anonMine:'🕶 Sent anonymously',
   reqPenalty:'Request a penalty',reqIncentive:'Request an incentive',employee:'Employee',penType:'Penalty type',penAmount:'Fixed amount (EGP)',penHours:'Hours of pay',penDays:'Days of pay',
   quantity:'Quantity',incAmount:'Incentive amount (EGP)',payMonth:'Payroll month',incDate:'Date of the incident',reason:'Reason',needReason:'Choose the employee, enter the quantity and write the reason',
   actFlow:'Goes to the board member for approval, then HR.',penLine:'⚖️ Penalty — {emp}: {q} {u}',incLine:'🏅 Incentive — {emp}: {q} EGP',u_Amount:'EGP',u_Hours:'hour(s)',u_Days:'day(s)',
@@ -388,7 +388,7 @@ const T = {
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
   offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر موقعاً حديثاً أو ابحث في القائمة المحفوظة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',offlineList:'لا يوجد إنترنت — البحث في قائمة المشروعات المحفوظة',noSiteCache:'لا يوجد إنترنت ولا توجد قائمة مشروعات محفوظة بعد — افتح التطبيق مرة مع الإنترنت',reqElement:'طلب عنصر متغير',element:'العنصر',reqType:'بالـ',byAmount:'مبلغ (جنيه)',byDays:'أيام',byHours:'ساعات',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'مجهول',sendAnon:'إرسال دون ذكر اسمي — لن تعرف الموارد البشرية ولا عضو مجلس الإدارة من أرسلها',anonMine:'🕶 أُرسلت دون ذكر الاسم',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',salLine:'💼 الراتب الأساسي — {emp}',salFromTo:'{cur} ← {new} جنيه اعتباراً من {d}',salBy:'مقدم من {by}',offlineList:'لا يوجد إنترنت — البحث في قائمة المشروعات المحفوظة',noSiteCache:'لا يوجد إنترنت ولا توجد قائمة مشروعات محفوظة بعد — افتح التطبيق مرة مع الإنترنت',reqElement:'طلب عنصر متغير',element:'العنصر',reqType:'بالـ',byAmount:'مبلغ (جنيه)',byDays:'أيام',byHours:'ساعات',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'مجهول',sendAnon:'إرسال دون ذكر اسمي — لن تعرف الموارد البشرية ولا عضو مجلس الإدارة من أرسلها',anonMine:'🕶 أُرسلت دون ذكر الاسم',
   reqPenalty:'طلب جزاء',reqIncentive:'طلب حافز',employee:'الموظف',penType:'نوع الجزاء',penAmount:'مبلغ ثابت (جنيه)',penHours:'ساعات من الأجر',penDays:'أيام من الأجر',
   quantity:'الكمية',incAmount:'قيمة الحافز (جنيه)',payMonth:'شهر الرواتب',incDate:'تاريخ الواقعة',reason:'السبب',needReason:'اختر الموظف وأدخل الكمية واكتب السبب',
   actFlow:'يُرسل إلى عضو مجلس الإدارة للموافقة ثم الموارد البشرية.',penLine:'⚖️ جزاء — {emp}: {q} {u}',incLine:'🏅 حافز — {emp}: {q} جنيه',u_Amount:'جنيه',u_Hours:'ساعة',u_Days:'يوم',
@@ -619,7 +619,7 @@ async function refreshSiteCache(force){
 async function loadAll(){
   const id = APP.me.emp_id;
   const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts, vels] = await Promise.all([
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts, vels, sal] = await Promise.all([
     all(sb.from('settings').select('*').eq('key','payroll')),
     all(sb.from('public_holidays').select('date')),
     all(sb.from('employees').select('*').eq('id', id)),
@@ -641,11 +641,12 @@ async function loadAll(){
     sb.rpc('my_birthday_today').then(r => !!r.data, () => false),
     APP.me.receives_feedback ? sb.rpc('feedback_inbox').then(r => r.data || [], () => []) : Promise.resolve([]),
     all(sb.from('manager_actions').select('*').order('created_at', { ascending:false }).limit(100)),
-    sb.rpc('variable_elements').then(r => r.data || [], () => []) ]);
+    sb.rpc('variable_elements').then(r => r.data || [], () => []),
+    APP.me.board_approver ? all(sb.from('salary_change_requests').select('*').order('created_at', { ascending:false }).limit(50)) : Promise.resolve([]) ]);
   if (set[0] && set[0].value) S = { ...S, ...set[0].value };
   HOL = new Set(hol.map(h => h.date));
   APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
-  APP.varElements = vels || [];
+  APP.varElements = vels || []; APP.salReqs = (sal || []).filter(r => r.emp_id !== id);
   APP.news = ann || []; APP.newsRead = new Set((rd || []).map(x => x.ann_id)); APP.birthday = !!bday;
   APP.myFeedback = fb || []; APP.inbox = inbox || [];
   APP.myActions = (acts || []).filter(a => a.manager_emp === id); APP.boardActions = APP.me.board_approver ? (acts || []).filter(a => a.manager_emp !== id && a.emp_id !== id) : [];
@@ -1195,10 +1196,18 @@ function renderVoice(){
   const ba = APP.boardActions || [];
   $('board-card').style.display = APP.me.board_approver ? '' : 'none';
   const waitB = ba.filter(a => a.status === 'Waiting for board');
+  const sr = APP.salReqs || [], srWait = sr.filter(r => r.status === 'Waiting for board');
+  const n0 = x => Number(x || 0).toLocaleString(LANG==='ar' ? 'ar-EG' : 'en-US');
+  const salHtml = [...srWait, ...sr.filter(r => r.status !== 'Waiting for board').slice(0, 5)].map(r => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
+      <div class="t1">${esc(t('salLine', { emp: r.emp_name || r.emp_id }))}</div>${stChip(r.status)}</div>
+      <div class="t2" style="direction:ltr;text-align:${LANG==='ar' ? 'right' : 'left'}">${esc(t('salFromTo', { cur: r.current_amount == null ? '—' : n0(r.current_amount), new: n0(r.new_amount), d: dShort(r.effective_from) }))}</div>
+      <div class="t2">${esc(r.reason)}</div><div class="t2">${esc(t('salBy', { by: r.requested_by || '' }))}</div>
+      ${r.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-salb="${esc(r.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-salb="${esc(r.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('');
   $('board-list').innerHTML = [...waitB, ...ba.filter(a => a.status !== 'Waiting for board').slice(0, 10)].map(a => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
       <div class="t1">${esc(actLine(a))}</div>${stChip(a.status)}</div>
       <div class="t2">${esc(t('reqBy'))}: ${esc(a.manager_name || a.manager_emp)} · ${esc(a.apply_period)}</div><div class="t2">${esc(a.reason)}</div>
-      ${a.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-board="${esc(a.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-board="${esc(a.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noBoard'))}</div>`;
+      ${a.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-board="${esc(a.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-board="${esc(a.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('');
+  $('board-list').innerHTML = (salHtml + $('board-list').innerHTML) || `<div class="empty">${esc(t('noBoard'))}</div>`;
   const inbox = APP.inbox || [];
   $('inbox-card').style.display = APP.me.receives_feedback ? '' : 'none';
   $('inbox-list').innerHTML = inbox.map(f => `<div class="it" style="display:block" data-inbox="${esc(f.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
@@ -1299,6 +1308,19 @@ function boardSheet(id, ok){
     a.status = ok ? 'Waiting for HR' : 'Rejected'; closeSheet(); toast('✓'); renderVoice();
   };
 }
+function salarySheet(id, ok){
+  const r = (APP.salReqs || []).find(x => x.id === id); if (!r) return;
+  sheet(`<h2>${ok ? '✅ ' + esc(t('approve')) : '❌ ' + esc(t('reject'))}</h2><div class="t1" style="margin-bottom:6px">${esc(t('salLine', { emp: r.emp_name || r.emp_id }))}</div>
+    <div class="t2" style="direction:ltr;margin-bottom:6px">${esc(t('salFromTo', { cur: r.current_amount == null ? '—' : Number(r.current_amount).toLocaleString(), new: Number(r.new_amount).toLocaleString(), d: dShort(r.effective_from) }))}</div>
+    <div class="t2" style="margin-bottom:10px">${esc(r.reason)}</div><div class="field"><label>${esc(t('noteOpt'))}</label><textarea id="sb-n" rows="3"></textarea></div>
+    <button class="btn" id="sb-go">${esc(ok ? t('approve') : t('reject'))}</button>`);
+  $('sb-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const { data, error } = await sb.rpc('decide_salary_change', { p_id:id, p_approve: !!ok, p_note:$('sb-n').value.trim() || null });
+    if (error) return toast(friendly(error.message), true);
+    r.status = ok ? 'Approved' : 'Rejected'; closeSheet(); toast('✓'); renderVoice();
+  };
+}
 function closeHireSheet(id){
   sheet(`<h2>${esc(t('agreeClose'))}</h2><div class="field"><label>${esc(t('closeNote'))}</label><textarea id="ch-n" rows="3"></textarea></div><button class="btn" id="ch-go">${esc(t('agreeClose'))}</button>`);
   $('ch-go').onclick = async () => {
@@ -1311,6 +1333,7 @@ function closeHireSheet(id){
 }
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-board]'); if (b) return boardSheet(b.dataset.board, b.dataset.ok === '1');
+  const sb2 = e.target.closest('[data-salb]'); if (sb2) return salarySheet(sb2.dataset.salb, sb2.dataset.ok === '1');
   const c = e.target.closest('[data-close-hire]'); if (c) return closeHireSheet(c.dataset.closeHire);
   const x = e.target.closest('[data-cancel-act]'); if (x){
     const { error } = await sb.rpc('cancel_manager_action', { p_id:x.dataset.cancelAct }); if (error) return toast(friendly(error.message), true);
