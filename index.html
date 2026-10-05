@@ -194,7 +194,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       <div class="card" id="treq-card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
       <div class="card" id="mreq-card" style="display:none"><div class="sec" data-t="hrReqTitle"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><button class="btn ghost" data-act="req-hire">👥 <span data-t="reqHire"></span></button><button class="btn ghost" data-act="req-train">🎓 <span data-t="reqTrain"></span></button>
-          <button class="btn ghost" data-act="req-penalty">⚖️ <span data-t="reqPenalty"></span></button><button class="btn ghost" data-act="req-incentive">🏅 <span data-t="reqIncentive"></span></button></div>
+          <button class="btn ghost" data-act="req-penalty">⚖️ <span data-t="reqPenalty"></span></button><button class="btn ghost" data-act="req-element">💰 <span data-t="reqElement"></span></button></div>
         <div class="list" id="mreq-list"></div></div>
       <div class="card" id="tproj-card" style="display:none"><div class="sec" data-t="teamProj"></div><div class="hint" data-t="teamProjNote"></div><div class="list" id="tproj-list"></div></div>
       <div class="card"><div class="sec" data-t="teamTitle"></div><div class="hint" data-t="teamNote"></div><div class="list" id="team-list"></div></div></div>
@@ -298,9 +298,9 @@ const T = {
   sentNow:'{n} saved check-in(s) sent ✓',notRecorded:'A saved check-in could not be recorded — see the details on the home screen',
   failedItem:'Not recorded',discard:'Discard',discardQ:'Discard this saved check-in? HR will need to record it manually.',sendNow:'Send now',
   tooOld:'More than 72 hours old — HR must record it.',wrongOrder:'Earlier than a check-in already recorded — HR must review it.',
-  offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose one of your recent sites',
+  offlineMode:'Offline — showing the last saved information',offlineSites:'No internet: choose a recent site or search the saved list',
   noCache:'No internet connection. Connect once to sign in.',
-  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',anonymous:'Anonymous',sendAnon:'Send anonymously — HR and the board member will not see your name',anonMine:'🕶 Sent anonymously',
+  approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',offlineList:'No internet — searching the saved project list',noSiteCache:'No internet and no saved project list yet — open the app once with internet',reqElement:'Request a variable element',element:'Element',reqType:'By',byAmount:'Amount (EGP)',byDays:'Days',byHours:'Hours',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'Anonymous',sendAnon:'Send anonymously — HR and the board member will not see your name',anonMine:'🕶 Sent anonymously',
   reqPenalty:'Request a penalty',reqIncentive:'Request an incentive',employee:'Employee',penType:'Penalty type',penAmount:'Fixed amount (EGP)',penHours:'Hours of pay',penDays:'Days of pay',
   quantity:'Quantity',incAmount:'Incentive amount (EGP)',payMonth:'Payroll month',incDate:'Date of the incident',reason:'Reason',needReason:'Choose the employee, enter the quantity and write the reason',
   actFlow:'Goes to the board member for approval, then HR.',penLine:'⚖️ Penalty — {emp}: {q} {u}',incLine:'🏅 Incentive — {emp}: {q} EGP',u_Amount:'EGP',u_Hours:'hour(s)',u_Days:'day(s)',
@@ -386,9 +386,9 @@ const T = {
   sentNow:'تم إرسال {n} تسجيل محفوظ ✓',notRecorded:'تعذّر تسجيل أحد التسجيلات المحفوظة — راجع التفاصيل في الشاشة الرئيسية',
   failedItem:'لم يُسجَّل',discard:'حذف',discardQ:'حذف هذا التسجيل المحفوظ؟ ستحتاج الموارد البشرية إلى تسجيله يدوياً.',sendNow:'إرسال الآن',
   tooOld:'مضى عليه أكثر من ٧٢ ساعة — يجب أن تسجّله الموارد البشرية.',wrongOrder:'أقدم من تسجيل موجود بالفعل — يجب أن تراجعه الموارد البشرية.',
-  offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر أحد مواقعك الأخيرة',
+  offlineMode:'بدون إنترنت — يتم عرض آخر بيانات محفوظة',offlineSites:'لا يوجد إنترنت: اختر موقعاً حديثاً أو ابحث في القائمة المحفوظة',
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
-  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',anonymous:'مجهول',sendAnon:'إرسال دون ذكر اسمي — لن تعرف الموارد البشرية ولا عضو مجلس الإدارة من أرسلها',anonMine:'🕶 أُرسلت دون ذكر الاسم',
+  approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',offlineList:'لا يوجد إنترنت — البحث في قائمة المشروعات المحفوظة',noSiteCache:'لا يوجد إنترنت ولا توجد قائمة مشروعات محفوظة بعد — افتح التطبيق مرة مع الإنترنت',reqElement:'طلب عنصر متغير',element:'العنصر',reqType:'بالـ',byAmount:'مبلغ (جنيه)',byDays:'أيام',byHours:'ساعات',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'مجهول',sendAnon:'إرسال دون ذكر اسمي — لن تعرف الموارد البشرية ولا عضو مجلس الإدارة من أرسلها',anonMine:'🕶 أُرسلت دون ذكر الاسم',
   reqPenalty:'طلب جزاء',reqIncentive:'طلب حافز',employee:'الموظف',penType:'نوع الجزاء',penAmount:'مبلغ ثابت (جنيه)',penHours:'ساعات من الأجر',penDays:'أيام من الأجر',
   quantity:'الكمية',incAmount:'قيمة الحافز (جنيه)',payMonth:'شهر الرواتب',incDate:'تاريخ الواقعة',reason:'السبب',needReason:'اختر الموظف وأدخل الكمية واكتب السبب',
   actFlow:'يُرسل إلى عضو مجلس الإدارة للموافقة ثم الموارد البشرية.',penLine:'⚖️ جزاء — {emp}: {q} {u}',incLine:'🏅 حافز — {emp}: {q} جنيه',u_Amount:'جنيه',u_Hours:'ساعة',u_Days:'يوم',
@@ -581,7 +581,7 @@ async function afterLogin(user){
   }
   show('scr-main');
   try { await loadAll(); } catch(e){ if (!useCache(user.id)) throw e; }
-  APP.ready = true; renderAll(); flushQueue(); checkAppUpdate();
+  APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000);
 }
 async function firstLogin(){
   const yr=$('fl-year').value.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), a=$('fl-p1').value, b=$('fl-p2').value;
@@ -603,10 +603,23 @@ async function signOut(){ try { await sb.auth.signOut(); } catch(e){} APP.ready=
 // ═════════════════════════════════════════════════════════
 //  DATA
 // ═════════════════════════════════════════════════════════
+async function refreshSiteCache(force){
+  try {
+    const c = store.get('pk_sites', null), uid = APP.me && APP.me.id;
+    if (!force && c && c.uid === uid && Date.now() - (c.at || 0) < 24 * 3600 * 1000) return;
+    const list = [];
+    for (let from = 0; from < 50000; from += 1000){
+      const { data, error } = await sb.rpc('sites_for_offline').range(from, from + 999);
+      if (error) return; (data || []).forEach(p => list.push([p.id, p.name || '']));
+      if (!data || data.length < 1000) break;
+    }
+    store.set('pk_sites', { uid, at: Date.now(), list });
+  } catch(e) { /* keep the previous list */ }
+}
 async function loadAll(){
   const id = APP.me.emp_id;
   const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts] = await Promise.all([
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts, vels] = await Promise.all([
     all(sb.from('settings').select('*').eq('key','payroll')),
     all(sb.from('public_holidays').select('date')),
     all(sb.from('employees').select('*').eq('id', id)),
@@ -627,10 +640,12 @@ async function loadAll(){
     all(sb.from('training_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
     sb.rpc('my_birthday_today').then(r => !!r.data, () => false),
     APP.me.receives_feedback ? sb.rpc('feedback_inbox').then(r => r.data || [], () => []) : Promise.resolve([]),
-    all(sb.from('manager_actions').select('*').order('created_at', { ascending:false }).limit(100)) ]);
+    all(sb.from('manager_actions').select('*').order('created_at', { ascending:false }).limit(100)),
+    sb.rpc('variable_elements').then(r => r.data || [], () => []) ]);
   if (set[0] && set[0].value) S = { ...S, ...set[0].value };
   HOL = new Set(hol.map(h => h.date));
   APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
+  APP.varElements = vels || [];
   APP.news = ann || []; APP.newsRead = new Set((rd || []).map(x => x.ann_id)); APP.birthday = !!bday;
   APP.myFeedback = fb || []; APP.inbox = inbox || [];
   APP.myActions = (acts || []).filter(a => a.manager_emp === id); APP.boardActions = APP.me.board_approver ? (acts || []).filter(a => a.manager_emp !== id && a.emp_id !== id) : [];
@@ -714,8 +729,9 @@ function openSitePicker(mode){
       ${APP.myProjects.length > 8 ? `<div class="field"><input id="myp-q" placeholder="${esc(t('filterProj'))}" autocomplete="off"></div>` : ''}
       <div id="myp-list">${APP.myProjects.filter(p => p.id !== openCode).map(siteBtn).join('')}</div>`
     : `${recent.length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('recent'))}</div>${recent.filter(r=>r.code!==openCode).map(siteBtn).join('')}` : ''}
-    ${navigator.onLine ? `<div class="field" style="margin-top:12px"><input id="site-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
-    <div id="site-res"><div class="hint">${esc(t('typeMore'))}</div></div>` : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}`}
+    ${navigator.onLine ? '' : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}
+    <div class="field" style="margin-top:12px"><input id="site-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
+    <div id="site-res"><div class="hint">${esc(t('typeMore'))}</div></div>`}
     <button class="btn green big" id="site-go" disabled data-mode="${mode}">▶ ${esc(t('checkIn'))}</button>`);
   if ($('site-q')) $('site-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(searchSites, 300); });
   if ($('myp-q')) $('myp-q').addEventListener('input', () => { const q = $('myp-q').value.trim().toLowerCase();
@@ -725,9 +741,20 @@ function siteBtn(s){ return `<button class="site" data-site="${esc(s.code||s.id)
 async function searchSites(){
   const q = $('site-q').value.trim(), box = $('site-res');
   if (q.length < 2){ box.innerHTML = `<div class="hint">${esc(t('typeMore'))}</div>`; return; }
-  const { data, error } = await sb.rpc('search_sites', { p_q:q });
-  if (error) { box.innerHTML = `<div class="hint neg">${esc(friendly(error.message))}</div>`; return; }
   const openCode = APP.status && APP.status.open && APP.status.open.code;
+  const local = () => {                                                // the saved list, for use without internet
+    const c = store.get('pk_sites', null);
+    if (!c || !c.list || c.uid !== (APP.me && APP.me.id)) { box.innerHTML = `<div class="hint neg">📴 ${esc(t('noSiteCache'))}</div>`; return; }
+    const ql = q.toLowerCase();
+    const hits = c.list.filter(([id, nm]) => id.toLowerCase().startsWith(ql) || (nm || '').toLowerCase().includes(ql))
+                       .sort((a, b) => (b[0].toLowerCase().startsWith(ql)) - (a[0].toLowerCase().startsWith(ql))).slice(0, 25);
+    box.innerHTML = `<div class="hint" style="margin-bottom:6px">📴 ${esc(t('offlineList'))}</div>` + (hits.filter(h => h[0] !== openCode).map(([id, nm]) => siteBtn({ id, name: nm })).join('') || `<div class="hint">${esc(t('noSites'))}</div>`);
+  };
+  if (!navigator.onLine) return local();
+  let data, error;
+  try { ({ data, error } = await withTimeout(sb.rpc('search_sites', { p_q:q }), 8000)); } catch(e) { return local(); }
+  if (error && /load failed|failed to fetch|network|timeout|timed out|fetch/i.test(error.message || '')) return local();
+  if (error) { box.innerHTML = `<div class="hint neg">${esc(friendly(error.message))}</div>`; return; }
   box.innerHTML = (data||[]).filter(s=>s.id!==openCode).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`;
 }
 function selectSite(btn){
@@ -1158,7 +1185,7 @@ function renderVoice(){
   $('mreq-card').style.display = mgr ? '' : 'none';
   $('mreq-list').innerHTML = (APP.mgrReqs || []).map(({kind, r}) => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
       <div class="t1">${kind==='hire' ? '👥 ' + esc(t('hireLine', { n:r.headcount, job:r.job_name })) : kind==='train' ? '🎓 ' + esc(t('trainLine', { topic:r.topic, n:(r.emp_ids||[]).length }))
-        : esc(t(r.kind==='penalty' ? 'penLine' : 'incLine', { emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) }))}</div>${stChip(r.status)}</div>
+        : esc(actLine(r))}</div>${stChip(r.status)}</div>
       <div class="t2">${esc(dShort(r.created_at))}${kind==='act' ? ' · ' + esc(r.apply_period) : ''}</div>${kind==='act' ? `<div class="t2">${esc(r.reason)}</div>` : ''}
       ${r.board_note ? `<div class="t2" style="margin-top:4px"><b>${esc(r.board_by || '')}:</b> ${esc(r.board_note)}</div>` : ''}${r.hr_note ? `<div class="t2" style="margin-top:6px"><b>HR:</b> ${esc(r.hr_note)}</div>` : ''}
       ${kind==='hire' && r.status !== 'Closed' && (r.hr_closed || r.mgr_closed) ? `<div class="t2" style="margin-top:4px">${esc(t(r.mgr_closed ? 'waitHrClose' : 'waitMgrClose'))}</div>` : ''}
@@ -1169,7 +1196,7 @@ function renderVoice(){
   $('board-card').style.display = APP.me.board_approver ? '' : 'none';
   const waitB = ba.filter(a => a.status === 'Waiting for board');
   $('board-list').innerHTML = [...waitB, ...ba.filter(a => a.status !== 'Waiting for board').slice(0, 10)].map(a => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
-      <div class="t1">${esc(t(a.kind==='penalty' ? 'penLine' : 'incLine', { emp: a.emp_name || a.emp_id, q: a.quantity, u: t('u_' + a.action_type) }))}</div>${stChip(a.status)}</div>
+      <div class="t1">${esc(actLine(a))}</div>${stChip(a.status)}</div>
       <div class="t2">${esc(t('reqBy'))}: ${esc(a.manager_name || a.manager_emp)} · ${esc(a.apply_period)}</div><div class="t2">${esc(a.reason)}</div>
       ${a.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-board="${esc(a.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-board="${esc(a.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noBoard'))}</div>`;
   const inbox = APP.inbox || [];
@@ -1229,23 +1256,31 @@ function trainSheet(){
     closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'train', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
   };
 }
+function actLine(r){
+  if (r.kind === 'penalty') return t('penLine', { emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) });
+  const el = (APP.varElements || []).find(x => x.code === r.element_code);
+  return t('elLine', { el: (el && (LANG==='ar' ? el.name_ar : el.name_en)) || r.element_name || t('reqIncentive'), emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) });
+}
 function actionSheet(kind){
   const team = APP.myTeam || [], per = (S.period || todayStr().slice(0,7));
-  sheet(`<h2>${kind==='penalty' ? '⚖️ ' + esc(t('reqPenalty')) : '🏅 ' + esc(t('reqIncentive'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('actFlow'))}</div>
+  sheet(`<h2>${kind==='penalty' ? '⚖️ ' + esc(t('reqPenalty')) : '💰 ' + esc(t('reqElement'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('actFlow'))}</div>
     <div class="field"><label>${esc(t('employee'))}</label><select id="ma-e"><option value=""></option>${team.map(m => `<option value="${esc(m.id)}">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} (${esc(m.id)})</option>`).join('')}</select></div>
     ${kind==='penalty' ? `<div class="field"><label>${esc(t('penType'))}</label><select id="ma-t"><option value="Days">${esc(t('penDays'))}</option><option value="Hours">${esc(t('penHours'))}</option><option value="Amount">${esc(t('penAmount'))}</option></select></div>
       <div class="field"><label>${esc(t('quantity'))}</label><input id="ma-q" type="number" min="0" step="0.5" inputmode="decimal"></div>
       <div class="field"><label>${esc(t('incDate'))}</label><input id="ma-d" type="date" value="${todayStr()}"></div>`
-    : `<div class="field"><label>${esc(t('incAmount'))}</label><input id="ma-q" type="number" min="0" step="1" inputmode="decimal"></div>`}
+    : `<div class="field"><label>${esc(t('element'))}</label><select id="ma-el"><option value=""></option>${(APP.varElements||[]).map(el => `<option value="${el.code}">${esc((LANG==='ar' ? el.name_ar : el.name_en) || el.name_en || el.code)}${el.element_type==='Deduction' ? ' (−)' : ''}</option>`).join('')}</select></div>
+      <div class="field"><label>${esc(t('reqType'))}</label><select id="ma-t"><option value="Amount">${esc(t('byAmount'))}</option><option value="Days">${esc(t('byDays'))}</option><option value="Hours">${esc(t('byHours'))}</option></select></div>
+      <div class="field"><label>${esc(t('quantity'))}</label><input id="ma-q" type="number" min="0" step="0.5" inputmode="decimal"></div>`}
     <div class="field"><label>${esc(t('payMonth'))}</label><input id="ma-p" type="month" value="${esc(per)}"></div>
     <div class="field"><label>${esc(t('reason'))} *</label><textarea id="ma-r" rows="3"></textarea></div>
     <button class="btn" id="ma-go">${esc(t('send'))}</button>`);
   $('ma-go').onclick = async () => {
     const e = $('ma-e').value, q = Number($('ma-q').value), r = $('ma-r').value.trim(), p = $('ma-p').value;
-    if (!e || !(q > 0) || !r || !/^\d{4}-\d{2}$/.test(p)) return toast(t('needReason'), true);
+    if (!e || !(q > 0) || !r || !/^\d{4}-\d{2}$/.test(p) || (kind==='element' && !$('ma-el').value)) return toast(t('needReason'), true);
     if (!navigator.onLine) return toast(t('offline'), true);
     $('ma-go').disabled = true;
-    const rec = { kind, manager_emp:APP.me.emp_id, emp_id:e, action_type: kind==='penalty' ? $('ma-t').value : 'Amount', quantity:q, apply_period:p, reason:r, incident_date: kind==='penalty' ? ($('ma-d').value || null) : null };
+    const rec = { kind, manager_emp:APP.me.emp_id, emp_id:e, action_type:$('ma-t').value, quantity:q, apply_period:p, reason:r, incident_date: kind==='penalty' ? ($('ma-d').value || null) : null,
+                  element_code: kind==='element' ? Number($('ma-el').value) : null };
     const { data, error } = await sb.from('manager_actions').insert(rec).select();
     $('ma-go').disabled = false;
     if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
@@ -1254,7 +1289,7 @@ function actionSheet(kind){
 }
 function boardSheet(id, ok){
   const a = (APP.boardActions || []).find(x => x.id === id); if (!a) return;
-  sheet(`<h2>${ok ? '✅ ' + esc(t('approve')) : '❌ ' + esc(t('reject'))}</h2><div class="t2" style="margin-bottom:8px">${esc(t(a.kind==='penalty' ? 'penLine' : 'incLine', { emp: a.emp_name || a.emp_id, q: a.quantity, u: t('u_' + a.action_type) }))}</div>
+  sheet(`<h2>${ok ? '✅ ' + esc(t('approve')) : '❌ ' + esc(t('reject'))}</h2><div class="t2" style="margin-bottom:8px">${esc(actLine(a))}</div>
     <div class="t2" style="margin-bottom:10px">${esc(a.reason)}</div><div class="field"><label>${esc(t('noteOpt'))}</label><textarea id="bd-n" rows="3"></textarea></div>
     <button class="btn" id="bd-go">${esc(ok ? t('approve') : t('reject'))}</button>`);
   $('bd-go').onclick = async () => {
@@ -1348,7 +1383,7 @@ document.addEventListener('click', async ev => {
   if (act==='req-hire') return hireSheet();
   if (act==='req-train') return trainSheet();
   if (act==='req-penalty') return actionSheet('penalty');
-  if (act==='req-incentive') return actionSheet('incentive');
+  if (act==='req-incentive' || act==='req-element') return actionSheet('element');
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
