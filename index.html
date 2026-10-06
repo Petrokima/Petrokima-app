@@ -255,7 +255,7 @@ const T = {
   notIn:'You are not checked in.',checkedIn:'Checked in at',since:'since',hSince:'for',checkIn:'Check in',checkOut:'Check out',switchSite:'Switch site',
   openFrom:'You checked in on {d} at {t} and have not checked out yet.',
   locNote:'Your time comes from the company server. Your location is recorded with each check-in.',
-  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',totalToday:'Total today',hours:'h',
+  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',totalToday:'Total today',hours:'h',mins:'m',
   thisCycle:'This payroll month',noMonth:'No attendance recorded this payroll month.',
   whereWork:'Where are you working?',recent:'Recent sites',searchSite:'Type the site code or name',typeMore:'Type at least 2 letters or numbers',noSites:'No site found',
   confirmIn:'Check in at',gettingLoc:'Getting your location…',noLoc:'Location not available — saved without it',
@@ -343,7 +343,7 @@ const T = {
   notIn:'لم تسجّل حضورك بعد.',checkedIn:'مسجّل حضور في',since:'منذ',hSince:'مدة',checkIn:'تسجيل حضور',checkOut:'تسجيل انصراف',switchSite:'تغيير الموقع',
   openFrom:'سجّلت حضورك يوم {d} الساعة {t} ولم تسجّل الانصراف بعد.',
   locNote:'الوقت يُؤخذ من خادم الشركة، ويتم تسجيل موقعك مع كل تسجيل حضور.',
-  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',totalToday:'إجمالي اليوم',hours:'س',
+  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',totalToday:'إجمالي اليوم',hours:'س',mins:'د',
   thisCycle:'شهر الرواتب الحالي',noMonth:'لا يوجد حضور مسجل في شهر الرواتب الحالي.',
   whereWork:'أين تعمل الآن؟',recent:'المواقع الأخيرة',searchSite:'اكتب كود أو اسم الموقع',typeMore:'اكتب حرفين أو رقمين على الأقل',noSites:'لم يتم العثور على موقع',
   confirmIn:'تسجيل الحضور في',gettingLoc:'جارٍ تحديد موقعك…',noLoc:'تعذّر تحديد الموقع — تم الحفظ بدونه',
@@ -440,7 +440,9 @@ const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
 const pad = n => String(n).padStart(2,'0');
 const loc = () => LANG==='ar' ? 'ar-EG' : 'en-GB';
 const fmt = v => num(v).toLocaleString(loc(), { maximumFractionDigits:2 });
-const fmtH = v => num(v).toLocaleString(loc(), { maximumFractionDigits:2 }) + ' ' + t('hours');
+// hours shown as hours and minutes for employees (9.83 → "9 h 50 m" / "٩ س ٥٠ د"); payroll keeps decimal hours
+const fmtH = v => { const tm = Math.round(num(v) * 60), h = Math.floor(tm / 60), m = tm % 60, n = x => x.toLocaleString(loc());
+  return h && m ? `${n(h)} ${t('hours')} ${n(m)} ${t('mins')}` : h ? `${n(h)} ${t('hours')}` : `${n(m)} ${t('mins')}`; };
 function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
 function dObj(s){ const [y,m,d]=String(s).split('-').map(Number); return new Date(y, m-1, d); }
 function dStr(o){ return `${o.getFullYear()}-${pad(o.getMonth()+1)}-${pad(o.getDate())}`; }
@@ -904,7 +906,7 @@ function renderRequests(){
     <div class="stat"><div class="v num">${open}</div><div class="l">${esc(t('openReq'))}</div></div>`;
   const items = [
     ...APP.leaves.map(l=>({ k:'leave', id:l.id, at:l.created_at, icon:'🌴', title:t('leaveTitle',{ t: tm('lt',l.leave_type) }), sub:`${niceDate(l.date_from)} → ${niceDate(l.date_to)} · ${fmt(l.days)} ${t('days')}`, st:reqStage(l), reply:[l.manager_note, l.decision_note].filter(Boolean).join(' · ') })),
-    ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmt(p.hours)} ${t('hours')}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
+    ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmtH(p.hours)}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
     ...APP.reqs.map(r=>({ k:'req', id:r.id, at:r.created_at, icon:'📨', title:tm('ht',r.request_type), sub:r.details||'', st:r.status, reply:r.hr_response||'' })),
   ].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
   $('req-list').innerHTML = items.map(x => `<div class="it"><div style="font-size:22px">${x.icon}</div><div class="grow"><div class="t1">${esc(x.title)}</div>
@@ -1074,7 +1076,7 @@ function renderTeam(){
       <button class="btn ghost small" data-tproj="${esc(m.id)}">${esc(t('manage'))}</button></div>`).join('');
   $('treq-list').innerHTML = reqs.slice(0,40).map(({kind, r}) => { const stg = reqStage(r), mine = stg==='Waiting for manager';
     const what = kind==='leave' ? `🌴 ${t('leaveTitle',{ t: tm('lt', r.leave_type) })}` : `✋ ${tm('pt', r.type)}`;
-    const when = kind==='leave' ? `${niceDate(r.date_from)} → ${niceDate(r.date_to)} · ${fmt(r.days)} ${t('days')}` : `${niceDate(r.date)} · ${fmt(r.hours)} ${t('hours')}`;
+    const when = kind==='leave' ? `${niceDate(r.date_from)} → ${niceDate(r.date_to)} · ${fmt(r.days)} ${t('days')}` : `${niceDate(r.date)} · ${fmtH(r.hours)}`;
     return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(r.emp_name || r.emp_id)} <span class="muted" style="font-size:12px">${esc(r.emp_id)}</span></div>
       <div class="t2">${esc(what)} · ${esc(when)}</div><div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(r.created_at || r.requested_at))}</div>${r.reason ? `<div class="t2">💬 ${esc(r.reason)}</div>` : ''}
       <div style="margin-top:6px">${chip(mine ? 'Pending' : stg==='Waiting for HR' ? 'Waiting for HR' : r.status)}</div>
