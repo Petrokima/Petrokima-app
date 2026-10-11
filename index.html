@@ -286,6 +286,9 @@ const T = {
   deviceTaken:'This phone is already registered to another employee. Each phone can be used by one employee only.',
   attemptLogged:'This attempt has been recorded and HR has been notified.',
   deviceMismatch:'This phone is not the phone registered to your employee code. Contact HR.',
+  mockLoc:'A fake-location app is active on this phone. Turn it off (and remove it from Developer options → Select mock location app), then try again.',
+  outsideSite:'You are about {d} from {site}. Check in when you arrive at the site.',
+  appRequired:'Please check in with the Petrokima app, not the internet browser. Download it from download.petrokima-hr.com',
   badDevice:'This phone could not be identified. Close the app and open it again.',
   phoneReg:'Registered phone',thisPhone:'This phone is registered to you',back:'Back',
   locTitle:'Location is required',locDenied:'Check-in needs your location, and this phone is not sharing it with Petrokima.',
@@ -374,6 +377,9 @@ const T = {
   deviceTaken:'هذا الهاتف مسجّل بالفعل لموظف آخر. كل هاتف يُستخدم لموظف واحد فقط.',
   attemptLogged:'تم تسجيل هذه المحاولة وإبلاغ الموارد البشرية.',
   deviceMismatch:'هذا الهاتف ليس الهاتف المسجّل لكود الموظف الخاص بك. تواصل مع الموارد البشرية.',
+  mockLoc:'يوجد تطبيق لتزييف الموقع يعمل على هذا الهاتف. أوقفه (واحذفه من خيارات المطوّر ← تطبيق الموقع الوهمي) ثم حاول مرة أخرى.',
+  outsideSite:'أنت على بعد حوالي {d} من {site}. سجّل الحضور عند وصولك إلى الموقع.',
+  appRequired:'من فضلك سجّل الحضور من تطبيق بتروكيما وليس من متصفح الإنترنت. حمّله من download.petrokima-hr.com',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
   phoneReg:'الهاتف المسجّل',thisPhone:'هذا الهاتف مسجّل باسمك',back:'رجوع',
   locTitle:'تحديد الموقع مطلوب',locDenied:'تسجيل الحضور يتطلب موقعك، وهذا الهاتف لا يشارك موقعه مع تطبيق بتروكيما.',
@@ -468,6 +474,9 @@ function friendly(msg){
   if (/NOT_IN/.test(msg)) return t('notInErr');
   if (/DEVICE/.test(msg)) return t('deviceMismatch');
   if (/NO_LOCATION/.test(msg)) return t('locDenied');
+  if (/MOCK_LOCATION/.test(msg)) return t('mockLoc');
+  if (/APP_REQUIRED/.test(msg)) return t('appRequired');
+  if (/OUTSIDE_SITE/.test(msg)) { const m = msg.match(/about (.+?) from (.+?)\. Check/) || []; return t('outsideSite', { d: m[1] || '', site: m[2] || '' }); }
   if (/approved and locked/i.test(msg)) return t('lockedPeriod');
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return t('offline');
   return msg.replace(/^[A-Z_]+:\s*/, '');
@@ -500,6 +509,14 @@ const serverDown = r => !!r && (isNetErr(r.error) || r.status === 0 || r.status 
 // Never wait for ever: give up after `ms` and treat it as an outage (the request may still arrive — the check-in's unique id prevents doubles)
 const withTimeout = (p, ms) => Promise.race([ Promise.resolve(p), new Promise(res => setTimeout(() => res({ data:null, status:0, error:{ message:'timeout: no answer from the server' } }), ms)) ]);
 // The server already has this check-in (it arrived earlier but the answer was lost)
+// send a check-in; if the database does not know the newer location fields yet, send it without them
+async function insertClock(rec){
+  const r = await sb.from('clock_events').insert(rec);
+  if (r.error && /mock_location|client_kind/.test(String(r.error.message || '')) && /column|schema/i.test(String(r.error.message || ''))) {
+    const { mock_location, client_kind, ...old } = rec; return sb.from('clock_events').insert(old);
+  }
+  return r;
+}
 const alreadyHave = e => !!e && (e.code === '23505' || /duplicate key/i.test(String(e.message||''))) && /client_id/i.test(String((e.message||'') + ' ' + (e.details||'')));
 // every request from the app gives up after 20 seconds instead of hanging
 const timedFetch = (input, init = {}) => {
@@ -550,6 +567,7 @@ function deviceLabel(){
   return 'Browser';
 }
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const clientKind = () => NATIVE ? PLATFORM + '-app' : 'web-' + (isIOS() ? 'ios' : /android/i.test(navigator.userAgent || '') ? 'android' : 'other');
 const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
 function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
@@ -772,7 +790,11 @@ async function nativeLocation(){
     if (perm.location !== 'granted') perm = await G.requestPermissions({ permissions:['location'] });
     if (perm.location === 'denied') return { err:1 };
     const p = await G.getCurrentPosition({ enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge:60000 });
-    return { lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy) };
+    const out = { lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy), mock:null };
+    // Android app: ask the phone whether this location came from a fake-location app
+    const LG = PLATFORM === 'android' ? nativePlugin('LocationGuard') : null;
+    if (LG) { try { const r = await Promise.race([ LG.inspect(), new Promise(res => setTimeout(() => res(null), 3000)) ]); if (r && typeof r.mock === 'boolean') out.mock = r.mock; } catch(e) {} }
+    return out;
   } catch(e){
     const m = String((e && (e.message || e.code)) || e);
     return { err: /denied|permission/i.test(m) ? 1 : /disabled|services|not enabled/i.test(m) ? 1 : /time/i.test(m) ? 3 : 2 };
@@ -803,11 +825,11 @@ async function clock(type, code, btn){
   if (g.err) { g.lat = null; g.lng = null; g.accuracy = null; }       // allowed by an exception the admin set — the server marks it
   const tapAt = new Date().toISOString();          // the moment the employee checked in (not when the server answered)
   const rec = { client_id: uid(), emp_id: APP.me.emp_id, event_type:type, project_code: code || null, device_id: deviceId(), lat:g.lat, lng:g.lng, accuracy:g.accuracy,
-                device: (navigator.userAgent || '').slice(0, 150) };
+                device: (navigator.userAgent || '').slice(0, 150), mock_location: typeof g.mock === 'boolean' ? g.mock : null, client_kind: clientKind() };
   const pendingBefore = queue().length;
   if (navigator.onLine && !pendingBefore){
     if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`; }
-    const res = await withTimeout(sb.from('clock_events').insert(rec), 15000);
+    const res = await withTimeout(insertClock(rec), 15000);
     if (btn){ btn.disabled = false; btn.textContent = label; }
     if (!res.error){ closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
     if (!serverDown(res)) return toast(friendly(res.error.message), true);          // a real refusal (wrong site, no location…) — tell the employee
@@ -861,7 +883,7 @@ async function flushQueue(){
   try {
     while (q.length && !q[0]._err){
       const { _name, _err, _off, _applied, ...rec } = q[0];
-      const res = await withTimeout(sb.from('clock_events').insert({ ...rec, device_now: new Date().toISOString() }), 15000);   // the server compares the clocks
+      const res = await withTimeout(insertClock({ ...rec, device_now: new Date().toISOString() }), 15000);   // the server compares the clocks
       const error = res.error;
       if (error && alreadyHave(error)) { q.shift(); store.set('pk_queue', q); sent++; continue; }   // it arrived earlier — the answer was lost
       if (error && serverDown(res)) break;                                  // still no connection / server still down: try later
