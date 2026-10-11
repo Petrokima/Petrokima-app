@@ -229,7 +229,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 //  CONFIGURATION — the only lines to fill in before publishing
 // ═════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://hckkrzghxxhauotyqlqr.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_yyfkPLo6M7XDe3lwurctmw_6wsmB-2M';
+const SUPABASE_KEY = 'PASTE-YOUR-ANON-KEY-HERE';
 const LOGIN_DOMAIN = 'petrokima.local';
 const APP_BUILD = 0;            // set automatically by the Android / iPhone build — 0 on the web
 const APK_REPO  = '';           // GitHub repository that publishes the Android app (owner/name)
@@ -289,6 +289,7 @@ const T = {
   mockLoc:'A fake-location app is active on this phone. Turn it off (and remove it from Developer options → Select mock location app), then try again.',
   outsideSite:'You are about {d} from {site}. Check in when you arrive at the site.',
   appRequired:'Please check in with the Petrokima app, not the internet browser. Download it from download.petrokima-hr.com',
+  updateRequired:'Your Petrokima app is out of date. Install the new version (download.petrokima-hr.com), then check in again.',
   badDevice:'This phone could not be identified. Close the app and open it again.',
   phoneReg:'Registered phone',thisPhone:'This phone is registered to you',back:'Back',
   locTitle:'Location is required',locDenied:'Check-in needs your location, and this phone is not sharing it with Petrokima.',
@@ -380,6 +381,7 @@ const T = {
   mockLoc:'يوجد تطبيق لتزييف الموقع يعمل على هذا الهاتف. أوقفه (واحذفه من خيارات المطوّر ← تطبيق الموقع الوهمي) ثم حاول مرة أخرى.',
   outsideSite:'أنت على بعد حوالي {d} من {site}. سجّل الحضور عند وصولك إلى الموقع.',
   appRequired:'من فضلك سجّل الحضور من تطبيق بتروكيما وليس من متصفح الإنترنت. حمّله من download.petrokima-hr.com',
+  updateRequired:'إصدار تطبيق بتروكيما لديك قديم. ثبّت الإصدار الجديد (download.petrokima-hr.com) ثم سجّل الحضور مرة أخرى.',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
   phoneReg:'الهاتف المسجّل',thisPhone:'هذا الهاتف مسجّل باسمك',back:'رجوع',
   locTitle:'تحديد الموقع مطلوب',locDenied:'تسجيل الحضور يتطلب موقعك، وهذا الهاتف لا يشارك موقعه مع تطبيق بتروكيما.',
@@ -476,6 +478,7 @@ function friendly(msg){
   if (/NO_LOCATION/.test(msg)) return t('locDenied');
   if (/MOCK_LOCATION/.test(msg)) return t('mockLoc');
   if (/APP_REQUIRED/.test(msg)) return t('appRequired');
+  if (/UPDATE_REQUIRED/.test(msg)) { setTimeout(() => checkAppUpdate(true), 0); return t('updateRequired'); }
   if (/OUTSIDE_SITE/.test(msg)) { const m = msg.match(/about (.+?) from (.+?)\. Check/) || []; return t('outsideSite', { d: m[1] || '', site: m[2] || '' }); }
   if (/approved and locked/i.test(msg)) return t('lockedPeriod');
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return t('offline');
@@ -567,7 +570,7 @@ function deviceLabel(){
   return 'Browser';
 }
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const clientKind = () => NATIVE ? PLATFORM + '-app' : 'web-' + (isIOS() ? 'ios' : /android/i.test(navigator.userAgent || '') ? 'android' : 'other');
+const clientKind = () => NATIVE ? PLATFORM + '-app' + (APP_BUILD ? ':' + APP_BUILD : '') : 'web-' + (isIOS() ? 'ios' : /android/i.test(navigator.userAgent || '') ? 'android' : 'other');
 const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
 function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
@@ -1156,12 +1159,24 @@ async function teamDecide(id, approve, note){
   const r = await sb.from('allowance_approvals').select('*').eq('manager_id', APP.me.emp_id).order('submitted_at', { ascending:false });
   APP.team = r.data || APP.team; saveCache(); renderTeam();
 }
-async function checkAppUpdate(){
-  if (!NATIVE || PLATFORM !== 'android' || !APK_REPO || !APP_BUILD || !navigator.onLine) return;
+// newest Android build: read from our own download page (no limits), GitHub as a fallback
+async function latestBuild(){
+  if (APK_DOWNLOAD) {
+    try { const r = await fetch(APK_DOWNLOAD.replace(/[^/]*$/, '') + '?v=' + Date.now(), { cache:'no-store' });
+      if (r.ok) { const m = (await r.text()).match(/1\.0\.(\d+)/); if (m) return Number(m[1]); } } catch(e){}
+  }
+  if (!APK_REPO) return 0;
+  const r = await fetch(`https://api.github.com/repos/${APK_REPO}/releases/latest`, { headers:{ Accept:'application/vnd.github+json' }, cache:'no-store' });
+  if (!r.ok) return 0;
+  const j = await r.json(); return Number(String(j.tag_name || '').split('.').pop()) || 0;
+}
+let updChecked = 0;
+async function checkAppUpdate(force){
+  if (!NATIVE || PLATFORM !== 'android' || !(APK_REPO || APK_DOWNLOAD) || !APP_BUILD || !navigator.onLine) return;
+  if (!force && Date.now() - updChecked < 15 * 60 * 1000) return;       // at most every 15 minutes
+  updChecked = Date.now();
   try {
-    const r = await fetch(`https://api.github.com/repos/${APK_REPO}/releases/latest`, { headers:{ Accept:'application/vnd.github+json' } });
-    if (!r.ok) return;
-    const j = await r.json(), latest = Number(String(j.tag_name || '').split('.').pop());
+    const latest = await latestBuild();
     if (latest > APP_BUILD && !$('upd-bar')){
       document.body.insertAdjacentHTML('afterbegin', `<div id="upd-bar" style="background:var(--brand);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:14px;font-weight:700;padding-top:calc(10px + env(safe-area-inset-top,0px))">
         <span style="flex:1">⬆ ${esc(t('updateAvail'))}</span><a href="${APK_DOWNLOAD || `https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk`}" style="background:#fff;color:var(--brand);padding:7px 12px;border-radius:10px;text-decoration:none">${esc(t('updateBtn'))}</a></div>`);
@@ -1441,7 +1456,8 @@ $('fl-go').addEventListener('click', firstLogin);
 const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; if (APP.ready) renderPayslips(); } });
-document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); } });
+document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ checkAppUpdate(); await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); } });
+setInterval(() => { if (APP.ready) checkAppUpdate(); }, 60 * 60 * 1000);
 setInterval(() => { if (APP.ready) tick(); }, 15000);
 setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 30000);
 
