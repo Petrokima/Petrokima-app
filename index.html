@@ -273,7 +273,9 @@ const T = {
   noSlips:'No approved payslips yet. They appear here once payroll is approved.',gross:'Gross',ded:'Deductions',net:'Net pay',additions:'Additions',deductions:'Deductions',approvedSlip:'Approved payslip',
   code:'Employee code',job:'Job',dept:'Department',unit:'Unit',manager:'Direct manager',hired:'Employment date',mobile:'Mobile',email:'Email',entity:'Company',nidL:'National ID',
   changePass:'Change password',passChanged:'Password changed ✓',install:'Install the app',installAndroid:'Add Petrokima to your home screen for one-tap access.',installBtn:'Install',
-  installIos:'On iPhone: tap the Share button, then “Add to Home Screen”.',configMissing:'The app is not configured yet. The administrator must add the Supabase key.',
+  installIos:'On iPhone: tap the Share button, then “Add to Home Screen”.',
+  androidUseApp:'On Android phones, Petrokima works only in the Petrokima app — not in the internet browser.\n\nDownload and install the app, then sign in there with your employee code and password.',
+  androidGetApp:'Download the Petrokima app',configMissing:'The app is not configured yet. The administrator must add the Supabase key.',
   st:{Pending:'Pending',Approved:'Approved',Rejected:'Rejected',Cancelled:'Cancelled','In progress':'In progress',Completed:'Completed','Waiting for manager':'Waiting for your manager','Waiting for HR':'Manager approved — waiting for HR'},
   lt:{Annual:'Annual',Casual:'Casual',Sick:'Sick',Unpaid:'Unpaid','Other paid':'Other paid'},
   pt:{'Late arrival':'Late arrival','Early leave':'Early leave'},
@@ -365,7 +367,9 @@ const T = {
   noSlips:'لا توجد قسائم رواتب معتمدة بعد. ستظهر هنا بعد اعتماد الرواتب.',gross:'الإجمالي',ded:'الاستقطاعات',net:'صافي الراتب',additions:'الإضافات',deductions:'الاستقطاعات',approvedSlip:'قسيمة راتب معتمدة',
   code:'كود الموظف',job:'الوظيفة',dept:'الإدارة',unit:'الوحدة',manager:'المدير المباشر',hired:'تاريخ التعيين',mobile:'الموبايل',email:'البريد الإلكتروني',entity:'الشركة',nidL:'الرقم القومي',
   changePass:'تغيير كلمة المرور',passChanged:'تم تغيير كلمة المرور ✓',install:'تثبيت التطبيق',installAndroid:'أضف تطبيق بتروكيما إلى الشاشة الرئيسية لفتحه بضغطة واحدة.',installBtn:'تثبيت',
-  installIos:'على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».',configMissing:'التطبيق غير مُعدّ بعد. يجب على المسؤول إضافة مفتاح Supabase.',
+  installIos:'على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».',
+  androidUseApp:'على هواتف أندرويد يعمل نظام بتروكيما من خلال تطبيق بتروكيما فقط — وليس من متصفح الإنترنت.\n\nحمّل التطبيق وثبّته، ثم سجّل الدخول فيه بكود الموظف وكلمة المرور.',
+  androidGetApp:'تحميل تطبيق بتروكيما',configMissing:'التطبيق غير مُعدّ بعد. يجب على المسؤول إضافة مفتاح Supabase.',
   st:{Pending:'قيد المراجعة',Approved:'مقبول',Rejected:'مرفوض',Cancelled:'ملغي','In progress':'جارٍ التنفيذ',Completed:'تم','Waiting for manager':'في انتظار مديرك المباشر','Waiting for HR':'وافق المدير — في انتظار الموارد البشرية'},
   lt:{Annual:'سنوية',Casual:'عارضة',Sick:'مرضية',Unpaid:'بدون أجر','Other paid':'أخرى مدفوعة'},
   pt:{'Late arrival':'تأخير صباحي','Early leave':'انصراف مبكر'},
@@ -570,7 +574,12 @@ function deviceLabel(){
   return 'Browser';
 }
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const clientKind = () => NATIVE ? PLATFORM + '-app' + (APP_BUILD ? ':' + APP_BUILD : '') : 'web-' + (isIOS() ? 'ios' : /android/i.test(navigator.userAgent || '') ? 'android' : 'other');
+// an Android phone using a browser (also when Chrome shows the "desktop site", which hides the word Android)
+const ANDROID_APP_PAGE = 'https://download.petrokima-hr.com/';
+const isAndroidWeb = () => !NATIVE && !isIOS() && (/android/i.test(navigator.userAgent || '')
+  || /android/i.test(((navigator.userAgentData || {}).platform) || '')
+  || ((navigator.maxTouchPoints || 0) > 0 && /linux/i.test(navigator.userAgent || '')));
+const clientKind = () => NATIVE ? PLATFORM + '-app' + (APP_BUILD ? ':' + APP_BUILD : '') : 'web-' + (isIOS() ? 'ios' : isAndroidWeb() ? 'android' : 'other');
 const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
 function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
@@ -1465,6 +1474,12 @@ setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQu
   applyLang(); net();
   if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (NATIVE) await restoreDeviceId();
+  if (isAndroidWeb()) {                                   // Android phones must use the Petrokima app, not the browser
+    message(t('androidUseApp'));
+    $('msg-body').insertAdjacentHTML('beforeend', `<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:16px" href="${ANDROID_APP_PAGE}">⬇ ${esc(t('androidGetApp'))}</a>`);
+    const back = document.querySelector('#scr-msg [data-act="signout"]'); if (back) back.style.display = 'none';
+    return;
+  }
   if (!window.supabase || !SUPABASE_KEY || SUPABASE_KEY.startsWith('PASTE')) return message(t('configMissing'));
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: timedFetch } });
   $('li-code').value = localStorage.getItem('pk_code') || '';
