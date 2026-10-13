@@ -255,7 +255,7 @@ const T = {
   notIn:'You are not checked in.',checkedIn:'Checked in at',since:'since',hSince:'for',checkIn:'Check in',checkOut:'Check out',switchSite:'Switch site',
   openFrom:'You checked in on {d} at {t} and have not checked out yet.',
   locNote:'Your time comes from the company server. Your location is recorded with each check-in.',
-  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',totalToday:'Total today',hours:'h',mins:'m',
+  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',noOut:'no check-out',totalToday:'Total today',hours:'h',mins:'m',
   thisCycle:'This payroll month',noMonth:'No attendance recorded this payroll month.',
   whereWork:'Where are you working?',recent:'Recent sites',searchSite:'Type the site code or name',typeMore:'Type at least 2 letters or numbers',noSites:'No site found',
   confirmIn:'Check in at',gettingLoc:'Getting your location…',noLoc:'Location not available — saved without it',
@@ -349,7 +349,7 @@ const T = {
   notIn:'لم تسجّل حضورك بعد.',checkedIn:'مسجّل حضور في',since:'منذ',hSince:'مدة',checkIn:'تسجيل حضور',checkOut:'تسجيل انصراف',switchSite:'تغيير الموقع',
   openFrom:'سجّلت حضورك يوم {d} الساعة {t} ولم تسجّل الانصراف بعد.',
   locNote:'الوقت يُؤخذ من خادم الشركة، ويتم تسجيل موقعك مع كل تسجيل حضور.',
-  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',totalToday:'إجمالي اليوم',hours:'س',mins:'د',
+  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',noOut:'لم يُسجَّل انصراف',totalToday:'إجمالي اليوم',hours:'س',mins:'د',
   thisCycle:'شهر الرواتب الحالي',noMonth:'لا يوجد حضور مسجل في شهر الرواتب الحالي.',
   whereWork:'أين تعمل الآن؟',recent:'المواقع الأخيرة',searchSite:'اكتب كود أو اسم الموقع',typeMore:'اكتب حرفين أو رقمين على الأقل',noSites:'لم يتم العثور على موقع',
   confirmIn:'تسجيل الحضور في',gettingLoc:'جارٍ تحديد موقعك…',noLoc:'تعذّر تحديد الموقع — تم الحفظ بدونه',
@@ -742,10 +742,12 @@ function renderHome(){
   const cyc = cycleOf(st.date || todayStr());
   $('month-title').textContent = `${t('thisCycle')} — ${periodLabel(cyc)}`;
   const days = APP.att.filter(a => a.date !== st.date);
+  // a past day with a check-in but no check-out: hours are not counted until HR settles it
+  const noOutDay = a => (a.projects||[]).some(x => x.forgotten || (x.in && !x.out && a.date < (st.date || todayStr())));
   $('month-list').innerHTML = days.length ? days.map(a => `<div class="it"><div class="grow"><div class="t1">${esc(niceDate(a.date))}</div>
       <div class="t2">${(a.projects||[]).map(x=>esc(x.code || t('noProject'))).join(' · ') || esc(tm('st',a.status)||a.status)}</div></div>
-      <div class="num" style="font-size:13.5px">${esc(a.check_in||'')}${a.check_out?' – '+esc(a.check_out):''}</div>
-      <div class="num" style="min-width:52px;text-align:end">${fmtH(a.total_hours)}</div></div>`).join('')
+      <div class="num" style="font-size:13.5px">${esc(a.check_in||'')}${noOutDay(a) ? ` – <span class="chip c-red">${esc(t('noOut'))}</span>` : a.check_out?' – '+esc(a.check_out):''}</div>
+      <div class="num" style="min-width:52px;text-align:end">${noOutDay(a) ? '—' : fmtH(a.total_hours)}</div></div>`).join('')
     : `<div class="empty">${esc(t('noMonth'))}</div>`;
   tick();
 }
