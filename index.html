@@ -189,6 +189,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     <div class="view" id="v-news"><div class="card"><div class="sec" data-t="newsTitle"></div><div class="list" id="news-list"></div></div></div>
     <!-- TEAM APPROVALS (managers) -->
     <div class="view" id="v-team">
+      <div class="card" id="hra-card" style="display:none"><div class="sec">🔔 <span data-t="hraTitle"></span></div><div class="hint" id="hra-note"></div><div class="list" id="hra-list"></div></div>
       <div class="card" id="board-card" style="display:none"><div class="sec" data-t="boardTitle"></div><div class="list" id="board-list"></div></div>
       <div class="card" id="inbox-card" style="display:none"><div class="sec" data-t="inboxTitle"></div><div class="list" id="inbox-list"></div></div>
       <div class="card" id="treq-card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
@@ -255,7 +256,7 @@ const T = {
   notIn:'You are not checked in.',checkedIn:'Checked in at',since:'since',hSince:'for',checkIn:'Check in',checkOut:'Check out',switchSite:'Switch site',
   openFrom:'You checked in on {d} at {t} and have not checked out yet.',
   locNote:'Your time comes from the company server. Your location is recorded with each check-in.',
-  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',noOut:'no check-out',totalToday:'Total today',hours:'h',mins:'m',
+  today:'Today',noToday:'Nothing recorded today yet.',openLine:'still on site',noOut:'no check-out',hraTitle:'HR alerts',hraNoteHR:'Contracts, probation, IDs, certificates and disability cards that need attention. Renewing a contract is done on the desktop.',hraNoteMgr:'Your team: contracts and probation periods ending soon. Give your recommendation — HR decides.',hraNone:'Nothing needs attention',hk_contract:'Contract ends',hk_probation:'Probation ends',hk_id:'National ID expires',hk_cert:'Certificate expires',hk_disability:'Disability card expires',hraIn:'in {n} days',hraAgo:'{n} days ago',hraToday:'today',hraDone:'Done',hraNoteL:'Note (optional)',hraSaved:'Saved',hraMgr:'Manager',hraHR:'HR',dec_seen:'Seen',dec_renew:'Recommend renewal',dec_not_renew:'Do not renew',dec_confirm:'Confirm',dec_not_confirm:'Do not confirm',tooEarlyErr:'You can request annual or emergency leave from {d} (after {m} months of service). Ask HR if you need an exception.',emergLimitErr:'Emergency leave allowed this year: {cap} days — you have already used or requested {used}.',emergLeft:'Emergency leave left this year',leaveFrom:'Annual and emergency leave can be requested from {d}',totalToday:'Total today',hours:'h',mins:'m',
   thisCycle:'This payroll month',noMonth:'No attendance recorded this payroll month.',
   whereWork:'Where are you working?',recent:'Recent sites',searchSite:'Type the site code or name',typeMore:'Type at least 2 letters or numbers',noSites:'No site found',
   confirmIn:'Check in at',gettingLoc:'Getting your location…',noLoc:'Location not available — saved without it',
@@ -349,7 +350,7 @@ const T = {
   notIn:'لم تسجّل حضورك بعد.',checkedIn:'مسجّل حضور في',since:'منذ',hSince:'مدة',checkIn:'تسجيل حضور',checkOut:'تسجيل انصراف',switchSite:'تغيير الموقع',
   openFrom:'سجّلت حضورك يوم {d} الساعة {t} ولم تسجّل الانصراف بعد.',
   locNote:'الوقت يُؤخذ من خادم الشركة، ويتم تسجيل موقعك مع كل تسجيل حضور.',
-  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',noOut:'لم يُسجَّل انصراف',totalToday:'إجمالي اليوم',hours:'س',mins:'د',
+  today:'اليوم',noToday:'لم يُسجَّل شيء اليوم بعد.',openLine:'ما زال في الموقع',noOut:'لم يُسجَّل انصراف',hraTitle:'تنبيهات الموارد البشرية',hraNoteHR:'العقود وفترات الاختبار والبطاقات الشخصية والشهادات وبطاقات ذوي الإعاقة التي تحتاج إلى متابعة. تجديد العقد يتم من برنامج الكمبيوتر.',hraNoteMgr:'فريقك: عقود وفترات اختبار تنتهي قريباً. أبدِ توصيتك — والقرار للموارد البشرية.',hraNone:'لا يوجد ما يحتاج إلى متابعة',hk_contract:'انتهاء العقد',hk_probation:'انتهاء فترة الاختبار',hk_id:'انتهاء البطاقة الشخصية',hk_cert:'انتهاء شهادة',hk_disability:'انتهاء بطاقة ذوي الإعاقة',hraIn:'بعد {n} يوم',hraAgo:'منذ {n} يوم',hraToday:'اليوم',hraDone:'تم',hraNoteL:'ملاحظة (اختياري)',hraSaved:'تم الحفظ',hraMgr:'المدير',hraHR:'الموارد البشرية',dec_seen:'تم الاطلاع',dec_renew:'أوصي بالتجديد',dec_not_renew:'لا أوصي بالتجديد',dec_confirm:'تثبيت',dec_not_confirm:'عدم التثبيت',tooEarlyErr:'يمكنك طلب إجازة سنوية أو عارضة اعتباراً من {d} (بعد {m} أشهر من تاريخ التعيين). تواصل مع الموارد البشرية إذا احتجت استثناءً.',emergLimitErr:'المسموح من الإجازة العارضة هذا العام: {cap} يوم — استخدمت أو طلبت {used} يوم.',emergLeft:'المتبقي من الإجازة العارضة هذا العام',leaveFrom:'يمكن طلب الإجازة السنوية والعارضة اعتباراً من {d}',totalToday:'إجمالي اليوم',hours:'س',mins:'د',
   thisCycle:'شهر الرواتب الحالي',noMonth:'لا يوجد حضور مسجل في شهر الرواتب الحالي.',
   whereWork:'أين تعمل الآن؟',recent:'المواقع الأخيرة',searchSite:'اكتب كود أو اسم الموقع',typeMore:'اكتب حرفين أو رقمين على الأقل',noSites:'لم يتم العثور على موقع',
   confirmIn:'تسجيل الحضور في',gettingLoc:'جارٍ تحديد موقعك…',noLoc:'تعذّر تحديد الموقع — تم الحفظ بدونه',
@@ -474,6 +475,8 @@ function friendly(msg){
   if (/LATE_REQUEST/.test(msg)) return t('lateReqErr', { time: (msg.match(/before (\d\d:\d\d)/) || [])[1] || lateDeadline() });
   if (/ADVANCE_NOTICE/.test(msg)) return t('annualNoticeErr', { n: Number(S.annualNoticeDays) || 1 });
   if (/PAST_DATE/.test(msg)) return t('pastDateErr');
+  if (/TOO_EARLY/.test(msg)) { const m = msg.match(/from (\d{4}-\d\d-\d\d) \((\d+) months/) || []; return t('tooEarlyErr', { d: m[1] ? dShort(m[1]) : '', m: m[2] || 6 }); }
+  if (/EMERGENCY_LIMIT/.test(msg)) { const m = msg.match(/this year: ([\d.]+) days; already used or requested: ([\d.]+)/) || []; return t('emergLimitErr', { cap: m[1] || '', used: m[2] || '' }); }
   if (/OFFLINE_TOO_OLD/.test(msg)) return t('tooOld');
   if (/OFFLINE_ORDER/.test(msg)) return t('wrongOrder');
   if (/ALREADY_IN/.test(msg)) return t('alreadyIn');
@@ -531,11 +534,11 @@ const timedFetch = (input, init = {}) => {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
   return fetch(input, { ...init, signal: ac.signal }).finally(() => clearTimeout(t));
 };
-function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, myProjects:APP.myProjects, myTeam:APP.myTeam, me:APP.me, emp:APP.emp, status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, slips:APP.slips, att:APP.att, manager:APP.manager }); }
+function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, myProjects:APP.myProjects, myTeam:APP.myTeam, me:APP.me, emp:APP.emp, status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, slips:APP.slips, att:APP.att, manager:APP.manager, hra:APP.hra, lbal:APP.lbal }); }
 function useCache(uid){
   const c = store.get('pk_cache', null); if (!c || (uid && c.uid !== uid)) return false;
   APP.me=c.me; APP.emp=c.emp; APP.status=c.status; APP.statusAt=c.statusAt||Date.now(); S={...S,...(c.S||{})}; HOL=new Set(c.hol||[]);
-  APP.leaves=c.leaves||[]; APP.perms=c.perms||[]; APP.reqs=c.reqs||[]; APP.slips=c.slips||[]; APP.att=c.att||[]; APP.manager=c.manager; APP.offline=true; APP.updatedAt=c.updatedAt; APP.team=c.team||[]; APP.teamReq=c.teamReq||[]; APP.myProjects=c.myProjects||[]; APP.myTeam=c.myTeam||[];
+  APP.leaves=c.leaves||[]; APP.perms=c.perms||[]; APP.reqs=c.reqs||[]; APP.slips=c.slips||[]; APP.att=c.att||[]; APP.manager=c.manager; APP.offline=true; APP.updatedAt=c.updatedAt; APP.team=c.team||[]; APP.teamReq=c.teamReq||[]; APP.myProjects=c.myProjects||[]; APP.myTeam=c.myTeam||[]; APP.hra=c.hra||[]; APP.lbal=c.lbal||null;
   return true;
 }
 // Server time minus phone time, measured each time we are online
@@ -651,7 +654,7 @@ async function refreshSiteCache(force){
 async function loadAll(){
   const id = APP.me.emp_id;
   const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts, vels, sal] = await Promise.all([
+  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts, vels, sal, hra, lbal] = await Promise.all([
     all(sb.from('settings').select('*').eq('key','payroll')),
     all(sb.from('public_holidays').select('date')),
     all(sb.from('employees').select('*').eq('id', id)),
@@ -674,11 +677,14 @@ async function loadAll(){
     APP.me.receives_feedback ? sb.rpc('feedback_inbox').then(r => r.data || [], () => []) : Promise.resolve([]),
     all(sb.from('manager_actions').select('*').order('created_at', { ascending:false }).limit(100)),
     sb.rpc('variable_elements').then(r => r.data || [], () => []),
-    APP.me.board_approver ? all(sb.from('salary_change_requests').select('*').order('created_at', { ascending:false }).limit(50)) : Promise.resolve([]) ]);
+    APP.me.board_approver ? all(sb.from('salary_change_requests').select('*').order('created_at', { ascending:false }).limit(50)) : Promise.resolve([]),
+    sb.rpc('hr_alerts').then(r => Array.isArray(r.data) ? r.data : [], () => []),
+    sb.rpc('leave_balance').then(r => r.error ? null : r.data, () => null) ]);
   if (set[0] && set[0].value) S = { ...S, ...set[0].value };
   HOL = new Set(hol.map(h => h.date));
   APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; APP.slips = sl; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
   APP.varElements = vels || []; APP.salReqs = (sal || []).filter(r => r.emp_id !== id);
+  APP.hra = hra || []; APP.lbal = lbal || null;
   APP.news = ann || []; APP.newsRead = new Set((rd || []).map(x => x.ann_id)); APP.birthday = !!bday;
   APP.myFeedback = fb || []; APP.inbox = inbox || [];
   APP.myActions = (acts || []).filter(a => a.manager_emp === id); APP.boardActions = APP.me.board_approver ? (acts || []).filter(a => a.manager_emp !== id && a.emp_id !== id) : [];
@@ -937,7 +943,9 @@ function renderRequests(){
   const ent=entitlement(), taken=yearDays(annualTypes(),'Approved'), pend=yearDays(annualTypes(),'Pending');
   const cyc=cycleOf(todayStr()), lim=num(S.permissionsPerMonth)||2, used=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
   const open = APP.leaves.filter(l=>l.status==='Pending').length + APP.perms.filter(p=>p.status==='Pending').length + APP.reqs.filter(r=>r.status==='Pending'||r.status==='In progress').length;
-  $('req-stats').innerHTML = `<div class="stat"><div class="v num">${fmt(ent-taken)}</div><div class="l">${esc(t('annualLeft'))}${pend?`<br>(${fmt(pend)} ${esc(tm('st','Pending'))})`:''}</div></div>
+  const lb = APP.lbal, annLeft = lb ? num(lb.remaining) : ent-taken, annPend = lb ? num(lb.pending) : pend;
+  const emLeft = lb ? Math.max(0, num(lb.emergency_cap) - num(lb.emergency_taken) - num(lb.emergency_pending)) : null;
+  $('req-stats').innerHTML = `<div class="stat"><div class="v num">${fmt(annLeft)}</div><div class="l">${esc(t('annualLeft'))}${annPend?`<br>(${fmt(annPend)} ${esc(tm('st','Pending'))})`:''}${emLeft!==null?`<br>${esc(t('emergLeft'))}: <b class="num">${fmt(emLeft)}</b>`:''}${lb && lb.eligible_from > todayStr() && !lb.early_ok ? `<br><span class="neg">${esc(t('leaveFrom', { d: dShort(lb.eligible_from) }))}</span>` : ''}</div></div>
     <div class="stat"><div class="v num">${used}/${lim}</div><div class="l">${esc(t('permsUsed'))}</div></div>
     <div class="stat"><div class="v num">${open}</div><div class="l">${esc(t('openReq'))}</div></div>`;
   const items = [
@@ -967,8 +975,13 @@ function leaveSheet(){
     if (f&&to&&to<f) out.push(`<span class="neg">${esc(t('toBefore'))}</span>`);
     if (f&&to&&to>=f) out.push(esc(t('wd',{ c: Math.round((dObj(to)-dObj(f))/86400000)+1, w: workdays(f,to) })));
     if (f && f < todayStr()) out.push(esc(t('past')));
-    if (annualTypes().includes(ty)){ const left=entitlement()-yearDays(annualTypes(),'Approved')-yearDays(annualTypes(),'Pending')-d;
+    const lb = APP.lbal;
+    if (annualTypes().includes(ty)){ const left = lb ? num(lb.remaining)-num(lb.pending)-d : entitlement()-yearDays(annualTypes(),'Approved')-yearDays(annualTypes(),'Pending')-d;
       out.push(`${esc(t('balAfter'))}: <b class="num ${left<0?'neg':'pos'}">${fmt(left)}</b>${left<0?` — <span class="neg">${esc(t('over'))}</span>`:''}`); }
+    if (lb && ty==='Casual'){ const el = num(lb.emergency_cap)-num(lb.emergency_taken)-num(lb.emergency_pending)-d;
+      out.push(`${esc(t('emergLeft'))}: <b class="num ${el<0?'neg':'pos'}">${fmt(el)}</b>${el<0?` — <span class="neg">${esc(t('emergLimitErr', { cap: fmt(lb.emergency_cap), used: fmt(num(lb.emergency_taken)+num(lb.emergency_pending)) }))}</span>`:''}`); }
+    if (lb && (ty==='Annual'||ty==='Casual') && f && lb.eligible_from && f < lb.eligible_from && !lb.early_ok)
+      out.push(`<span class="neg">${esc(t('tooEarlyErr', { d: dShort(lb.eligible_from), m: 6 }))}</span>`);
     if (ty==='Unpaid') out.push(esc(t('unpaidNote'))); if (ty==='Sick') out.push(esc(t('sickNote')));
     if (f&&to && APP.leaves.some(l=>(l.status==='Approved'||l.status==='Pending')&&l.date_from<=to&&l.date_to>=f)) out.push(`<span class="neg">${esc(t('overlap'))}</span>`);
     $('lv-h').innerHTML = out.join('<br>');
@@ -1104,7 +1117,8 @@ function renderTeam(){
   const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
   const reqs = (APP.teamReq||[]).slice().sort((a,b) => (reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1));
   const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
-  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback || APP.me.board_approver) ? '' : 'none';
+  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback || APP.me.board_approver || (APP.hra||[]).length) ? '' : 'none';
+  renderHRA();
   $('treq-card').style.display = (team.length || reqs.length || (APP.myTeam||[]).length) ? '' : 'none';
   $('tproj-card').style.display = (APP.myTeam||[]).length ? '' : 'none';
   $('tproj-list').innerHTML = (APP.myTeam||[]).map(m => `<div class="it"><div class="grow"><div class="t1">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></div>
@@ -1118,7 +1132,8 @@ function renderTeam(){
       <div style="margin-top:6px">${chip(mine ? 'Pending' : stg==='Waiting for HR' ? 'Waiting for HR' : r.status)}</div>
       ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-treq-ok="${kind}:${r.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-treq-no="${kind}:${r.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
     || `<div class="empty">${esc(t('noTeamReq'))}</div>`;
-  $('team-badge').style.display = waiting ? '' : 'none'; $('team-badge').textContent = waiting;
+  const hraWait = (APP.hra||[]).filter(a => !a.done).length;
+  $('team-badge').style.display = (waiting + hraWait) ? '' : 'none'; $('team-badge').textContent = waiting + hraWait;
   const st = { 'Pending manager':['c-orange','aaWait'], 'Pending HR':['c-blue','aaHR'], 'Approved':['c-green','aaOk'], 'Rejected':['c-red','aaNo'] };
   $('team-list').innerHTML = team.map(a => { const c = st[a.status] || ['c-grey','aaNo'];
     return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(a.emp_name || a.emp_id)} <span class="muted" style="font-size:12px">${esc(a.emp_id)}</span></div>
@@ -1127,6 +1142,38 @@ function renderTeam(){
       <div style="margin-top:6px"><span class="chip ${c[0]}">${esc(t(c[1]))}</span></div>
       ${a.status==='Pending manager' ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-team-ok="${a.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-team-no="${a.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div>
       <div class="num" style="font-size:17px">${fmt(a.amount)}</div></div>`; }).join('') || `<div class="empty">${esc(t('noTeam'))}</div>`;
+}
+// HR alerts: HR / HR officers see everything; a manager sees his team's contracts and probation and recommends
+function renderHRA(){
+  const list = (APP.hra || []).slice().sort((a,b) => (a.done?1:0) - (b.done?1:0) || String(a.due).localeCompare(String(b.due)));
+  $('hra-card').style.display = list.length ? '' : 'none'; if (!list.length) return;
+  const asHR = list.some(a => a.as === 'hr');
+  $('hra-note').textContent = t(asHR ? 'hraNoteHR' : 'hraNoteMgr');
+  const when = n => { n = Number(n); return n < 0 ? t('hraAgo', { n: -n }) : n === 0 ? t('hraToday') : t('hraIn', { n }); };
+  const acts = a => a.as === 'manager' ? (a.kind === 'contract' ? ['renew','not_renew'] : ['confirm','not_confirm']) : ['seen'];
+  $('hra-list').innerHTML = list.slice(0, 80).map(a => {
+    const nm = (LANG==='ar' ? a.name_ar : a.name_en) || a.name_en || a.name_ar || a.emp_id;
+    const resp = (a.responses || []).map(r => `<div class="t2" style="font-size:12px">💬 ${esc(r.role==='manager' ? t('hraMgr') : t('hraHR'))}: ${esc(t('dec_' + r.decision))}${r.note ? ' — ' + esc(r.note) : ''}</div>`).join('');
+    return `<div class="it" style="align-items:flex-start${a.done ? ';opacity:.6' : ''}"><div class="grow"><div class="t1">${esc(nm)} <span class="muted" style="font-size:12px">${esc(a.emp_id)}</span></div>
+      <div class="t2">${esc(t('hk_' + a.kind))}${a.detail && a.kind === 'cert' ? ' · ' + esc(a.detail) : ''} · ${esc(niceDate(a.due))} · <span class="${Number(a.days_left) < 0 ? 'neg' : ''}">${esc(when(a.days_left))}</span></div>${resp}
+      ${a.done ? `<div style="margin-top:6px">${chip('Approved').replace(/>[^<]*</, '>' + esc(t('hraDone')) + '<')}</div>`
+               : `<div class="row" style="margin-top:10px">${acts(a).map((d, i) => `<button class="btn ${i === 0 ? 'green' : 'ghost'} small" style="flex:1" data-hra="${esc([a.kind, a.emp_id, a.ref_id || '', a.due, d].join('|'))}">${esc(t('dec_' + d))}</button>`).join('')}</div>`}</div></div>`; }).join('')
+    || `<div class="empty">${esc(t('hraNone'))}</div>`;
+}
+function hraSheet(key){
+  const [kind, emp, ref, due, dec] = key.split('|'), a = (APP.hra || []).find(x => x.kind === kind && x.emp_id === emp && (x.ref_id || '') === ref && x.due === due); if (!a) return;
+  const nm = (LANG==='ar' ? a.name_ar : a.name_en) || a.name_en || emp;
+  sheet(`<h2>🔔 ${esc(t('dec_' + dec))}</h2><div class="hint">${esc(nm)} (${esc(emp)}) · ${esc(t('hk_' + kind))} · ${esc(niceDate(due))}</div>
+    <div class="field"><label>${esc(t('hraNoteL'))}</label><textarea id="hra-n" rows="3"></textarea></div>
+    <button class="btn" id="hra-go">${esc(t('dec_' + dec))}</button>`);
+  $('hra-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    $('hra-go').disabled = true;
+    const { error } = await sb.rpc('hr_alert_respond', { p_kind:kind, p_emp:emp, p_ref:ref, p_due:due, p_decision:dec, p_note:$('hra-n').value.trim() || null });
+    if (error) { $('hra-go').disabled = false; return toast(friendly(error.message), true); }
+    const r = await sb.rpc('hr_alerts'); if (Array.isArray(r.data)) APP.hra = r.data;
+    closeSheet(); toast(t('hraSaved')); renderTeam(); saveCache();
+  };
 }
 // the manager manages one team member's projects
 async function teamProjSheet(empId){
@@ -1430,6 +1477,7 @@ document.addEventListener('click', async ev => {
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="rno-note"></textarea></div>
       <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="rno-go">${esc(t('reject'))}</button></div>`);
     $('rno-go').onclick = () => teamReqDecide(key, false, $('rno-note').value.trim()); return; }
+  const hr1 = x.closest('[data-hra]'); if (hr1) return hraSheet(hr1.dataset.hra);
   const tok = x.closest('[data-team-ok]'); if (tok) { tok.disabled = true; return teamDecide(tok.dataset.teamOk, true); }
   const tno = x.closest('[data-team-no]'); if (tno) { const id = tno.dataset.teamNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="tno-note"></textarea></div>
