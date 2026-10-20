@@ -1115,7 +1115,9 @@ function passSheet(){
 }
 function renderTeam(){
   const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
-  const reqs = (APP.teamReq||[]).slice().sort((a,b) => (reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1));
+  // waiting-for-me first, then newest sent first (date + time) — 20 Oct 2026
+  const sentKey = x => String(x.r.created_at || x.r.requested_at || x.r.date_from || x.r.date || '');
+  const reqs = (APP.teamReq||[]).slice().sort((a,b) => ((reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1)) || sentKey(b).localeCompare(sentKey(a)));
   const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
   $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback || APP.me.board_approver || (APP.hra||[]).length) ? '' : 'none';
   renderHRA();
