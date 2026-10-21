@@ -72,6 +72,17 @@ jobs:
           BUILD_NUMBER: ${{ github.run_number }}
         run: node scripts/patch-android.js
 
+      - name: Phone notifications (Firebase settings from the secret GOOGLE_SERVICES_JSON)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            node -e "const j=JSON.parse(require('fs').readFileSync('android/app/google-services.json','utf8')); if(!JSON.stringify(j).includes('com.petrokima.hr')) { console.error('::error::google-services.json is not for the package com.petrokima.hr'); process.exit(1); } console.log('Firebase settings added for project', j.project_info && j.project_info.project_id)"
+          else
+            echo "::warning::The secret GOOGLE_SERVICES_JSON is not set — this app is built WITHOUT phone notifications"
+          fi
+
       - name: Copy the app into the Android project
         run: npx cap sync android
 
