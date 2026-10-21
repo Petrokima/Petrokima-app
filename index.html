@@ -183,6 +183,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <button class="btn ghost" data-act="req-hr">📨 <span data-t="reqOther"></span></button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn ghost" data-act="fb-complaint">⚠️ <span data-t="complaint"></span></button><button class="btn ghost" data-act="fb-suggestion">💡 <span data-t="suggestion"></span></button></div>
       </div>
+      <div id="doc-card"></div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div class="list" id="req-list"></div></div>
       <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
     </div>
@@ -248,7 +249,7 @@ const T = {
  en:{appName:'Petrokima',loginSub:'Attendance & HR requests',empCode:'Employee code',password:'Password',signIn:'Sign in',forgot:'Forgot your password? Ask HR to reset it.',
   wrongLogin:'Wrong employee code or password.',fillLogin:'Enter your employee code and password.',
   firstTitle:'Welcome',firstSub:'This is your first sign-in. Confirm who you are and choose your own password.',nid4:'Last 4 digits of your national ID',
-  newPass:'New password (at least 8 characters)',repeatPass:'Repeat the new password',savePass:'Save my password',signOut:'Sign out',pushWhy:'Get a notification when your request is decided, a new announcement is published, or a request is waiting for you.',pushOnBtn:'🔔 Turn on notifications',pushDone:'Notifications are on ✓',pushBlocked:'Notifications are turned off for Petrokima. To allow them: iPhone Settings → Notifications → Petrokima → Allow Notifications.',pushNotReady:'Notifications are being prepared — please try again in a minute.',
+  newPass:'New password (at least 8 characters)',repeatPass:'Repeat the new password',savePass:'Save my password',signOut:'Sign out',docTitle:'📄 Documents HR asked for',docNid:'Your renewed national ID card',docAttach:'📎 Attach a photo of the new card',docExpiry:'Expiry date written on the NEW card',docSend:'Send to HR',docSent:'Sent to HR ✓ — waiting for review',docAccepted:'Received by HR ✓',docReturned:'Returned by HR — please send again',docNeedFile:'Attach the photo first',docNeedDate:'Enter the expiry date of the new card',docTooBig:'The file is too large (max 10 MB)',docUploading:'Sending…',docAnswer:'Answer',pushWhy:'Get a notification when your request is decided, a new announcement is published, or a request is waiting for you.',pushOnBtn:'🔔 Turn on notifications',pushDone:'Notifications are on ✓',pushBlocked:'Notifications are turned off for Petrokima. To allow them: iPhone Settings → Notifications → Petrokima → Allow Notifications.',pushNotReady:'Notifications are being prepared — please try again in a minute.',
   need4:'Enter the last 4 digits of your national ID.',short:'The password must be at least 8 characters.',nomatch:'The two passwords do not match.',sameTemp:'Choose a password different from the temporary one.',
   nidWrong:'The national ID digits do not match HR records.',locked:'Your account is locked. Ask HR to reset it.',passSet:'Password saved — welcome!',
   noRole:'This account has no access yet. Please contact HR.',notLinked:'This account is not linked to an employee record.',inactive:'This account is locked or deactivated. Please contact HR.',
@@ -342,7 +343,7 @@ const T = {
  ar:{appName:'بتروكيما',loginSub:'الحضور وطلبات الموارد البشرية',empCode:'كود الموظف',password:'كلمة المرور',signIn:'تسجيل الدخول',forgot:'نسيت كلمة المرور؟ اطلب من الموارد البشرية إعادة تعيينها.',
   wrongLogin:'كود الموظف أو كلمة المرور غير صحيحة.',fillLogin:'أدخل كود الموظف وكلمة المرور.',
   firstTitle:'مرحباً بك',firstSub:'هذا أول تسجيل دخول لك. أكّد هويتك واختر كلمة مرور خاصة بك.',nid4:'آخر ٤ أرقام من الرقم القومي',
-  newPass:'كلمة المرور الجديدة (٨ أحرف على الأقل)',repeatPass:'أعد كتابة كلمة المرور الجديدة',savePass:'حفظ كلمة المرور',signOut:'تسجيل الخروج',pushWhy:'استقبل إشعاراً عند البت في طلبك أو نشر إعلان جديد أو عند وجود طلب ينتظرك.',pushOnBtn:'🔔 تفعيل الإشعارات',pushDone:'تم تفعيل الإشعارات ✓',pushBlocked:'الإشعارات مغلقة لتطبيق بتروكيما. للسماح بها: الإعدادات ← الإشعارات ← Petrokima ← السماح بالإشعارات.',pushNotReady:'جارٍ تجهيز الإشعارات — يرجى المحاولة بعد دقيقة.',
+  newPass:'كلمة المرور الجديدة (٨ أحرف على الأقل)',repeatPass:'أعد كتابة كلمة المرور الجديدة',savePass:'حفظ كلمة المرور',signOut:'تسجيل الخروج',docTitle:'📄 مستندات تطلبها الموارد البشرية',docNid:'بطاقة الرقم القومي الجديدة',docAttach:'📎 أرفق صورة البطاقة الجديدة',docExpiry:'تاريخ الانتهاء المكتوب على البطاقة الجديدة',docSend:'إرسال إلى الموارد البشرية',docSent:'تم الإرسال ✓ — في انتظار المراجعة',docAccepted:'استلمتها الموارد البشرية ✓',docReturned:'أعادتها الموارد البشرية — يرجى الإرسال مرة أخرى',docNeedFile:'أرفق الصورة أولاً',docNeedDate:'اكتب تاريخ انتهاء البطاقة الجديدة',docTooBig:'الملف كبير جداً (الحد ١٠ ميجابايت)',docUploading:'جارٍ الإرسال…',docAnswer:'رد',pushWhy:'استقبل إشعاراً عند البت في طلبك أو نشر إعلان جديد أو عند وجود طلب ينتظرك.',pushOnBtn:'🔔 تفعيل الإشعارات',pushDone:'تم تفعيل الإشعارات ✓',pushBlocked:'الإشعارات مغلقة لتطبيق بتروكيما. للسماح بها: الإعدادات ← الإشعارات ← Petrokima ← السماح بالإشعارات.',pushNotReady:'جارٍ تجهيز الإشعارات — يرجى المحاولة بعد دقيقة.',
   need4:'أدخل آخر ٤ أرقام من الرقم القومي.',short:'يجب ألا تقل كلمة المرور عن ٨ أحرف.',nomatch:'كلمتا المرور غير متطابقتين.',sameTemp:'اختر كلمة مرور مختلفة عن كلمة المرور المؤقتة.',
   nidWrong:'أرقام الرقم القومي لا تطابق سجلات الموارد البشرية.',locked:'تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',passSet:'تم حفظ كلمة المرور — مرحباً بك!',
   noRole:'هذا الحساب ليس له صلاحية بعد. يرجى التواصل مع الموارد البشرية.',notLinked:'هذا الحساب غير مرتبط بملف موظف.',inactive:'هذا الحساب مقفل أو موقوف. يرجى التواصل مع الموارد البشرية.',
@@ -641,6 +642,60 @@ async function signOut(){
         const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } } catch(e){}
   try { await sb.auth.signOut(); } catch(e){} APP.ready=false; location.reload(); }
 
+// ── Documents HR asked for (61-document-requests.sql): the employee answers with a photo of the new card ──
+async function loadDocs(){
+  try { const r = await sb.from('doc_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
+        APP.docs = r.error ? [] : (r.data || []); } catch(e){ APP.docs = []; }
+}
+function renderDocs(){
+  const box = $('doc-card'); if (!box) return;
+  const L = (APP.docs || []).filter(d => d.status !== 'Accepted' || (Date.now() - new Date(d.reviewed_at || 0)) < 7 * 864e5);
+  if (!L.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card"><div class="sec">${esc(t('docTitle'))}</div><div class="list">${L.map(d => {
+    const open = d.status === 'Requested' || d.status === 'Returned';
+    const st = d.status === 'Submitted' ? t('docSent') : d.status === 'Accepted' ? t('docAccepted') : d.status === 'Returned' ? t('docReturned') : '';
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(t('docNid'))}</div>
+      ${d.message ? `<div class="t2">💬 ${esc(d.message)}</div>` : ''}${d.review_note ? `<div class="t2" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
+      ${st ? `<div class="t2">${esc(st)}</div>` : ''}
+      ${open ? `<button class="btn small" style="margin-top:8px" data-act="doc-answer" data-id="${esc(d.id)}">📎 ${esc(t('docAnswer'))}</button>` : ''}</div></div>`; }).join('')}</div></div>`;
+}
+// phone photos are made smaller (max 1600 px, JPEG) before sending; PDFs are sent as they are
+async function docShrink(file){
+  if (!/^image\/(jpeg|png|webp)$/i.test(file.type) || file.size < 900000) return file;
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(file); });
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
+    return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type:'image/jpeg' }) : file;
+  } catch(e){ return file; }
+}
+function docSheet(id){
+  const d = (APP.docs || []).find(x => x.id === id); if (!d) return;
+  sheet(`<h2>📄 ${esc(t('docNid'))}</h2>${d.message ? `<div class="hint">💬 ${esc(d.message)}</div>` : ''}
+    <div class="field"><label>${esc(t('docAttach'))}</label><input type="file" id="doc-f" accept="image/*,application/pdf"></div>
+    <div class="field"><label>${esc(t('docExpiry'))}</label><input type="date" id="doc-x"></div>
+    <button class="btn" id="doc-go">${esc(t('docSend'))}</button>`);
+  $('doc-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    let f = $('doc-f').files && $('doc-f').files[0], x = $('doc-x').value;
+    if (!f) return toast(t('docNeedFile'), true);
+    if (!x) return toast(t('docNeedDate'), true);
+    const btn = $('doc-go'); btn.disabled = true; btn.textContent = t('docUploading');
+    try {
+      f = await docShrink(f);
+      if (f.size > 10 * 1024 * 1024) throw new Error(t('docTooBig'));
+      const ext = (f.name.match(/\.(\w+)$/) || [, f.type === 'application/pdf' ? 'pdf' : 'jpg'])[1].toLowerCase();
+      const path = `${APP.me.emp_id}/${d.id}/${Date.now()}.${ext}`;
+      const up = await sb.storage.from('employee-docs').upload(path, f, { contentType: f.type || undefined, upsert:false });
+      if (up.error) throw up.error;
+      const { error } = await sb.rpc('submit_document', { p_id: d.id, p_path: path, p_name: f.name, p_new_expiry: x });
+      if (error) throw error;
+      closeSheet(); toast(t('docSent')); await loadDocs(); renderDocs();
+    } catch(e){ btn.disabled = false; btn.textContent = t('docSend'); toast(friendly(e.message || String(e)), true); }
+  };
+}
+
 // ── iPhone notifications (web app on the Home Screen; 60-push-iphone.sql + edge function send-push) ──
 const webPushOK = () => !NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && isStandalone();
 const b64ToBytes = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
@@ -776,6 +831,7 @@ async function loadAll(){
   APP.myActions = (acts || []).filter(a => a.manager_emp === id); APP.boardActions = APP.me.board_approver ? (acts || []).filter(a => a.manager_emp !== id && a.emp_id !== id) : [];
   APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r })), ...(APP.myActions || []).map(r => ({ kind:'act', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
+  await loadDocs();
   await loadStatus();
 }
 async function loadStatus(){
@@ -1332,7 +1388,7 @@ async function checkAppUpdate(force){
 function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
   $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
   $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
-  renderHome(); renderRequests(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
+  renderHome(); renderRequests(); renderDocs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
 // ═════════════════════════════════════════════════════════
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
 // ═════════════════════════════════════════════════════════
@@ -1598,6 +1654,7 @@ document.addEventListener('click', async ev => {
   if (act==='req-incentive' || act==='req-element') return actionSheet('element');
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
+  if (act==='doc-answer') return docSheet(a.dataset.id);
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
