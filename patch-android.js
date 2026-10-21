@@ -105,3 +105,34 @@ if (fs.existsSync(mainJava)) {
 }
 
 console.log(`✔ Android project patched — location permission, version 1.0.${build}, release signing, fake-GPS check`);
+
+// ── Phone notifications (21 Oct 2026): Android 13+ permission, a white notification icon, default channel and colour ──
+{
+  let mf = fs.readFileSync(manifestPath, 'utf8');
+  if (!mf.includes('POST_NOTIFICATIONS')) {
+    mf = mf.replace('<uses-permission android:name="android.permission.INTERNET" />',
+      '<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />');
+  }
+  if (!mf.includes('default_notification_icon')) {
+    mf = mf.replace(/(<application[^>]*>)/, `$1
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_petrokima" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/petrokima_notification" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="petrokima" />`);
+  }
+  if (!mf.includes('POST_NOTIFICATIONS') || !mf.includes('default_notification_icon')) throw new Error('Could not add notification settings to AndroidManifest.xml');
+  fs.writeFileSync(manifestPath, mf);
+  const res = path.join(app, 'src', 'main', 'res');
+  fs.mkdirSync(path.join(res, 'drawable'), { recursive: true });
+  fs.mkdirSync(path.join(res, 'values'), { recursive: true });
+  // a simple white bell (Android shows notification icons as white shapes)
+  fs.writeFileSync(path.join(res, 'drawable', 'ic_stat_petrokima.xml'), `<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.9,2 2,2zM18,16v-5c0,-3.07 -1.63,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.64,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z"/>
+</vector>
+`);
+  fs.writeFileSync(path.join(res, 'values', 'petrokima_notification.xml'), `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="petrokima_notification">#1F4FB5</color>
+</resources>
+`);
+}

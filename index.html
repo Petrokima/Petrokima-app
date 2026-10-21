@@ -617,6 +617,7 @@ async function afterLogin(user){
   show('scr-main');
   try { await loadAll(); } catch(e){ if (!useCache(user.id)) throw e; }
   APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000);
+  setupPush();
 }
 async function firstLogin(){
   const yr=$('fl-year').value.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), a=$('fl-p1').value, b=$('fl-p2').value;
@@ -633,7 +634,39 @@ async function firstLogin(){
   tempPass=''; toast(t('passSet'));
   const { data: s } = await sb.auth.getSession(); await afterLogin(s.session.user);
 }
-async function signOut(){ try { await sb.auth.signOut(); } catch(e){} APP.ready=false; location.reload(); }
+async function signOut(){
+  try { const tk = localStorage.getItem('pk_push_token'); if (tk) { await sb.rpc('remove_push_token', { p_token: tk }); localStorage.removeItem('pk_push_token'); } } catch(e){}
+  try { await sb.auth.signOut(); } catch(e){} APP.ready=false; location.reload(); }
+
+// ── Phone notifications (Android app only, 59-push-notifications.sql + edge function send-push) ──
+// Asks once for permission, registers the phone with Firebase, saves its token for the signed-in user (with the app
+// language), and opens the right tab when a notification is tapped. The web/iPhone version is not affected.
+let pushReady = false;
+async function setupPush(){
+  if (pushReady || !NATIVE || PLATFORM !== 'android') return;
+  const P = nativePlugin('PushNotifications'); if (!P) return;
+  pushReady = true;
+  try {
+    try { await P.createChannel({ id:'petrokima', name:'Petrokima HR', description:'Requests, approvals and announcements', importance:5, visibility:1, sound:'default', vibration:true }); } catch(e){}
+    await P.addListener('registration', async t => {
+      try { const r = await sb.rpc('save_push_token', { p_token: t.value, p_platform: 'android', p_lang: LANG }); if (!r.error) localStorage.setItem('pk_push_token', t.value); } catch(e){}
+    });
+    await P.addListener('registrationError', e => console.warn('push registration', e && e.error));
+    await P.addListener('pushNotificationReceived', n => {                           // app open: show it inside the app
+      toast(((n && n.title) || '') + (n && n.body ? ' — ' + n.body : ''));
+      if (APP.ready) loadAll().then(renderAll).catch(()=>{});
+    });
+    await P.addListener('pushNotificationActionPerformed', a => {                    // notification tapped
+      const v = a && a.notification && a.notification.data && a.notification.data.view;
+      const open = () => { if (v && document.getElementById('v-' + v)) go(v); loadAll().then(renderAll).catch(()=>{}); };
+      if (APP.ready) open(); else setTimeout(() => { if (APP.ready) open(); }, 2500);
+    });
+    let perm = await P.checkPermissions();
+    if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') perm = await P.requestPermissions();
+    if (perm.receive !== 'granted') return;
+    await P.register();
+  } catch(e){ console.warn('push setup', e); }
+}
 
 // ═════════════════════════════════════════════════════════
 //  DATA
@@ -1465,7 +1498,9 @@ let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (APP.ready) renderProfile(); });
 document.addEventListener('click', async ev => {
   const x = ev.target;
-  if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG); return applyLang(); }
+  if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG);
+    const tk = localStorage.getItem('pk_push_token'); if (tk && APP.ready) sb.rpc('save_push_token', { p_token: tk, p_platform: 'android', p_lang: LANG }).then(()=>{}, ()=>{});   // notifications follow the app language
+    return applyLang(); }
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
   if (x === $('sheet')) return closeSheet();
   const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
