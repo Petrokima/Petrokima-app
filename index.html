@@ -162,6 +162,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     <!-- HOME -->
     <div class="view on" id="v-home">
       <div id="bday-box"></div>
+      <div id="push-card"></div>
       <div class="card clock">
         <div class="time" id="clk-time">--:--</div>
         <div class="date" id="clk-date"></div>
@@ -247,7 +248,7 @@ const T = {
  en:{appName:'Petrokima',loginSub:'Attendance & HR requests',empCode:'Employee code',password:'Password',signIn:'Sign in',forgot:'Forgot your password? Ask HR to reset it.',
   wrongLogin:'Wrong employee code or password.',fillLogin:'Enter your employee code and password.',
   firstTitle:'Welcome',firstSub:'This is your first sign-in. Confirm who you are and choose your own password.',nid4:'Last 4 digits of your national ID',
-  newPass:'New password (at least 8 characters)',repeatPass:'Repeat the new password',savePass:'Save my password',signOut:'Sign out',
+  newPass:'New password (at least 8 characters)',repeatPass:'Repeat the new password',savePass:'Save my password',signOut:'Sign out',pushWhy:'Get a notification when your request is decided, a new announcement is published, or a request is waiting for you.',pushOnBtn:'🔔 Turn on notifications',pushDone:'Notifications are on ✓',pushBlocked:'Notifications are turned off for Petrokima. To allow them: iPhone Settings → Notifications → Petrokima → Allow Notifications.',pushNotReady:'Notifications are being prepared — please try again in a minute.',
   need4:'Enter the last 4 digits of your national ID.',short:'The password must be at least 8 characters.',nomatch:'The two passwords do not match.',sameTemp:'Choose a password different from the temporary one.',
   nidWrong:'The national ID digits do not match HR records.',locked:'Your account is locked. Ask HR to reset it.',passSet:'Password saved — welcome!',
   noRole:'This account has no access yet. Please contact HR.',notLinked:'This account is not linked to an employee record.',inactive:'This account is locked or deactivated. Please contact HR.',
@@ -341,7 +342,7 @@ const T = {
  ar:{appName:'بتروكيما',loginSub:'الحضور وطلبات الموارد البشرية',empCode:'كود الموظف',password:'كلمة المرور',signIn:'تسجيل الدخول',forgot:'نسيت كلمة المرور؟ اطلب من الموارد البشرية إعادة تعيينها.',
   wrongLogin:'كود الموظف أو كلمة المرور غير صحيحة.',fillLogin:'أدخل كود الموظف وكلمة المرور.',
   firstTitle:'مرحباً بك',firstSub:'هذا أول تسجيل دخول لك. أكّد هويتك واختر كلمة مرور خاصة بك.',nid4:'آخر ٤ أرقام من الرقم القومي',
-  newPass:'كلمة المرور الجديدة (٨ أحرف على الأقل)',repeatPass:'أعد كتابة كلمة المرور الجديدة',savePass:'حفظ كلمة المرور',signOut:'تسجيل الخروج',
+  newPass:'كلمة المرور الجديدة (٨ أحرف على الأقل)',repeatPass:'أعد كتابة كلمة المرور الجديدة',savePass:'حفظ كلمة المرور',signOut:'تسجيل الخروج',pushWhy:'استقبل إشعاراً عند البت في طلبك أو نشر إعلان جديد أو عند وجود طلب ينتظرك.',pushOnBtn:'🔔 تفعيل الإشعارات',pushDone:'تم تفعيل الإشعارات ✓',pushBlocked:'الإشعارات مغلقة لتطبيق بتروكيما. للسماح بها: الإعدادات ← الإشعارات ← Petrokima ← السماح بالإشعارات.',pushNotReady:'جارٍ تجهيز الإشعارات — يرجى المحاولة بعد دقيقة.',
   need4:'أدخل آخر ٤ أرقام من الرقم القومي.',short:'يجب ألا تقل كلمة المرور عن ٨ أحرف.',nomatch:'كلمتا المرور غير متطابقتين.',sameTemp:'اختر كلمة مرور مختلفة عن كلمة المرور المؤقتة.',
   nidWrong:'أرقام الرقم القومي لا تطابق سجلات الموارد البشرية.',locked:'تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',passSet:'تم حفظ كلمة المرور — مرحباً بك!',
   noRole:'هذا الحساب ليس له صلاحية بعد. يرجى التواصل مع الموارد البشرية.',notLinked:'هذا الحساب غير مرتبط بملف موظف.',inactive:'هذا الحساب مقفل أو موقوف. يرجى التواصل مع الموارد البشرية.',
@@ -617,7 +618,7 @@ async function afterLogin(user){
   show('scr-main');
   try { await loadAll(); } catch(e){ if (!useCache(user.id)) throw e; }
   APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000);
-  setupPush();
+  setupPush(); setupWebPush(); openViewFromLink();
 }
 async function firstLogin(){
   const yr=$('fl-year').value.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), a=$('fl-p1').value, b=$('fl-p2').value;
@@ -636,7 +637,59 @@ async function firstLogin(){
 }
 async function signOut(){
   try { const tk = localStorage.getItem('pk_push_token'); if (tk) { await sb.rpc('remove_push_token', { p_token: tk }); localStorage.removeItem('pk_push_token'); } } catch(e){}
+  try { const ep = localStorage.getItem('pk_push_web'); if (ep) { await sb.rpc('remove_push_token', { p_token: ep }); localStorage.removeItem('pk_push_web');
+        const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } } catch(e){}
   try { await sb.auth.signOut(); } catch(e){} APP.ready=false; location.reload(); }
+
+// ── iPhone notifications (web app on the Home Screen; 60-push-iphone.sql + edge function send-push) ──
+const webPushOK = () => !NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && isStandalone();
+const b64ToBytes = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+function renderPushCard(){
+  const box = $('push-card'); if (!box) return;
+  if (!webPushOK() || !APP.ready) { box.innerHTML = ''; return; }
+  const perm = Notification.permission, on = perm === 'granted' && localStorage.getItem('pk_push_web');
+  if (on) { box.innerHTML = ''; return; }
+  box.innerHTML = perm === 'denied'
+    ? `<div class="card"><div class="hint" style="margin:0">🔕 ${esc(t('pushBlocked'))}</div></div>`
+    : `<div class="card"><div class="hint" style="margin:0 0 10px">${esc(t('pushWhy'))}</div><button class="btn" data-act="push-on">${esc(t('pushOnBtn'))}</button></div>`;
+}
+async function webSubscribe(ask){
+  const { data: key } = await sb.rpc('push_web_key');
+  if (!key) { if (ask) toast(t('pushNotReady')); return false; }
+  if (ask && Notification.permission === 'default') await Notification.requestPermission();
+  if (Notification.permission !== 'granted') return false;
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  const want = b64ToBytes(key), have = sub && sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
+  if (sub && have && (have.length !== want.length || have.some((b, i) => b !== want[i]))) { await sub.unsubscribe(); sub = null; }   // key changed
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
+  const { error } = await sb.rpc('save_push_web', { p_sub: sub.toJSON(), p_lang: LANG });
+  if (error) throw error;
+  localStorage.setItem('pk_push_web', sub.endpoint);
+  return true;
+}
+async function enableWebPush(btn){
+  if (btn) btn.disabled = true;
+  try { if (await webSubscribe(true)) toast(t('pushDone')); } catch(e){ toast(friendly(e.message || String(e))); }
+  if (btn) btn.disabled = false;
+  renderPushCard();
+}
+async function setupWebPush(){
+  if (!webPushOK()) return;
+  try { if (Notification.permission === 'granted') await webSubscribe(false); } catch(e){ console.warn('web push', e); }
+  renderPushCard();
+}
+// a tapped notification opens the right tab (from the service worker, or a new window opened at #view=…)
+function openViewFromLink(){
+  const m = /#view=(\w+)/.exec(location.hash || ''); if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (document.getElementById('v-' + m[1])) go(m[1]);
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'open-view' || !APP.ready) return;
+  if (document.getElementById('v-' + e.data.view)) go(e.data.view);
+  loadAll().then(renderAll).catch(()=>{});
+});
 
 // ── Phone notifications (Android app only, 59-push-notifications.sql + edge function send-push) ──
 // Asks once for permission, registers the phone with Firebase, saves its token for the signed-in user (with the app
@@ -1500,7 +1553,8 @@ document.addEventListener('click', async ev => {
   const x = ev.target;
   if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG);
     const tk = localStorage.getItem('pk_push_token'); if (tk && APP.ready) sb.rpc('save_push_token', { p_token: tk, p_platform: 'android', p_lang: LANG }).then(()=>{}, ()=>{});   // notifications follow the app language
-    return applyLang(); }
+    const ep = localStorage.getItem('pk_push_web'); if (ep && APP.ready) sb.rpc('set_push_lang', { p_token: ep, p_lang: LANG }).then(()=>{}, ()=>{});
+    applyLang(); renderPushCard(); return; }
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
   if (x === $('sheet')) return closeSheet();
   const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
@@ -1544,6 +1598,7 @@ document.addEventListener('click', async ev => {
   if (act==='req-incentive' || act==='req-element') return actionSheet('element');
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
+  if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
 $('li-go').addEventListener('click', doLogin);
