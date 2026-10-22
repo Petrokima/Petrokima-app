@@ -454,6 +454,14 @@ Object.assign(T.en, { reqMission:'Outside mission', misTitle:'🚗 Outside missi
   misOverlap:'There is already a mission on these dates', misLocked:'That payroll month is already approved', misNotTeam:'This employee is not in your team',
   misIAssigned:'Assigned by you', misSelAll:'Select all ({n})', misChosen:'{n} chosen', misAckedHR:'Acknowledged — waiting for HR', misMyAckedHR:'You acknowledged — waiting for HR',
   misNoAppHR:'Sent to HR — employee does not use the app', misNoAppNote:'Employees who do not use the app yet (no login or first sign-in not finished) go straight to HR without acknowledging.' });
+Object.assign(T.en, { dayEnded:'Day ended at {t}', dayTotal:'Worked today: {h}', cameBack:'I came back — check in again',
+  cameBackNote:'Your check-out stays recorded. The time you were away is not counted, and HR can see it.',
+  undoOut:'↩ Undo check-out (until {t})', undoneOut:'Check-out undone — you are checked in again ✓', undoLate:'More than 5 minutes have passed — check in again instead',
+  undoNotLast:'Something was recorded after this check-out — check in again instead', undoLocked:'This day is in an approved payroll month', undoGone:'This check-out can no longer be undone' });
+Object.assign(T.ar, { dayEnded:'انتهى يومك في {t}', dayTotal:'ساعات العمل اليوم: {h}', cameBack:'رجعت — تسجيل حضور مرة أخرى',
+  cameBackNote:'يبقى وقت انصرافك مسجلاً. وقت غيابك لا يُحتسب، وتراه الموارد البشرية.',
+  undoOut:'↩ إلغاء الانصراف (حتى {t})', undoneOut:'تم إلغاء الانصراف — أنت مسجل حضور مرة أخرى ✓', undoLate:'مرت أكثر من 5 دقائق — سجل حضورك مرة أخرى',
+  undoNotLast:'تم تسجيل شيء بعد هذا الانصراف — سجل حضورك مرة أخرى', undoLocked:'هذا اليوم ضمن شهر رواتب معتمد', undoGone:'لم يعد ممكناً إلغاء هذا الانصراف' });
 Object.assign(T.ar, { reqMission:'مأمورية خارجية', misTitle:'🚗 مأمورية خارجية', misAssign:'تكليف بمأمورية', misTeamTitle:'🚗 المأموريات الخارجية — فريقك',
   misFull:'يوم كامل أو أكثر', misPart:'جزء من اليوم', misFrom:'من تاريخ', misTo:'إلى تاريخ', misDate:'التاريخ', misTimeFrom:'من الساعة', misTimeTo:'إلى الساعة',
   misPlace:'المكان', misPurpose:'الغرض', misProject:'كود المشروع (اختياري)', misWho:'الموظفون', misNoWho:'اختر موظفاً واحداً على الأقل',
@@ -509,6 +517,10 @@ function friendly(msg){
   if (/OFFLINE_TOO_OLD/.test(msg)) return t('tooOld');
   if (/OFFLINE_ORDER/.test(msg)) return t('wrongOrder');
   if (/ALREADY_IN/.test(msg)) return t('alreadyIn');
+  if (/UNDO_TOO_LATE/.test(msg)) return t('undoLate');
+  if (/UNDO_NOT_LAST/.test(msg)) return t('undoNotLast');
+  if (/UNDO_LOCKED/.test(msg)) return t('undoLocked');
+  if (/UNDO_NOT_FOUND/.test(msg)) return t('undoGone');
   if (/NOT_IN/.test(msg)) return t('notInErr');
   if (/DEVICE/.test(msg)) return t('deviceMismatch');
   if (/NO_LOCATION/.test(msg)) return t('locDenied');
@@ -887,8 +899,31 @@ function serverNowMin(){ const st=APP.status; if(!st) return null; if (APP.offli
 function tick(){
   const m = serverNowMin();
   if (m !== null){ const mm=Math.floor(m)%1440; $('clk-time').textContent = `${pad(Math.floor(mm/60))}:${pad(mm%60)}`; }
+  if (APP.undoShown && !undoUntil(APP.status)) { APP.undoShown = false; renderHome(); return; }
   const o = APP.status && APP.status.open, el = $('clk-dur');
   if (o && el && m !== null){ const dayOff = Math.round((dObj(APP.status.date) - dObj(o.date))/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
+}
+// Day finished = checked out, at least one period today, nothing waiting to be sent, and he has not pressed "I came back"
+function undoUntil(st){ return st && st.undo && Number(st.undo.until_ms) > serverNowMs() ? Number(st.undo.until_ms) : 0; }
+function dayEndedView(st){
+  const today = (st && st.today) || [];
+  if (APP.cameBack || !today.length || today.some(x => !x.out) || queue().length) return false;
+  const last = today.map(x => x.out).sort().pop(), tot = today.reduce((s, x) => s + num(x.hours), 0), u = undoUntil(st);
+  $('clk-state').innerHTML = `<div class="state off" style="padding:18px 14px"><div style="font-size:22px;font-weight:800">✅ ${esc(t('dayEnded', { t: last }))}</div>
+    <div class="num" style="font-size:17px;margin-top:6px">${esc(t('dayTotal', { h: fmtH(tot) }))}</div></div>`;
+  $('clk-btns').innerHTML = (u ? `<button class="btn big" data-act="undo-out" style="background:#b45309;margin-bottom:10px">${esc(t('undoOut', { t: localParts(u).time }))}</button>` : '')
+    + `<button class="btn ghost small" data-act="came-back" style="width:100%">${esc(t('cameBack'))}</button>`;
+  APP.undoShown = !!u;
+  return true;
+}
+async function undoCheckout(btn){
+  const st = APP.status || {}; if (!st.undo) return;
+  if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div>`; }
+  const { error } = await sb.rpc('undo_checkout', { p_event: st.undo.id });
+  try { await loadStatus(); } catch(e){}
+  renderHome();
+  if (error) return toast(friendly(error.message), true);
+  toast(t('undoneOut'));
 }
 function renderHome(){
   $('bday-box').innerHTML = birthdayCard();
@@ -900,12 +935,14 @@ function renderHome(){
     $('clk-state').innerHTML = `<div class="state ${notToday?'warn':'on'}">${notToday ? esc(t('openFrom',{ d:niceDate(o.date), t:o.in })) + '<br>' : ''}
       ${esc(t('checkedIn'))} <b>${esc(o.code ? (o.name || o.code) : t('noProject'))}</b><br>${esc(t('since'))} <b class="num">${esc(o.in)}</b> · ${esc(t('hSince'))} <b class="num" id="clk-dur"></b></div>`;
     $('clk-btns').innerHTML = `<div class="row"><button class="btn ghost big" data-act="switch">🔁 ${esc(t('switchSite'))}</button><button class="btn red big" data-act="out">⏹ ${esc(t('checkOut'))}</button></div>`;
+  } else if (dayEndedView(st)) {
+    // checked out for the day: show it as finished; a small button lets him check in again if he really came back
   } else {
     $('clk-state').innerHTML = `<div class="state off">${esc(t('notIn'))}</div>`;
-    $('clk-btns').innerHTML = st.no_project
+    $('clk-btns').innerHTML = (APP.cameBack ? `<div class="hint" style="margin:0 0 10px">${esc(t('cameBackNote'))}</div>` : '') + (st.no_project
       ? `<div style="display:grid;gap:10px"><button class="btn green big" data-act="in">🏗 ${esc(t('inSite'))}</button>
            <button class="btn big" id="noproj-home" style="background:#0f6f9d">▶ ${esc(t('inNoProject'))}</button></div>`
-      : `<button class="btn green big" data-act="in">▶ ${esc(t('checkIn'))}</button>`;
+      : `<button class="btn green big" data-act="in">▶ ${esc(t('checkIn'))}</button>`);
   }
   const q = queue(), pend = q.length;
   const saved = pend ? `<div class="state warn" style="margin-top:0;text-align:start">⏳ ${esc(t('waiting', { n: pend }))}
@@ -1027,13 +1064,14 @@ async function clock(type, code, btn){
     if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`; }
     const res = await withTimeout(insertClock(rec), 15000);
     if (btn){ btn.disabled = false; btn.textContent = label; }
-    if (!res.error){ closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
+    if (!res.error){ closeSheet(); if (type === 'in') APP.cameBack = false; try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
     if (!serverDown(res)) return toast(friendly(res.error.message), true);          // a real refusal (wrong site, no location…) — tell the employee
   }
   // no internet, server not reachable, or older check-ins still waiting: keep it on the phone, in order
   const q = queue();
   q.push({ ...rec, offline:true, client_at: tapAt, _name: code ? ((pickSel && pickSel.name) || code) : '' });
   store.set('pk_queue', q);
+  if (type === 'in') APP.cameBack = false;
   applyEvent(APP.status, q[q.length-1]); saveCache(); closeSheet(); renderHome();
   toast(t('queued'));
   if (navigator.onLine) flushQueue();
@@ -1795,6 +1833,8 @@ document.addEventListener('click', async ev => {
   if (act==='mis-assign') return missionSheet(true);
   if (act==='in' || act==='switch') return openSitePicker(act);
   if (act==='out') return confirmOut();
+  if (act==='undo-out') return undoCheckout(a);
+  if (act==='came-back') { APP.cameBack = true; return renderHome(); }
   if (act==='close') return closeSheet();
   if (act==='sync') return flushQueue();
   if (act==='refresh') return doRefresh();
