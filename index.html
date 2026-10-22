@@ -449,17 +449,21 @@ Object.assign(T.en, { reqMission:'Outside mission', misTitle:'🚗 Outside missi
   misPlace:'Place (where)', misPurpose:'Purpose', misProject:'Project code (optional)', misWho:'Employees', misNoWho:'Choose at least one employee',
   misNeedPlace:'Write where the mission is', misBadDates:'The end date must be on or after the start date', misBadTimes:'The end time must be after the start time',
   misAckTitle:'Your manager assigned you a mission', misAckBtn:'✋ I undertake this mission', misAcked:'Thank you — your manager and HR are notified ✓',
-  misSentMgr:'Mission request sent to your direct manager ✓', misSentHR:'Mission request sent to HR ✓', misAssigned:'Mission sent — each employee must acknowledge it ✓',
+  misSentMgr:'Mission request sent to your direct manager ✓', misSentHR:'Mission request sent to HR ✓', misAssigned:'Mission sent ✓ — app users acknowledge it; the others go straight to HR',
   misNone:'No missions', misAssignedBy:'Assigned by your manager', misAskedBy:'Requested by {n}', misAckNote:'You still check in and out on the phone during the mission.',
-  misOverlap:'There is already a mission on these dates', misLocked:'That payroll month is already approved', misNotTeam:'This employee is not in your team' });
+  misOverlap:'There is already a mission on these dates', misLocked:'That payroll month is already approved', misNotTeam:'This employee is not in your team',
+  misIAssigned:'Assigned by you', misSelAll:'Select all ({n})', misChosen:'{n} chosen', misAckedHR:'Acknowledged — waiting for HR', misMyAckedHR:'You acknowledged — waiting for HR',
+  misNoAppHR:'Sent to HR — employee does not use the app', misNoAppNote:'Employees who do not use the app yet (no login or first sign-in not finished) go straight to HR without acknowledging.' });
 Object.assign(T.ar, { reqMission:'مأمورية خارجية', misTitle:'🚗 مأمورية خارجية', misAssign:'تكليف بمأمورية', misTeamTitle:'🚗 المأموريات الخارجية — فريقك',
   misFull:'يوم كامل أو أكثر', misPart:'جزء من اليوم', misFrom:'من تاريخ', misTo:'إلى تاريخ', misDate:'التاريخ', misTimeFrom:'من الساعة', misTimeTo:'إلى الساعة',
   misPlace:'المكان', misPurpose:'الغرض', misProject:'كود المشروع (اختياري)', misWho:'الموظفون', misNoWho:'اختر موظفاً واحداً على الأقل',
   misNeedPlace:'اكتب مكان المأمورية', misBadDates:'تاريخ النهاية يجب أن يكون في أو بعد تاريخ البداية', misBadTimes:'وقت النهاية يجب أن يكون بعد وقت البداية',
   misAckTitle:'كلفك مديرك بمأمورية', misAckBtn:'✋ أتعهد بتنفيذ المأمورية', misAcked:'شكراً — تم إبلاغ مديرك والموارد البشرية ✓',
-  misSentMgr:'تم إرسال طلب المأمورية إلى مديرك المباشر ✓', misSentHR:'تم إرسال طلب المأمورية إلى الموارد البشرية ✓', misAssigned:'تم إرسال المأمورية — يجب على كل موظف تأكيدها ✓',
+  misSentMgr:'تم إرسال طلب المأمورية إلى مديرك المباشر ✓', misSentHR:'تم إرسال طلب المأمورية إلى الموارد البشرية ✓', misAssigned:'تم إرسال المأمورية ✓ — مستخدمو التطبيق يؤكدونها، والباقون تذهب مأمورياتهم مباشرة للموارد البشرية',
   misNone:'لا توجد مأموريات', misAssignedBy:'تكليف من مديرك', misAskedBy:'طلب من {n}', misAckNote:'تسجل الحضور والانصراف من الهاتف كالمعتاد أثناء المأمورية.',
-  misOverlap:'توجد مأمورية بالفعل في هذه التواريخ', misLocked:'رواتب هذا الشهر معتمدة بالفعل', misNotTeam:'هذا الموظف ليس من فريقك' });
+  misOverlap:'توجد مأمورية بالفعل في هذه التواريخ', misLocked:'رواتب هذا الشهر معتمدة بالفعل', misNotTeam:'هذا الموظف ليس من فريقك',
+  misIAssigned:'تكليف منك', misSelAll:'اختيار الكل ({n})', misChosen:'تم اختيار {n}', misAckedHR:'أكد الموظف — في انتظار الموارد البشرية', misMyAckedHR:'أكدت المأمورية — في انتظار الموارد البشرية',
+  misNoAppHR:'أُرسلت للموارد البشرية — الموظف لا يستخدم التطبيق', misNoAppNote:'الموظفون الذين لا يستخدمون التطبيق بعد (بدون حساب أو لم يكملوا أول دخول) تُرسل مأمورياتهم مباشرة إلى الموارد البشرية دون تأكيد.' });
 T.en.st['Waiting for employee'] = 'Waiting for the employee to acknowledge'; T.ar.st['Waiting for employee'] = 'في انتظار تأكيد الموظف';
 function applyLang(){
   document.documentElement.lang = LANG; document.documentElement.dir = LANG==='ar' ? 'rtl' : 'ltr';
@@ -1125,11 +1129,11 @@ function renderRequests(){
     ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmtH(p.hours)}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
     ...APP.reqs.map(r=>({ k:'req', id:r.id, at:r.created_at, icon:'📨', title:tm('ht',r.request_type), sub:r.details||'', st:r.status, reply:r.hr_response||'' })),
     ...(APP.missions||[]).map(m=>({ k:'mis', id:m.id, at:m.created_at, icon:'🚗', title:`${t('reqMission')} · ${m.place}`, sub:misWhen(m) + (m.origin==='manager' ? ' · ' + t('misAssignedBy') : ''),
-       st:m.status, reply:[m.purpose, m.manager_note, m.hr_note].filter(Boolean).join(' · '), noCancel: m.origin==='manager' })),
+       st:m.status, stHtml: misChip(m, false), reply:[m.purpose, m.manager_note, m.hr_note].filter(Boolean).join(' · '), noCancel: m.origin==='manager' })),
   ].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
   $('req-list').innerHTML = items.map(x => `<div class="it"><div style="font-size:22px">${x.icon}</div><div class="grow"><div class="t1">${esc(x.title)}</div>
       <div class="t2">${esc(x.sub)}</div>${x.at?`<div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(x.at))}</div>`:''}${x.reply?`<div class="t2" style="color:var(--text)">💬 ${esc(x.reply)}</div>`:''}</div>
-      <div style="text-align:end">${chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)&&!x.noCancel?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
+      <div style="text-align:end">${x.stHtml || chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)&&!x.noCancel?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
     || `<div class="empty">${esc(t('noRequests'))}</div>`;
 }
 function opt(list, group){ return list.map(v=>`<option value="${esc(v)}">${esc(tm(group,v))}</option>`).join(''); }
@@ -1223,6 +1227,13 @@ function askCancel(key){
 // ═════════════════════════════════════════════════════════
 //  OUTSIDE MISSIONS (66) — employee → manager → HR · manager assigns → employee acknowledges → HR
 // ═════════════════════════════════════════════════════════
+function misChip(m, asManager){
+  if (m.origin === 'manager' && m.status === 'Waiting for HR')
+    return `<span class="chip c-blue">${esc(m.no_app ? t('misNoAppHR') : asManager ? t('misAckedHR') : t('misMyAckedHR'))}</span>`;
+  return chip(asManager && m.status === 'Waiting for manager' ? 'Pending' : m.status);
+}
+const misName = m => (LANG === 'ar' ? (m.emp_name_ar || m.emp_name) : (m.emp_name || m.emp_name_ar))
+  || (((APP.myTeam || []).find(x => String(x.id) === String(m.emp_id)) || {})[LANG === 'ar' ? 'name_ar' : 'name_en']) || '';
 const misWhen = m => `${niceDate(m.date_from)}${m.date_to !== m.date_from ? ' → ' + niceDate(m.date_to) : ''}${m.time_from ? ' · ' + String(m.time_from).slice(0,5) + '–' + String(m.time_to).slice(0,5) : ''}`;
 async function loadMissionsP(){
   const id = APP.me && APP.me.emp_id; if (!id) return;
@@ -1244,8 +1255,10 @@ function renderMisAck(){
 function missionSheet(assign){
   const team = APP.myTeam || [], sites = (store.get('pk_sites', null) || {}).list || [];
   sheet(`<h2>${esc(assign ? '🚗 ' + t('misAssign') : t('misTitle'))}</h2>
-    ${assign ? `<div class="field"><label>${esc(t('misWho'))}</label><div style="max-height:180px;overflow:auto;border:1px solid var(--border,#ddd);border-radius:10px;padding:6px 10px">
-      ${team.map(m => `<label style="display:flex;gap:8px;align-items:center;padding:5px 0"><input type="checkbox" class="mis-who" value="${esc(m.id)}" style="width:auto"> ${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></label>`).join('')}</div></div>` : ''}
+    ${assign ? `<div class="field"><label>${esc(t('misWho'))} · <span id="mis-cnt">${esc(t('misChosen', { n: 0 }))}</span></label><div style="border:1px solid var(--border,#ddd);border-radius:10px;padding:6px 10px">
+      <label style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border,#eee);font-weight:600"><input type="checkbox" id="mis-all" style="width:auto"> ${esc(t('misSelAll', { n: team.length }))}</label>
+      ${team.map(m => `<label style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="checkbox" class="mis-who" value="${esc(m.id)}" style="width:auto"> <span>${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span>${m.job_name ? `<br><span class="muted" style="font-size:12px">${esc(m.job_name)}</span>` : ''}</span></label>`).join('')}</div>
+      <div class="hint">ℹ ${esc(t('misNoAppNote'))}</div></div>` : ''}
     <div class="row"><button class="btn small" id="mis-k-full" style="flex:1">${esc(t('misFull'))}</button><button class="btn ghost small" id="mis-k-part" style="flex:1">${esc(t('misPart'))}</button></div>
     <div id="mis-full" class="row" style="margin-top:10px"><div class="field" style="flex:1"><label>${esc(t('misFrom'))}</label><input type="date" id="mis-f" value="${todayStr()}"></div>
       <div class="field" style="flex:1"><label>${esc(t('misTo'))}</label><input type="date" id="mis-t" value="${todayStr()}"></div></div>
@@ -1261,6 +1274,11 @@ function missionSheet(assign){
   const kind = p => { part = p; $('mis-full').style.display = p ? 'none' : ''; $('mis-part').style.display = p ? '' : 'none';
     $('mis-k-full').className = 'btn small' + (p ? ' ghost' : ''); $('mis-k-part').className = 'btn small' + (p ? '' : ' ghost'); };
   $('mis-k-full').onclick = () => kind(false); $('mis-k-part').onclick = () => kind(true);
+  if (assign) {
+    const cnt = () => { const n = document.querySelectorAll('.mis-who:checked').length; $('mis-cnt').textContent = t('misChosen', { n }); $('mis-all').checked = n === team.length && n > 0; };
+    $('mis-all').onchange = () => { document.querySelectorAll('.mis-who').forEach(c => c.checked = $('mis-all').checked); cnt(); };
+    document.querySelectorAll('.mis-who').forEach(c => c.onchange = cnt);
+  }
   $('mis-go').onclick = async () => {
     const f = part ? $('mis-d').value : $('mis-f').value, to = part ? $('mis-d').value : $('mis-t').value;
     const tf = part ? $('mis-tf').value : null, tt = part ? $('mis-tt').value : null, pl = $('mis-pl').value.trim();
@@ -1298,10 +1316,10 @@ function renderTeamMissions(){
   card.style.display = show ? '' : 'none';
   $('tmis-assign').style.display = (APP.myTeam || []).length ? '' : 'none';
   $('tmis-list').innerHTML = L.slice(0, 40).map(m => { const mine = m.status === 'Waiting for manager';
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(m.emp_id)} · ${esc(((APP.myTeam||[]).find(x => x.id === m.emp_id) || {})[LANG==='ar' ? 'name_ar' : 'name_en'] || '')}</div>
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(misName(m))} <span class="muted" style="font-size:12px">${esc(m.emp_id)}</span></div>
       <div class="t2">🚗 ${esc(m.place)} · ${esc(misWhen(m))}${m.project_code ? ' · ' + esc(m.project_code) : ''}</div>
-      ${m.purpose ? `<div class="t2">💬 ${esc(m.purpose)}</div>` : ''}<div class="t2" style="font-size:12px">${esc(m.origin === 'manager' ? t('misAssignedBy') : t('misAskedBy', { n: m.emp_id }))} · 🕒 ${esc(sentAt(m.created_at))}</div>
-      <div style="margin-top:6px">${chip(mine ? 'Pending' : m.status)}${m.origin === 'manager' && ['Waiting for employee','Waiting for HR'].includes(m.status) ? ` <button class="btn ghost small" data-cancel="mis:${esc(m.id)}">${esc(t('cancelReq'))}</button>` : ''}</div>
+      ${m.purpose ? `<div class="t2">💬 ${esc(m.purpose)}</div>` : ''}<div class="t2" style="font-size:12px">${esc(m.origin === 'manager' ? t('misIAssigned') : t('misAskedBy', { n: misName(m) || m.emp_id }))} · 🕒 ${esc(sentAt(m.created_at))}</div>
+      <div style="margin-top:6px">${misChip(m, true)}${m.origin === 'manager' && ['Waiting for employee','Waiting for HR'].includes(m.status) ? ` <button class="btn ghost small" data-cancel="mis:${esc(m.id)}">${esc(t('cancelReq'))}</button>` : ''}</div>
       ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-mis-ok="${esc(m.id)}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-mis-no="${esc(m.id)}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
     || `<div class="empty">${esc(t('misNone'))}</div>`;
   return L.filter(m => m.status === 'Waiting for manager').length;
