@@ -181,8 +181,10 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <button class="btn" data-act="req-leave">🌴 <span data-t="reqLeave"></span></button>
         <button class="btn" data-act="req-perm">✋ <span data-t="reqPerm"></span></button>
         <button class="btn ghost" data-act="req-hr">📨 <span data-t="reqOther"></span></button>
+        <button class="btn ghost" data-act="req-mission">🚗 <span data-t="reqMission"></span></button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn ghost" data-act="fb-complaint">⚠️ <span data-t="complaint"></span></button><button class="btn ghost" data-act="fb-suggestion">💡 <span data-t="suggestion"></span></button></div>
       </div>
+      <div id="mis-ack"></div>
       <div id="doc-card"></div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div class="list" id="req-list"></div></div>
       <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
@@ -195,6 +197,9 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       <div class="card" id="board-card" style="display:none"><div class="sec" data-t="boardTitle"></div><div class="list" id="board-list"></div></div>
       <div class="card" id="inbox-card" style="display:none"><div class="sec" data-t="inboxTitle"></div><div class="list" id="inbox-list"></div></div>
       <div class="card" id="treq-card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
+      <div class="card" id="tmis-card" style="display:none"><div class="sec" data-t="misTeamTitle"></div>
+        <div id="tmis-assign" style="margin-bottom:10px"><button class="btn ghost" data-act="mis-assign">🚗 <span data-t="misAssign"></span></button></div>
+        <div class="list" id="tmis-list"></div></div>
       <div class="card" id="mreq-card" style="display:none"><div class="sec" data-t="hrReqTitle"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><button class="btn ghost" data-act="req-hire">👥 <span data-t="reqHire"></span></button><button class="btn ghost" data-act="req-train">🎓 <span data-t="reqTrain"></span></button>
           <button class="btn ghost" data-act="req-penalty">⚖️ <span data-t="reqPenalty"></span></button><button class="btn ghost" data-act="req-element">💰 <span data-t="reqElement"></span></button></div>
@@ -438,6 +443,24 @@ const T = {
 let LANG = localStorage.getItem('pk_lang') || 'ar';   // Arabic by default; one tap switches to English
 const t = (k, vars) => { let s = (T[LANG][k] ?? T.en[k] ?? k); if (vars) Object.entries(vars).forEach(([a,b]) => s = s.replace('{'+a+'}', b)); return s; };
 const tm = (group, k) => (T[LANG][group] && T[LANG][group][k]) || k;
+// outside missions (66)
+Object.assign(T.en, { reqMission:'Outside mission', misTitle:'🚗 Outside mission', misAssign:'Assign a mission', misTeamTitle:'🚗 Outside missions — your team',
+  misFull:'Full day(s)', misPart:'Part of a day', misFrom:'From date', misTo:'To date', misDate:'Date', misTimeFrom:'From time', misTimeTo:'To time',
+  misPlace:'Place (where)', misPurpose:'Purpose', misProject:'Project code (optional)', misWho:'Employees', misNoWho:'Choose at least one employee',
+  misNeedPlace:'Write where the mission is', misBadDates:'The end date must be on or after the start date', misBadTimes:'The end time must be after the start time',
+  misAckTitle:'Your manager assigned you a mission', misAckBtn:'✋ I undertake this mission', misAcked:'Thank you — your manager and HR are notified ✓',
+  misSentMgr:'Mission request sent to your direct manager ✓', misSentHR:'Mission request sent to HR ✓', misAssigned:'Mission sent — each employee must acknowledge it ✓',
+  misNone:'No missions', misAssignedBy:'Assigned by your manager', misAskedBy:'Requested by {n}', misAckNote:'You still check in and out on the phone during the mission.',
+  misOverlap:'There is already a mission on these dates', misLocked:'That payroll month is already approved', misNotTeam:'This employee is not in your team' });
+Object.assign(T.ar, { reqMission:'مأمورية خارجية', misTitle:'🚗 مأمورية خارجية', misAssign:'تكليف بمأمورية', misTeamTitle:'🚗 المأموريات الخارجية — فريقك',
+  misFull:'يوم كامل أو أكثر', misPart:'جزء من اليوم', misFrom:'من تاريخ', misTo:'إلى تاريخ', misDate:'التاريخ', misTimeFrom:'من الساعة', misTimeTo:'إلى الساعة',
+  misPlace:'المكان', misPurpose:'الغرض', misProject:'كود المشروع (اختياري)', misWho:'الموظفون', misNoWho:'اختر موظفاً واحداً على الأقل',
+  misNeedPlace:'اكتب مكان المأمورية', misBadDates:'تاريخ النهاية يجب أن يكون في أو بعد تاريخ البداية', misBadTimes:'وقت النهاية يجب أن يكون بعد وقت البداية',
+  misAckTitle:'كلفك مديرك بمأمورية', misAckBtn:'✋ أتعهد بتنفيذ المأمورية', misAcked:'شكراً — تم إبلاغ مديرك والموارد البشرية ✓',
+  misSentMgr:'تم إرسال طلب المأمورية إلى مديرك المباشر ✓', misSentHR:'تم إرسال طلب المأمورية إلى الموارد البشرية ✓', misAssigned:'تم إرسال المأمورية — يجب على كل موظف تأكيدها ✓',
+  misNone:'لا توجد مأموريات', misAssignedBy:'تكليف من مديرك', misAskedBy:'طلب من {n}', misAckNote:'تسجل الحضور والانصراف من الهاتف كالمعتاد أثناء المأمورية.',
+  misOverlap:'توجد مأمورية بالفعل في هذه التواريخ', misLocked:'رواتب هذا الشهر معتمدة بالفعل', misNotTeam:'هذا الموظف ليس من فريقك' });
+T.en.st['Waiting for employee'] = 'Waiting for the employee to acknowledge'; T.ar.st['Waiting for employee'] = 'في انتظار تأكيد الموظف';
 function applyLang(){
   document.documentElement.lang = LANG; document.documentElement.dir = LANG==='ar' ? 'rtl' : 'ltr';
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
@@ -468,7 +491,7 @@ function toast(msg, bad){ const el=$('toast'); el.textContent=msg; el.className 
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); $('boot').style.display='none'; }
 function sheet(html){ $('sheet-body').innerHTML = html; $('sheet').classList.add('on'); }
 function closeSheet(){ $('sheet').classList.remove('on'); }
-function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
+function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for employee':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
 function friendly(msg){
   msg = String(msg||'');
   if (/year of birth does not match/i.test(msg)) return t('yearWrong', { n: (msg.match(/\((\d+)/) || [])[1] || '' });
@@ -489,6 +512,12 @@ function friendly(msg){
   if (/APP_REQUIRED/.test(msg)) return t('appRequired');
   if (/UPDATE_REQUIRED/.test(msg)) { setTimeout(() => checkAppUpdate(true), 0); return t('updateRequired'); }
   if (/OUTSIDE_SITE/.test(msg)) { const m = msg.match(/about (.+?) from (.+?)\. Check/) || []; return t('outsideSite', { d: m[1] || '', site: m[2] || '' }); }
+  if (/MISSION_OVERLAP/.test(msg)) return t('misOverlap');
+  if (/MISSION_LOCKED/.test(msg)) return t('misLocked');
+  if (/MISSION_NOT_TEAM/.test(msg)) return t('misNotTeam');
+  if (/MISSION_PLACE/.test(msg)) return t('misNeedPlace');
+  if (/MISSION_TIMES/.test(msg)) return t('misBadTimes');
+  if (/MISSION_DATES/.test(msg) && /after the start/.test(msg)) return t('misBadDates');
   if (/approved and locked/i.test(msg)) return t('lockedPeriod');
   if (/Failed to fetch|NetworkError|network/i.test(msg)) return t('offline');
   return msg.replace(/^[A-Z_]+:\s*/, '');
@@ -832,6 +861,7 @@ async function loadAll(){
   APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r })), ...(APP.myActions || []).map(r => ({ kind:'act', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
   await loadDocs();
+  await loadMissionsP();
   await loadStatus();
 }
 async function loadStatus(){
@@ -1094,10 +1124,12 @@ function renderRequests(){
     ...APP.leaves.map(l=>({ k:'leave', id:l.id, at:l.created_at, icon:'🌴', title:t('leaveTitle',{ t: tm('lt',l.leave_type) }), sub:`${niceDate(l.date_from)} → ${niceDate(l.date_to)} · ${fmt(l.days)} ${t('days')}`, st:reqStage(l), reply:[l.manager_note, l.decision_note].filter(Boolean).join(' · ') })),
     ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmtH(p.hours)}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
     ...APP.reqs.map(r=>({ k:'req', id:r.id, at:r.created_at, icon:'📨', title:tm('ht',r.request_type), sub:r.details||'', st:r.status, reply:r.hr_response||'' })),
+    ...(APP.missions||[]).map(m=>({ k:'mis', id:m.id, at:m.created_at, icon:'🚗', title:`${t('reqMission')} · ${m.place}`, sub:misWhen(m) + (m.origin==='manager' ? ' · ' + t('misAssignedBy') : ''),
+       st:m.status, reply:[m.purpose, m.manager_note, m.hr_note].filter(Boolean).join(' · '), noCancel: m.origin==='manager' })),
   ].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
   $('req-list').innerHTML = items.map(x => `<div class="it"><div style="font-size:22px">${x.icon}</div><div class="grow"><div class="t1">${esc(x.title)}</div>
       <div class="t2">${esc(x.sub)}</div>${x.at?`<div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(x.at))}</div>`:''}${x.reply?`<div class="t2" style="color:var(--text)">💬 ${esc(x.reply)}</div>`:''}</div>
-      <div style="text-align:end">${chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
+      <div style="text-align:end">${chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)&&!x.noCancel?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
     || `<div class="empty">${esc(t('noRequests'))}</div>`;
 }
 function opt(list, group){ return list.map(v=>`<option value="${esc(v)}">${esc(tm(group,v))}</option>`).join(''); }
@@ -1181,11 +1213,108 @@ function askCancel(key){
   sheet(`<h2>${esc(t('cancelQ'))}</h2><div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="cx-go">${esc(t('yes'))}</button></div>`);
   $('cx-go').onclick = async () => {
     const [k,id]=key.split(':'), table={ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' }[k];
+    if (k === 'mis') { const { error } = await sb.rpc('cancel_mission', { p_id:id }); if (error) return toast(friendly(error.message), true); closeSheet(); toast(t('cancelled')); await loadAll(); renderAll(); return; }
     const { data, error } = await sb.from(table).update({ status:'Cancelled' }).eq('id', id).select();
     if (error || !(data && data.length)) return toast(t('cantCancel'), true);
     closeSheet(); toast(t('cancelled')); await loadAll(); renderAll();
   };
 }
+
+// ═════════════════════════════════════════════════════════
+//  OUTSIDE MISSIONS (66) — employee → manager → HR · manager assigns → employee acknowledges → HR
+// ═════════════════════════════════════════════════════════
+const misWhen = m => `${niceDate(m.date_from)}${m.date_to !== m.date_from ? ' → ' + niceDate(m.date_to) : ''}${m.time_from ? ' · ' + String(m.time_from).slice(0,5) + '–' + String(m.time_to).slice(0,5) : ''}`;
+async function loadMissionsP(){
+  const id = APP.me && APP.me.emp_id; if (!id) return;
+  try {
+    const [mine, team] = await Promise.all([
+      sb.from('employee_missions').select('*').eq('emp_id', id).order('created_at', { ascending:false }).limit(60),
+      sb.from('employee_missions').select('*').eq('manager_id', id).neq('emp_id', id).order('created_at', { ascending:false }).limit(80)]);
+    APP.missions = mine.data || []; APP.teamMissions = team.data || [];
+  } catch(e) { APP.missions = APP.missions || []; APP.teamMissions = APP.teamMissions || []; }
+}
+function renderMisAck(){
+  const box = $('mis-ack'); if (!box) return;
+  const L = (APP.missions || []).filter(m => m.status === 'Waiting for employee');
+  box.innerHTML = L.map(m => `<div class="card" style="border:2px solid var(--warn,#e07b39)"><div class="sec">🚗 ${esc(t('misAckTitle'))}</div>
+      <div class="t1" style="font-weight:600">${esc(m.place)}</div><div class="t2">${esc(misWhen(m))}${m.project_code ? ' · ' + esc(m.project_code) : ''}</div>
+      ${m.purpose ? `<div class="t2">💬 ${esc(m.purpose)}</div>` : ''}<div class="hint">ℹ ${esc(t('misAckNote'))}</div>
+      <button class="btn green" style="margin-top:8px" data-mis-ack="${esc(m.id)}">${esc(t('misAckBtn'))}</button></div>`).join('');
+}
+function missionSheet(assign){
+  const team = APP.myTeam || [], sites = (store.get('pk_sites', null) || {}).list || [];
+  sheet(`<h2>${esc(assign ? '🚗 ' + t('misAssign') : t('misTitle'))}</h2>
+    ${assign ? `<div class="field"><label>${esc(t('misWho'))}</label><div style="max-height:180px;overflow:auto;border:1px solid var(--border,#ddd);border-radius:10px;padding:6px 10px">
+      ${team.map(m => `<label style="display:flex;gap:8px;align-items:center;padding:5px 0"><input type="checkbox" class="mis-who" value="${esc(m.id)}" style="width:auto"> ${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></label>`).join('')}</div></div>` : ''}
+    <div class="row"><button class="btn small" id="mis-k-full" style="flex:1">${esc(t('misFull'))}</button><button class="btn ghost small" id="mis-k-part" style="flex:1">${esc(t('misPart'))}</button></div>
+    <div id="mis-full" class="row" style="margin-top:10px"><div class="field" style="flex:1"><label>${esc(t('misFrom'))}</label><input type="date" id="mis-f" value="${todayStr()}"></div>
+      <div class="field" style="flex:1"><label>${esc(t('misTo'))}</label><input type="date" id="mis-t" value="${todayStr()}"></div></div>
+    <div id="mis-part" style="display:none;margin-top:10px"><div class="field"><label>${esc(t('misDate'))}</label><input type="date" id="mis-d" value="${todayStr()}"></div>
+      <div class="row"><div class="field" style="flex:1"><label>${esc(t('misTimeFrom'))}</label><input type="time" id="mis-tf" value="10:00"></div>
+        <div class="field" style="flex:1"><label>${esc(t('misTimeTo'))}</label><input type="time" id="mis-tt" value="14:00"></div></div></div>
+    <div class="field"><label>${esc(t('misPlace'))} *</label><input id="mis-pl" maxlength="200"></div>
+    <div class="field"><label>${esc(t('misPurpose'))}</label><textarea id="mis-pu" rows="2" maxlength="500"></textarea></div>
+    <div class="field"><label>${esc(t('misProject'))}</label><input id="mis-pr" list="mis-prl" maxlength="40" autocomplete="off"><datalist id="mis-prl">${sites.slice(0, 3000).map(([id, nm]) => `<option value="${esc(id)}">${esc(nm || '')}</option>`).join('')}</datalist></div>
+    <div class="hint">ℹ ${esc(t('misAckNote'))}</div>
+    <button class="btn" id="mis-go">${esc(t('send'))}</button>`);
+  let part = false;
+  const kind = p => { part = p; $('mis-full').style.display = p ? 'none' : ''; $('mis-part').style.display = p ? '' : 'none';
+    $('mis-k-full').className = 'btn small' + (p ? ' ghost' : ''); $('mis-k-part').className = 'btn small' + (p ? '' : ' ghost'); };
+  $('mis-k-full').onclick = () => kind(false); $('mis-k-part').onclick = () => kind(true);
+  $('mis-go').onclick = async () => {
+    const f = part ? $('mis-d').value : $('mis-f').value, to = part ? $('mis-d').value : $('mis-t').value;
+    const tf = part ? $('mis-tf').value : null, tt = part ? $('mis-tt').value : null, pl = $('mis-pl').value.trim();
+    if (!f || !to || to < f) return toast(t('misBadDates'), true);
+    if (part && (!tf || !tt || tt <= tf)) return toast(t('misBadTimes'), true);
+    if (!pl) return toast(t('misNeedPlace'), true);
+    const who = assign ? [...document.querySelectorAll('.mis-who:checked')].map(c => c.value) : null;
+    if (assign && !who.length) return toast(t('misNoWho'), true);
+    if (!navigator.onLine) return toast(t('offline'), true);
+    $('mis-go').disabled = true;
+    const args = { p_from:f, p_to:to, p_time_from:tf, p_time_to:tt, p_place:pl, p_purpose:$('mis-pu').value.trim() || null, p_project:$('mis-pr').value.trim() || null };
+    const { error } = assign ? await sb.rpc('assign_mission', { p_emps:who, ...args }) : await sb.rpc('request_mission', args);
+    $('mis-go').disabled = false;
+    if (error) return toast(friendly(error.message), true);
+    closeSheet(); toast(assign ? t('misAssigned') : (APP.manager ? t('misSentMgr') : t('misSentHR')));
+    await loadMissionsP(); renderAll();
+  };
+}
+async function misAck(id){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('acknowledge_mission', { p_id:id });
+  if (error) return toast(friendly(error.message), true);
+  toast(t('misAcked')); await loadMissionsP(); renderAll();
+}
+async function misDecide(id, ok, note){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('manager_decide_mission', { p_id:id, p_approve:ok, p_note: note || null });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(ok ? t('approvedMsg') : t('rejectedMsg')); await loadMissionsP(); renderAll();
+}
+function renderTeamMissions(){
+  const card = $('tmis-card'); if (!card) return 0;
+  const L = (APP.teamMissions || []).slice().sort((a,b) => ((a.status==='Waiting for manager'?0:1) - (b.status==='Waiting for manager'?0:1)) || String(b.created_at).localeCompare(String(a.created_at)));
+  const show = L.length || (APP.myTeam || []).length;
+  card.style.display = show ? '' : 'none';
+  $('tmis-assign').style.display = (APP.myTeam || []).length ? '' : 'none';
+  $('tmis-list').innerHTML = L.slice(0, 40).map(m => { const mine = m.status === 'Waiting for manager';
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(m.emp_id)} · ${esc(((APP.myTeam||[]).find(x => x.id === m.emp_id) || {})[LANG==='ar' ? 'name_ar' : 'name_en'] || '')}</div>
+      <div class="t2">🚗 ${esc(m.place)} · ${esc(misWhen(m))}${m.project_code ? ' · ' + esc(m.project_code) : ''}</div>
+      ${m.purpose ? `<div class="t2">💬 ${esc(m.purpose)}</div>` : ''}<div class="t2" style="font-size:12px">${esc(m.origin === 'manager' ? t('misAssignedBy') : t('misAskedBy', { n: m.emp_id }))} · 🕒 ${esc(sentAt(m.created_at))}</div>
+      <div style="margin-top:6px">${chip(mine ? 'Pending' : m.status)}${m.origin === 'manager' && ['Waiting for employee','Waiting for HR'].includes(m.status) ? ` <button class="btn ghost small" data-cancel="mis:${esc(m.id)}">${esc(t('cancelReq'))}</button>` : ''}</div>
+      ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-mis-ok="${esc(m.id)}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-mis-no="${esc(m.id)}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
+    || `<div class="empty">${esc(t('misNone'))}</div>`;
+  return L.filter(m => m.status === 'Waiting for manager').length;
+}
+const _renderTeamMis = renderTeam;
+renderTeam = function(){
+  _renderTeamMis.apply(this, arguments);
+  const w = renderTeamMissions();
+  if ((APP.teamMissions || []).length) $('tab-team').style.display = '';
+  if (w) { const b = $('team-badge'); const n = (Number(b.textContent) || 0) * (b.style.display === 'none' ? 0 : 1) + w; b.style.display = ''; b.textContent = n; }
+};
+const _renderRequestsMis = renderRequests;
+renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMisAck(); };
 
 // ═════════════════════════════════════════════════════════
 //  PAYSLIPS & PROFILE
@@ -1636,8 +1765,16 @@ document.addEventListener('click', async ev => {
   if (x.id === 'noproj-go') return clock('in', null, x);
   const nph = x.closest('#noproj-home'); if (nph) return clock('in', null, nph);
   if (x.id === 'out-go') return clock('out', null, x);
+  const mk = x.closest('[data-mis-ack]'); if (mk) { mk.disabled = true; return misAck(mk.dataset.misAck); }
+  const mok = x.closest('[data-mis-ok]'); if (mok) { mok.disabled = true; return misDecide(mok.dataset.misOk, true); }
+  const mno = x.closest('[data-mis-no]'); if (mno) { const id = mno.dataset.misNo;
+    sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="mno-note"></textarea></div>
+      <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="mno-go">${esc(t('reject'))}</button></div>`);
+    $('mno-go').onclick = () => { const n = $('mno-note').value.trim(); if (!n) return toast(t('rejectWhy'), true); misDecide(id, false, n); }; return; }
   const a = x.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act;
+  if (act==='req-mission') return missionSheet(false);
+  if (act==='mis-assign') return missionSheet(true);
   if (act==='in' || act==='switch') return openSitePicker(act);
   if (act==='out') return confirmOut();
   if (act==='close') return closeSheet();
