@@ -186,6 +186,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       </div>
       <div id="mis-ack"></div>
       <div id="doc-card"></div>
+      <div id="dreq-card"></div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div class="list" id="req-list"></div></div>
       <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
     </div>
@@ -454,6 +455,17 @@ Object.assign(T.en, { reqMission:'Outside mission', misTitle:'🚗 Outside missi
   misOverlap:'There is already a mission on these dates', misLocked:'That payroll month is already approved', misNotTeam:'This employee is not in your team',
   misIAssigned:'Assigned by you', misSelAll:'Select all ({n})', misChosen:'{n} chosen', misAckedHR:'Acknowledged — waiting for HR', misMyAckedHR:'You acknowledged — waiting for HR',
   misNoAppHR:'Sent to HR — employee does not use the app', misNoAppNote:'Employees who do not use the app yet (no login or first sign-in not finished) go straight to HR without acknowledging.' });
+Object.assign(T.en, { dreqTitle:'📝 HR asks you to update your data', dreqFill:'✏️ Fill in', dreqSend:'Send to HR', dreqSentHR:'Sent — waiting for HR to check it',
+  dreqSaved:'Saved ✓', dreqAccepted:'✅ HR saved your data', dreqReturned:'↩ HR returned it — please correct and send again', dreqNeed:'Fill in every field',
+  dreqDirectNote:'Personal mobile, e-mail and address are saved at once; other data is saved after HR checks it.', choose:'— choose —',
+  myContact:'✏️ Update my contact details', myContactTitle:'My contact details', contactSaved:'Your contact details are saved ✓',
+  personalEmail:'Personal e-mail', personalMobile:'Personal mobile', addressL:'Address', saveL:'Save', noChange:'Nothing changed' });
+Object.assign(T.ar, { dreqTitle:'📝 الموارد البشرية تطلب تحديث بياناتك', dreqFill:'✏️ إدخال البيانات', dreqSend:'إرسال للموارد البشرية', dreqSentHR:'تم الإرسال — في انتظار مراجعة الموارد البشرية',
+  dreqSaved:'تم الحفظ ✓', dreqAccepted:'✅ تم حفظ بياناتك', dreqReturned:'↩ أعادته الموارد البشرية — برجاء التصحيح والإرسال مرة أخرى', dreqNeed:'برجاء ملء كل الخانات',
+  dreqDirectNote:'الموبايل والبريد الإلكتروني الشخصي والعنوان تُحفظ فوراً؛ باقي البيانات تُحفظ بعد مراجعة الموارد البشرية.', choose:'— اختر —',
+  myContact:'✏️ تحديث بيانات الاتصال', myContactTitle:'بيانات الاتصال الخاصة بي', contactSaved:'تم حفظ بيانات الاتصال ✓',
+  personalEmail:'البريد الإلكتروني الشخصي', personalMobile:'الموبايل الشخصي', addressL:'العنوان', saveL:'حفظ', noChange:'لم يتغير شيء' });
+const DREQ_OPT_AR = { Single:'أعزب', Married:'متزوج', Divorced:'مطلق', Widowed:'أرمل', Finished:'أدى الخدمة', Exempt:'معفى', Postponed:'مؤجل', 'Not Applicable':'لا ينطبق' };
 Object.assign(T.en, { dayEnded:'Day ended at {t}', dayTotal:'Worked today: {h}', cameBack:'I came back — check in again',
   cameBackNote:'Your check-out stays recorded. The time you were away is not counted, and HR can see it.',
   undoOut:'↩ Undo check-out (until {t})', undoneOut:'Check-out undone — you are checked in again ✓', undoLate:'More than 5 minutes have passed — check in again instead',
@@ -517,6 +529,7 @@ function friendly(msg){
   if (/OFFLINE_TOO_OLD/.test(msg)) return t('tooOld');
   if (/OFFLINE_ORDER/.test(msg)) return t('wrongOrder');
   if (/ALREADY_IN/.test(msg)) return t('alreadyIn');
+  if (/^(DATA_VALUE|DATA_FIELD|DATA_CLOSED|DATA_NOT_FOUND|EMAIL): ?/.test(msg)) return msg.replace(/^[A-Z_]+: ?/, '');
   if (/UNDO_TOO_LATE/.test(msg)) return t('undoLate');
   if (/UNDO_NOT_LAST/.test(msg)) return t('undoNotLast');
   if (/UNDO_LOCKED/.test(msg)) return t('undoLocked');
@@ -741,6 +754,74 @@ function docSheet(id){
   };
 }
 
+// ── Data HR asks the employee to update + "My contact details" (77-data-update-requests.sql) ──
+async function loadDreqs(){
+  try { const r = await sb.from('data_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
+        APP.dreqs = r.error ? [] : (r.data || []); } catch(e){ APP.dreqs = []; }
+  if (!APP.dfields) { try { const f = await sb.rpc('data_fields'); APP.dfields = f.error ? null : f.data; } catch(e){} }
+}
+const dfield = k => (APP.dfields || []).find(f => f.key === k) || { key:k, en:k, ar:k, kind:'text' };
+const dfLabel = f => LANG === 'ar' ? (f.ar || f.en) : f.en;
+function renderDreqs(){
+  const box = $('dreq-card'); if (!box) return;
+  const L = (APP.dreqs || []).filter(d => ['Requested','Returned','Answered'].includes(d.status) || (Date.now() - new Date(d.reviewed_at || d.answered_at || 0)) < 7 * 864e5);
+  if (!L.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card"><div class="sec">${esc(t('dreqTitle'))}</div><div class="list">${L.map(d => {
+    const open = d.status === 'Requested' || d.status === 'Returned';
+    const st = d.status === 'Answered' ? t('dreqSentHR') : d.status === 'Accepted' ? t('dreqAccepted') : d.status === 'Completed' ? t('dreqSaved') : d.status === 'Returned' ? t('dreqReturned') : '';
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc((d.fields || []).map(k => dfLabel(dfield(k))).join(' · '))}</div>
+      ${d.message ? `<div class="t2">💬 ${esc(d.message)}</div>` : ''}${d.status === 'Returned' && d.review_note ? `<div class="t2" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
+      ${st ? `<div class="t2">${esc(st)}</div>` : ''}
+      ${open ? `<button class="btn small" style="margin-top:8px" data-act="dreq-answer" data-id="${esc(d.id)}">${esc(t('dreqFill'))}</button>` : ''}</div></div>`; }).join('')}</div></div>`;
+}
+function dreqInput(f, v){
+  const id = 'dq-' + f.key, val = v == null ? '' : String(v).slice(0, f.kind === 'date' ? 10 : 200);
+  if (f.kind === 'select') return `<select id="${id}"><option value="">${esc(t('choose'))}</option>${(f.options || []).map(o => `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(LANG === 'ar' ? (DREQ_OPT_AR[o] || o) : o)}</option>`).join('')}</select>`;
+  const type = f.kind === 'date' ? 'date' : f.kind === 'email' ? 'email' : f.kind === 'tel' ? 'tel' : 'text';
+  return `<input type="${type}" id="${id}" value="${esc(val)}"${f.kind === 'tel' ? ' inputmode="tel" dir="ltr"' : f.kind === 'email' ? ' dir="ltr" autocapitalize="off"' : ''}>`;
+}
+function dreqSheet(id){
+  const d = (APP.dreqs || []).find(x => x.id === id); if (!d) return;
+  const prev = d.status === 'Returned' && d.answer ? d.answer : {}, e = APP.emp || {};
+  const flds = (d.fields || []).map(dfield);
+  sheet(`<h2>${esc(t('dreqTitle'))}</h2>${d.message ? `<div class="hint">💬 ${esc(d.message)}</div>` : ''}
+    ${d.status === 'Returned' && d.review_note ? `<div class="hint" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
+    ${flds.map(f => `<div class="field"><label>${esc(dfLabel(f))}</label>${dreqInput(f, prev[f.key] != null ? prev[f.key] : e[f.key])}</div>`).join('')}
+    ${flds.some(f => !f.direct) ? `<div class="hint">${esc(t('dreqDirectNote'))}</div>` : ''}
+    <button class="btn" id="dq-go">${esc(t('dreqSend'))}</button>`);
+  $('dq-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const vals = {}; for (const f of flds) { const v = ($('dq-' + f.key).value || '').trim(); if (!v) return toast(t('dreqNeed'), true); vals[f.key] = v; }
+    const btn = $('dq-go'); btn.disabled = true;
+    const { data, error } = await sb.rpc('answer_data_request', { p_id: d.id, p_vals: vals });
+    btn.disabled = false;
+    if (error) return toast(friendly(error.message), true);
+    closeSheet(); toast(data === 'saved' ? t('dreqSaved') : t('dreqSentHR'));
+    try { await loadAll(); renderAll(); } catch(e){ await loadDreqs(); renderDreqs(); }
+  };
+}
+function contactSheet(){
+  const e = APP.emp || {};
+  sheet(`<h2>${esc(t('myContactTitle'))}</h2>
+    <div class="field"><label>${esc(t('personalMobile'))}</label><input type="tel" id="mc-mobile" inputmode="tel" dir="ltr" value="${esc(e.mobile || '')}"></div>
+    <div class="field"><label>${esc(t('personalEmail'))}</label><input type="email" id="mc-email" dir="ltr" autocapitalize="off" value="${esc(e.personal_email || '')}"></div>
+    <div class="field"><label>${esc(t('addressL'))}</label><input type="text" id="mc-address" value="${esc(e.address || '')}"></div>
+    <button class="btn" id="mc-go">${esc(t('saveL'))}</button>`);
+  $('mc-go').onclick = async () => {
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const vals = {}, cur = { mobile: e.mobile || '', personal_email: e.personal_email || '', address: e.address || '' };
+    [['mobile','mc-mobile'],['personal_email','mc-email'],['address','mc-address']].forEach(([k, id]) => { const v = $(id).value.trim(); if (v && v !== cur[k]) vals[k] = v; });
+    if (!Object.keys(vals).length) return toast(t('noChange'));
+    const btn = $('mc-go'); btn.disabled = true;
+    const { error } = await sb.rpc('update_my_contact', { p_vals: vals });
+    btn.disabled = false;
+    if (error) return toast(friendly(error.message), true);
+    closeSheet(); toast(t('contactSaved'));
+    try { const r = await sb.from('employees').select('*').eq('id', APP.me.emp_id); if (r.data && r.data[0]) { APP.emp = r.data[0]; saveCache && saveCache(); } } catch(x){}
+    renderProfile();
+  };
+}
+
 // ── iPhone notifications (web app on the Home Screen; 60-push-iphone.sql + edge function send-push) ──
 const webPushOK = () => !NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && isStandalone();
 const b64ToBytes = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
@@ -877,6 +958,7 @@ async function loadAll(){
   APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r })), ...(APP.myActions || []).map(r => ({ kind:'act', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
   await loadDocs();
+  await loadDreqs();
   await loadMissionsP();
   await loadStatus();
 }
@@ -1416,9 +1498,10 @@ function renderProfile(){
   const kv = (k,v,ltr) => v ? `<div class="kv"><span class="k">${esc(t(k))}</span><span class="v ${ltr?'num':''}">${esc(v)}</span></div>` : '';
   $('prof-card').innerHTML = `<div class="sec" style="font-size:17px">${esc(LANG==='ar' ? (e.name_ar||e.name_en) : (e.name_en||e.name_ar))}</div>
     ${kv('code', e.id, true)}${kv('job', e.job_name)}${kv('dept', e.department)}${kv('unit', e.unit)}${kv('manager', m ? (LANG==='ar' ? (m.name_ar||m.name_en) : (m.name_en||m.name_ar)) : '')}
-    ${kv('entity', e.entity)}${kv('hired', e.employment_date, true)}${kv('mobile', e.mobile, true)}${kv('email', e.email, true)}
+    ${kv('entity', e.entity)}${kv('hired', e.employment_date, true)}${kv('personalMobile', e.mobile, true)}${kv('personalEmail', e.personal_email, true)}${kv('addressL', e.address)}${kv('email', e.email, true)}
     ${kv('nidL', e.national_id ? '•••• ' + String(e.national_id).slice(-4) : '', true)}
-    ${APP.status && APP.status.device ? `<div class="kv"><span class="k">${esc(t('phoneReg'))}</span><span class="v">📱 ${esc(APP.status.device.label || '')} · ${esc(t('thisPhone'))}</span></div>` : ''}`;
+    ${APP.status && APP.status.device ? `<div class="kv"><span class="k">${esc(t('phoneReg'))}</span><span class="v">📱 ${esc(APP.status.device.label || '')} · ${esc(t('thisPhone'))}</span></div>` : ''}
+    <button class="btn ghost" data-act="my-contact" style="margin-top:12px">${esc(t('myContact'))}</button>`;
   const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const ic = $('install-card');
@@ -1573,7 +1656,7 @@ async function checkAppUpdate(force){
 function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
   $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
   $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
-  renderHome(); renderRequests(); renderDocs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
+  renderHome(); renderRequests(); renderDocs(); renderDreqs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
 // ═════════════════════════════════════════════════════════
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
 // ═════════════════════════════════════════════════════════
@@ -1850,6 +1933,8 @@ document.addEventListener('click', async ev => {
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
   if (act==='doc-answer') return docSheet(a.dataset.id);
+  if (act==='dreq-answer') return dreqSheet(a.dataset.id);
+  if (act==='my-contact') return contactSheet();
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
