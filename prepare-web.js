@@ -10,7 +10,7 @@ fs.copyFileSync(path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dis
 fs.copyFileSync(path.join(root, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js'), path.join(out, 'vendor', 'capacitor.js'));
 
 let html = fs.readFileSync(path.join(out, 'index.html'), 'utf8');
-const cdn = /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>/;
+const cdn = /<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2|vendor\/supabase\.js)[^"]*"[^>]*><\/script>/;
 if (!cdn.test(html)) throw new Error('Could not find the Supabase script tag in web/index.html');
 html = html.replace(cdn, '<script src="vendor/capacitor.js"></script>\n<script src="vendor/supabase.js"></script>');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '');                       // web-app install files are not needed inside the app

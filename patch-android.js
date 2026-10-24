@@ -150,6 +150,13 @@ console.log(`✔ Android project patched — location permission, version 1.0.${
     if (!mf.includes('ACCESS_BACKGROUND_LOCATION')) throw new Error('Could not add background location permission to AndroidManifest.xml');
     fs.writeFileSync(manifestPath, mf);
   }
+  mf = fs.readFileSync(manifestPath, 'utf8');
+  if (!/android:allowBackup="false"/.test(mf)) {                 // review fix: no Google backup of the session, phone ID or watch token
+    mf = mf.replace(/android:allowBackup="true"/, 'android:allowBackup="false"');
+    if (!/android:allowBackup="false"/.test(mf)) mf = mf.replace(/<application(\s)/, '<application android:allowBackup="false"$1');
+    if (!/android:allowBackup="false"/.test(mf)) throw new Error('Could not turn off Android backup in AndroidManifest.xml');
+    fs.writeFileSync(manifestPath, mf);
+  }
   let gr = fs.readFileSync(gradlePath, 'utf8');
   if (!gr.includes('androidx.work:work-runtime')) {
     gr = gr.replace(/\ndependencies \{/, '\ndependencies {\n    implementation "androidx.work:work-runtime:2.10.1"');
@@ -200,7 +207,7 @@ public class LeaveWatchPlugin extends Plugin {
         SharedPreferences sp = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         boolean samePeriod = token.equals(sp.getString("token", ""));
         SharedPreferences.Editor e = sp.edit();
-        if (!samePeriod) { e.remove("reported"); e.remove("pendingAt"); }
+        if (!samePeriod) { e.remove("reported"); e.remove("pendingAt"); e.remove("awayCount"); }
         e.putString("token", token);
         e.putString("url", call.getString("url", ""));
         e.putString("key", call.getString("key", ""));
@@ -349,8 +356,13 @@ public class LeaveWatchWorker extends Worker {
         try {
             if (Build.VERSION.SDK_INT >= 30) {
                 CancellationSignal cs = new CancellationSignal();
-                lm.getCurrentLocation(prov, cs, Executors.newSingleThreadExecutor(), loc -> { out[0] = loc; latch.countDown(); });
-                if (!latch.await(45, TimeUnit.SECONDS)) cs.cancel();
+                java.util.concurrent.ExecutorService ex = Executors.newSingleThreadExecutor();
+                try {
+                    lm.getCurrentLocation(prov, cs, ex, loc -> { out[0] = loc; latch.countDown(); });
+                    if (!latch.await(45, TimeUnit.SECONDS)) cs.cancel();
+                } finally {
+                    ex.shutdown();
+                }
             } else {
                 HandlerThread ht = new HandlerThread("petrokima-leave-watch");
                 ht.start();

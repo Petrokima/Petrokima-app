@@ -109,6 +109,10 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
 
+      - name: Remove the signing key file from the build computer
+        if: always()
+        run: rm -f "$RUNNER_TEMP/petrokima-release.jks"
+
       - name: Name the file
         run: cp android/app/build/outputs/apk/release/app-release.apk Petrokima.apk
 
@@ -126,7 +130,7 @@ jobs:
           DOWNLOAD_DOMAIN: ${{ vars.DOWNLOAD_DOMAIN }}
 
       - name: Publish the download page (GitHub Pages)
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453   # v4.1.0 — pinned (review)
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site
@@ -134,7 +138,7 @@ jobs:
           force_orphan: true
 
       - name: Publish the download
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.6.2 — pinned (review)
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Petrokima Android 1.0.${{ github.run_number }}
