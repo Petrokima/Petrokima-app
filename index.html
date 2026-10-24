@@ -26,7 +26,7 @@ input,select,textarea{font-family:inherit;font-size:16px}
 .screen.on{display:block}
 .center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .card{background:var(--card);border-radius:var(--radius);box-shadow:0 1px 3px rgba(20,30,60,.06);padding:18px;margin-bottom:14px}
-.logo{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:800;font-size:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.logo{width:84px;height:84px;border-radius:20px;display:block;margin:0 auto 12px;box-shadow:0 4px 14px rgba(2,16,43,.18)}
 h1{font-size:22px;font-weight:800;text-align:center}
 .sub{color:var(--muted);font-size:13px;text-align:center;margin-top:4px}
 .field{margin-bottom:14px}
@@ -111,7 +111,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 
 <!-- LOGIN -->
 <section class="screen" id="scr-login"><div class="center"><div style="width:100%;max-width:400px">
-  <div class="logo">PK</div><h1 data-t="appName"></h1><div class="sub" data-t="loginSub"></div>
+  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-t="appName"></h1><div class="sub" data-t="loginSub"></div>
   <div class="card" style="margin-top:22px">
     <div class="field"><label data-t="empCode"></label><input id="li-code" inputmode="text" autocomplete="username" autocapitalize="off"></div>
     <div class="field"><label data-t="password"></label><input id="li-pass" type="password" autocomplete="current-password"></div>
@@ -125,7 +125,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 
 <!-- FIRST SIGN-IN -->
 <section class="screen" id="scr-first"><div class="center"><div style="width:100%;max-width:400px">
-  <div class="logo">PK</div><h1 data-t="firstTitle"></h1><div class="sub" data-t="firstSub"></div>
+  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-t="firstTitle"></h1><div class="sub" data-t="firstSub"></div>
   <div class="card" style="margin-top:22px">
     <div class="hint" data-t="firstMustChange" style="margin-bottom:10px"></div>
     <div class="field"><label data-t="birthYear"></label><input id="fl-year" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1988" style="direction:ltr;text-align:center;letter-spacing:6px;font-size:20px"></div>
@@ -139,14 +139,14 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 
 <!-- INSTALL FIRST (iPhone) -->
 <section class="screen" id="scr-install"><div class="center"><div style="width:100%;max-width:400px;text-align:center">
-  <div class="logo">PK</div><h1 data-t="installTitle"></h1>
+  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-t="installTitle"></h1>
   <div class="card" style="margin-top:18px;text-align:start;line-height:1.9"><div data-t="installText" style="margin-bottom:10px"></div><div id="ios-steps" style="white-space:pre-line;font-weight:700"></div></div>
   <button class="iconbtn" data-lang>English</button>
 </div></div></section>
 
 <!-- MESSAGE (no access etc.) -->
 <section class="screen" id="scr-msg"><div class="center"><div style="width:100%;max-width:400px;text-align:center">
-  <div class="logo">PK</div><div class="card" id="msg-body" style="line-height:1.8"></div>
+  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><div class="card" id="msg-body" style="line-height:1.8"></div>
   <button class="btn ghost" data-act="signout" data-t="back"></button>
 </div></div></section>
 
