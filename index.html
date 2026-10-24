@@ -299,6 +299,7 @@ const T = {
   deviceMismatch:'This phone is not the phone registered to your employee code. Contact HR.',
   mockLoc:'A fake-location app is active on this phone. Turn it off (and remove it from Developer options → Select mock location app), then try again.',
   outsideSite:'You are about {d} from {site}. Check in when you arrive at the site.',
+  outsideSiteOut:'You are about {d} from {site}. Check-out is only allowed there — if you have already left, ask HR to add your check-out.',
   appRequired:'Please check in with the Petrokima app, not the internet browser. Download it from download.petrokima-hr.com',
   updateRequired:'Your Petrokima app is out of date. Install the new version (download.petrokima-hr.com), then check in again.',
   badDevice:'This phone could not be identified. Close the app and open it again.',
@@ -393,6 +394,7 @@ const T = {
   deviceMismatch:'هذا الهاتف ليس الهاتف المسجّل لكود الموظف الخاص بك. تواصل مع الموارد البشرية.',
   mockLoc:'يوجد تطبيق لتزييف الموقع يعمل على هذا الهاتف. أوقفه (واحذفه من خيارات المطوّر ← تطبيق الموقع الوهمي) ثم حاول مرة أخرى.',
   outsideSite:'أنت على بعد حوالي {d} من {site}. سجّل الحضور عند وصولك إلى الموقع.',
+  outsideSiteOut:'أنت على بعد حوالي {d} من {site}. لا يُسمح بتسجيل الانصراف إلا من هناك — إذا كنت قد غادرت بالفعل، اطلب من الموارد البشرية إضافة انصرافك.',
   appRequired:'من فضلك سجّل الحضور من تطبيق بتروكيما وليس من متصفح الإنترنت. حمّله من download.petrokima-hr.com',
   updateRequired:'إصدار تطبيق بتروكيما لديك قديم. ثبّت الإصدار الجديد (download.petrokima-hr.com) ثم سجّل الحضور مرة أخرى.',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
@@ -540,7 +542,7 @@ function friendly(msg){
   if (/MOCK_LOCATION/.test(msg)) return t('mockLoc');
   if (/APP_REQUIRED/.test(msg)) return t('appRequired');
   if (/UPDATE_REQUIRED/.test(msg)) { setTimeout(() => checkAppUpdate(true), 0); return t('updateRequired'); }
-  if (/OUTSIDE_SITE/.test(msg)) { const m = msg.match(/about (.+?) from (.+?)\. Check/) || []; return t('outsideSite', { d: m[1] || '', site: m[2] || '' }); }
+  if (/OUTSIDE_SITE/.test(msg)) { const m = msg.match(/about (.+?) from (.+?)\. Check/) || []; return t(/Check-out is only allowed/.test(msg) ? 'outsideSiteOut' : 'outsideSite', { d: m[1] || '', site: m[2] || '' }); }
   if (/MISSION_OVERLAP/.test(msg)) return t('misOverlap');
   if (/MISSION_LOCKED/.test(msg)) return t('misLocked');
   if (/MISSION_NOT_TEAM/.test(msg)) return t('misNotTeam');
