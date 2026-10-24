@@ -171,6 +171,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <div id="clk-btns"></div>
         <div class="muted" style="font-size:12px;margin-top:12px" data-t="locNote"></div>
       </div>
+      <div id="co-card"></div>
       <div class="card"><div class="sec" data-t="today"></div><div class="list" id="today-list"></div></div>
       <div class="card"><div class="sec" id="month-title"></div><div class="list" id="month-list"></div></div>
     </div>
@@ -467,6 +468,30 @@ Object.assign(T.ar, { dreqTitle:'📝 الموارد البشرية تطلب ت�
   dreqDirectNote:'الموبايل والبريد الإلكتروني الشخصي والعنوان تُحفظ فوراً؛ باقي البيانات تُحفظ بعد مراجعة الموارد البشرية.', choose:'— اختر —',
   myContact:'✏️ تحديث بيانات الاتصال', myContactTitle:'بيانات الاتصال الخاصة بي', contactSaved:'تم حفظ بيانات الاتصال ✓',
   personalEmail:'البريد الإلكتروني الشخصي', personalMobile:'الموبايل الشخصي', addressL:'العنوان', saveL:'حفظ', noChange:'لم يتغير شيء' });
+Object.assign(T.en, { coTitle:'🚪 Check-outs sent to HR', coTitleSheet:'🚪 HR has been told', coLeftTitle:'🚶 You are still checked in',
+  coTriedAt:'tried to check out at {t} away from {place}', coLeftAt:'away from {place} at {t}, still checked in',
+  coWaiting:'Waiting for HR to record it', coRecorded:'✅ HR recorded your check-out at {t}', coRejected:'❌ HR did not record it',
+  coAddMsg:'💬 Message to HR', coEditMsg:'💬 Change my message', coMsgLabel:'Message to HR (when did you leave, and why?)',
+  coMsgPh:'Example: I finished work and left the office at {t}. Please record my check-out.', coLater:'Later', coSendMsg:'Send message',
+  coNeedMsg:'Write your message first', coMsgSent:'Message sent to HR ✓',
+  coToldHR:'HR has been told that you tried to check out at {t} away from {place}. HR will record your check-out by hand — you can add a message below.',
+  coLeftNow:'You are away from {place} and still checked in. HR has been told ({t}). If you have finished work, send HR a message asking them to record your check-out.',
+  coTooSoon:'(Less than 10 minutes since your check-in — nothing was sent to HR.)',
+  lwTitle:'🚶 You left without checking out', lwBody:'You are away from your office and still checked in. HR has been told — open the app to send HR a message.',
+  lwAskTitle:'Allow location “All the time”', lwOpenSettings:'Open settings',
+  lwAskBody:'While you are checked in, the app checks from time to time that you are still at your office, so HR knows if you left without checking out.\n\nOn the next screen choose: Permissions → Location → “Allow all the time”.' });
+Object.assign(T.ar, { coTitle:'🚪 طلبات انصراف أُرسلت للموارد البشرية', coTitleSheet:'🚪 تم إبلاغ الموارد البشرية', coLeftTitle:'🚶 ما زلت مسجّل حضور',
+  coTriedAt:'حاولت تسجيل الانصراف الساعة {t} بعيداً عن {place}', coLeftAt:'بعيداً عن {place} الساعة {t} دون تسجيل انصراف',
+  coWaiting:'في انتظار تسجيل الموارد البشرية', coRecorded:'✅ سجّلت الموارد البشرية انصرافك الساعة {t}', coRejected:'❌ لم تسجّله الموارد البشرية',
+  coAddMsg:'💬 رسالة للموارد البشرية', coEditMsg:'💬 تعديل رسالتي', coMsgLabel:'رسالة للموارد البشرية (متى غادرت؟ ولماذا؟)',
+  coMsgPh:'مثال: أنهيت العمل وغادرت المكتب الساعة {t}. برجاء تسجيل انصرافي.', coLater:'لاحقاً', coSendMsg:'إرسال الرسالة',
+  coNeedMsg:'اكتب رسالتك أولاً', coMsgSent:'تم إرسال الرسالة للموارد البشرية ✓',
+  coToldHR:'تم إبلاغ الموارد البشرية بأنك حاولت تسجيل الانصراف الساعة {t} بعيداً عن {place}. ستسجّل الموارد البشرية انصرافك يدوياً — يمكنك إضافة رسالة بالأسفل.',
+  coLeftNow:'أنت بعيد عن {place} وما زلت مسجّل حضور. تم إبلاغ الموارد البشرية ({t}). إذا أنهيت عملك، أرسل رسالة للموارد البشرية لتسجيل انصرافك.',
+  coTooSoon:'(أقل من 10 دقائق منذ تسجيل الحضور — لم يُرسل شيء للموارد البشرية.)',
+  lwTitle:'🚶 غادرت دون تسجيل الانصراف', lwBody:'أنت بعيد عن مكتبك وما زلت مسجّل حضور. تم إبلاغ الموارد البشرية — افتح التطبيق لإرسال رسالة لهم.',
+  lwAskTitle:'اسمح بالموقع «طوال الوقت»', lwOpenSettings:'فتح الإعدادات',
+  lwAskBody:'أثناء تسجيل حضورك، يتحقق التطبيق من وقت لآخر أنك ما زلت في مكتبك، حتى تعرف الموارد البشرية إذا غادرت دون تسجيل الانصراف.\n\nفي الشاشة التالية اختر: الأذونات ← الموقع ← «السماح طوال الوقت».' });
 const DREQ_OPT_AR = { Single:'أعزب', Married:'متزوج', Divorced:'مطلق', Widowed:'أرمل', Finished:'أدى الخدمة', Exempt:'معفى', Postponed:'مؤجل', 'Not Applicable':'لا ينطبق' };
 Object.assign(T.en, { dayEnded:'Day ended at {t}', dayTotal:'Worked today: {h}', cameBack:'I came back — check in again',
   cameBackNote:'Your check-out stays recorded. The time you were away is not counted, and HR can see it.',
@@ -536,6 +561,7 @@ function friendly(msg){
   if (/UNDO_NOT_LAST/.test(msg)) return t('undoNotLast');
   if (/UNDO_LOCKED/.test(msg)) return t('undoLocked');
   if (/UNDO_NOT_FOUND/.test(msg)) return t('undoGone');
+  if (/TOO_SOON/.test(msg)) return t('coTooSoon');
   if (/NOT_IN/.test(msg)) return t('notInErr');
   if (/DEVICE/.test(msg)) return t('deviceMismatch');
   if (/NO_LOCATION/.test(msg)) return t('locDenied');
@@ -824,6 +850,100 @@ function contactSheet(){
   };
 }
 
+// ── Check-outs HR must record (80-checkout-requests.sql) ──
+//  · a check-out refused away from the office/site → the try is sent to HR at once; he can add a message
+//  · still checked in but away from his office (from 10 min after the check-in): Android background watch (LeaveWatch) +
+//    a check each time the app is opened → "left without checking out" sent to HR
+async function loadCoReqs(){
+  try { const r = await sb.from('checkout_requests').select('*').eq('emp_id', APP.me.emp_id).order('tried_at', { ascending:false }).limit(5);
+        APP.coreqs = r.error ? [] : (r.data || []); } catch(e){ APP.coreqs = []; }
+}
+function renderCoReqs(){
+  const box = $('co-card'); if (!box) return;
+  const L = (APP.coreqs || []).filter(c => c.status === 'Waiting' || (c.status !== 'Checked out' && Date.now() - new Date(c.handled_at || c.tried_at) < 3 * 864e5));
+  if (!L.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="card"><div class="sec">${esc(t('coTitle'))}</div><div class="list">${L.map(c => {
+    const what = t(c.kind === 'left' ? 'coLeftAt' : 'coTriedAt', { t: c.local_time || '', place: c.place || '' });
+    const st = c.status === 'Waiting' ? t('coWaiting') : c.status === 'Recorded' ? t('coRecorded', { t: c.out_time || '' }) : c.status === 'Rejected' ? t('coRejected') : '';
+    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(niceDate(c.att_date))} · ${esc(what)}</div>
+      ${c.message ? `<div class="t2">💬 ${esc(c.message)}</div>` : ''}<div class="t2">${esc(st)}</div>
+      ${c.status === 'Rejected' && c.reason ? `<div class="t2" style="color:var(--red,#c0392b)">${esc(c.reason)}</div>` : ''}
+      ${c.status === 'Waiting' ? `<button class="btn small" style="margin-top:8px" data-act="co-msg" data-id="${esc(c.id)}">${esc(t(c.message ? 'coEditMsg' : 'coAddMsg'))}</button>` : ''}</div></div>`; }).join('')}</div></div>`;
+}
+function coSheet(head, c){
+  sheet(`<h2>${esc(t(c.kind === 'left' ? 'coLeftTitle' : 'coTitleSheet'))}</h2>${head || ''}
+    <div class="field"><label>${esc(t('coMsgLabel'))}</label><textarea id="co-msg" maxlength="500" placeholder="${esc(t('coMsgPh', { t: c.local_time || '' }))}">${esc(c.message || '')}</textarea></div>
+    <div class="row"><button class="btn ghost" data-act="close">${esc(t('coLater'))}</button><button class="btn" id="co-go">${esc(t('coSendMsg'))}</button></div>`);
+  $('co-go').onclick = async () => {
+    const m = $('co-msg').value.trim(); if (!m) return toast(t('coNeedMsg'), true);
+    if (!navigator.onLine) return toast(t('offline'), true);
+    const b = $('co-go'); b.disabled = true;
+    const { error } = await sb.rpc('checkout_request_message', { p_id: c.id, p_message: m });
+    b.disabled = false; if (error) return toast(friendly(error.message), true);
+    closeSheet(); toast(t('coMsgSent')); await loadCoReqs(); renderCoReqs();
+  };
+}
+async function reportAwayCheckout(g, refusal){
+  let r;
+  try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'tried' }); } catch(e){ r = { error: e }; }
+  if (!r || r.error || !r.data) return toast(refusal + (r && r.error && /TOO_SOON/.test(String(r.error.message || '')) ? ' ' + t('coTooSoon') : ''), true);
+  await loadCoReqs(); renderCoReqs();
+  const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: r.data.kind || 'tried', local_time: r.data.time, place: r.data.place };
+  coSheet(`<div class="hint" style="color:var(--text)">${esc(refusal)}</div><div class="state on" style="text-align:start;margin-bottom:12px">✅ ${esc(t('coToldHR', { t: r.data.time || '', place: r.data.place || '' }))}</div>`, c);
+}
+const LW = () => PLATFORM === 'android' ? nativePlugin('LeaveWatch') : null;
+function distM(a, b, c, d){ const r = x => x * Math.PI / 180, h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2; return 2 * 6371000 * Math.asin(Math.sqrt(h)); }
+function stopWatch(){ APP.watch = null; store.set('pk_watch', null); const P = LW(); if (P) { try { P.stop(); } catch(e){} } }
+async function armWatch(){
+  const o = APP.status && APP.status.open; if (!o || !navigator.onLine || !sb || !APP.me) return;
+  const key = `${o.date} ${o.in}`, w = store.get('pk_watch', null);
+  if (APP.watch && w && w.period === key && w.uid === APP.me.id && Date.now() - w.at < 6 * 3600e3) return;
+  let r; try { r = await sb.rpc('checkout_watch'); } catch(e){ return; }
+  if (!r || r.error || !r.data) { APP.watch = null; return; }
+  APP.watch = r.data; store.set('pk_watch', { period: key, uid: APP.me.id, at: Date.now() });
+  const P = LW(); if (!P) return;
+  try {
+    await P.start({ token: r.data.token, url: SUPABASE_URL, key: SUPABASE_KEY, offices: JSON.stringify(r.data.offices || []),
+                    fromMs: Number(r.data.from_ms), untilMs: Number(r.data.until_ms), title: t('lwTitle'), body: t('lwBody') });
+    const s = await P.status();
+    if (s && !s.background && !$('sheet').classList.contains('on') && Date.now() - store.get('pk_bgask', 0) > 3 * 864e5) {
+      store.set('pk_bgask', Date.now());
+      sheet(`<h2>📍 ${esc(t('lwAskTitle'))}</h2><div class="hint" style="color:var(--text);white-space:pre-line">${esc(t('lwAskBody'))}</div>
+        <div class="row"><button class="btn ghost" data-act="close">${esc(t('coLater'))}</button><button class="btn" id="lw-set">${esc(t('lwOpenSettings'))}</button></div>`);
+      $('lw-set').onclick = async () => { closeSheet(); try { await P.openSettings(); } catch(e){} };
+    }
+  } catch(e){}
+}
+async function locationAllowed(){
+  try {
+    if (NATIVE) { const G = nativePlugin('Geolocation'); const p = G && await G.checkPermissions(); return !!p && p.location === 'granted'; }
+    if (navigator.permissions && navigator.permissions.query) { const p = await navigator.permissions.query({ name: 'geolocation' }); return p.state === 'granted'; }
+  } catch(e){}
+  return false;
+}
+async function leftCheck(){
+  const o = APP.status && APP.status.open, w = APP.watch;
+  if (!o || !w || !navigator.onLine || Date.now() < Number(w.from_ms) || Date.now() > Number(w.until_ms)) return;
+  if ((APP.coreqs || []).some(c => c.status === 'Waiting' && c.att_date === o.date && c.seg_in === o.in)) return;
+  if (Date.now() - store.get('pk_leftchk', 0) < 20 * 60e3) return;
+  if (!(await locationAllowed())) return;                    // never ask for the location just for this
+  store.set('pk_leftchk', Date.now());
+  const g = await getLocation(); if (g.err || g.lat == null) return;
+  const near = Math.min(...(w.offices || []).map(f => distM(g.lat, g.lng, f.lat, f.lng) - f.radius - Math.min(g.accuracy || 0, 150)));
+  if (!(near > 0)) return;
+  let r; try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'left' }); } catch(e){ return; }
+  if (!r || r.error || !r.data) return;
+  await loadCoReqs(); renderCoReqs();
+  if ($('sheet').classList.contains('on')) return;
+  const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: 'left', local_time: r.data.time, place: r.data.place };
+  coSheet(`<div class="state warn" style="text-align:start;margin-bottom:12px">🚶 ${esc(t('coLeftNow', { place: r.data.place || '', t: r.data.time || '' }))}</div>`, c);
+}
+async function afterStatus(){
+  const o = APP.status && APP.status.open;
+  if (!o) { if (APP.watch || store.get('pk_watch', null)) stopWatch(); return; }
+  await armWatch(); await leftCheck();
+}
+
 // ── iPhone notifications (web app on the Home Screen; 60-push-iphone.sql + edge function send-push) ──
 const webPushOK = () => !NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && isStandalone();
 const b64ToBytes = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
@@ -961,8 +1081,10 @@ async function loadAll(){
   APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
   await loadDocs();
   await loadDreqs();
+  await loadCoReqs();
   await loadMissionsP();
   await loadStatus();
+  afterStatus().catch(() => {});
 }
 async function loadStatus(){
   const { data, error } = await sb.rpc('my_clock_status');
@@ -1148,8 +1270,12 @@ async function clock(type, code, btn){
     if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`; }
     const res = await withTimeout(insertClock(rec), 15000);
     if (btn){ btn.disabled = false; btn.textContent = label; }
-    if (!res.error){ closeSheet(); if (type === 'in') APP.cameBack = false; try { await loadStatus(); } catch(e){} renderHome(); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
-    if (!serverDown(res)) return toast(friendly(res.error.message), true);          // a real refusal (wrong site, no location…) — tell the employee
+    if (!res.error){ closeSheet(); if (type === 'in') APP.cameBack = false; try { await loadStatus(); } catch(e){} renderHome(); afterStatus().catch(() => {}); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
+    if (!serverDown(res)) {                                                         // a real refusal (wrong site, no location…) — tell the employee
+      const msg = friendly(res.error.message);
+      if (type === 'out' && /OUTSIDE_SITE/.test(String(res.error.message || '')) && g.lat != null) { closeSheet(); return reportAwayCheckout(g, msg); }   // 80: HR is told at once
+      return toast(msg, true);
+    }
   }
   // no internet, server not reachable, or older check-ins still waiting: keep it on the phone, in order
   const q = queue();
@@ -1658,7 +1784,7 @@ async function checkAppUpdate(force){
 function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
   $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
   $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
-  renderHome(); renderRequests(); renderDocs(); renderDreqs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
+  renderHome(); renderCoReqs(); renderRequests(); renderDocs(); renderDreqs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
 // ═════════════════════════════════════════════════════════
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
 // ═════════════════════════════════════════════════════════
@@ -1937,6 +2063,7 @@ document.addEventListener('click', async ev => {
   if (act==='doc-answer') return docSheet(a.dataset.id);
   if (act==='dreq-answer') return dreqSheet(a.dataset.id);
   if (act==='my-contact') return contactSheet();
+  if (act==='co-msg') { const c = (APP.coreqs || []).find(x => x.id === a.dataset.id); return c && coSheet('', c); }
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
@@ -1946,7 +2073,7 @@ $('fl-go').addEventListener('click', firstLogin);
 const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; if (APP.ready) renderPayslips(); } });
-document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ checkAppUpdate(); await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); } });
+document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ checkAppUpdate(); await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); try { await loadCoReqs(); renderCoReqs(); } catch(e){} afterStatus().catch(() => {}); } });
 setInterval(() => { if (APP.ready) checkAppUpdate(); }, 60 * 60 * 1000);
 setInterval(() => { if (APP.ready) tick(); }, 15000);
 setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 30000);
