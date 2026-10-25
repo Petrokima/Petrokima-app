@@ -116,6 +116,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     <div class="field"><label data-t="empCode"></label><input id="li-code" inputmode="text" autocomplete="username" autocapitalize="off"></div>
     <div class="field"><label data-t="password"></label><input id="li-pass" type="password" autocomplete="current-password"></div>
     <div class="hint" data-t="firstHint" style="margin:-4px 0 10px"></div>
+    <div id="li-cap" style="display:none;margin:0 0 10px;min-height:0"></div>
     <button class="btn" id="li-go" data-t="signIn"></button>
     <div class="err" id="li-err"></div>
   </div>
@@ -468,6 +469,8 @@ Object.assign(T.ar, { dreqTitle:'📝 الموارد البشرية تطلب ت�
   dreqDirectNote:'الموبايل والبريد الإلكتروني الشخصي والعنوان تُحفظ فوراً؛ باقي البيانات تُحفظ بعد مراجعة الموارد البشرية.', choose:'— اختر —',
   myContact:'✏️ تحديث بيانات الاتصال', myContactTitle:'بيانات الاتصال الخاصة بي', contactSaved:'تم حفظ بيانات الاتصال ✓',
   personalEmail:'البريد الإلكتروني الشخصي', personalMobile:'الموبايل الشخصي', addressL:'العنوان', saveL:'حفظ', noChange:'لم يتغير شيء' });
+Object.assign(T.en, { captchaFail:'The security check did not load. Check your internet and try again.' });
+Object.assign(T.ar, { captchaFail:'لم يكتمل فحص الأمان. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.' });
 Object.assign(T.en, { coTitle:'🚪 Check-outs sent to HR', coTitleSheet:'🚪 HR has been told', coLeftTitle:'🚶 You are still checked in',
   coTriedAt:'tried to check out at {t} away from {place}', coLeftAt:'away from {place} at {t}, still checked in',
   coWaiting:'Waiting for HR to record it', coRecorded:'✅ HR recorded your check-out at {t}', coRejected:'❌ HR did not record it',
@@ -561,6 +564,7 @@ function friendly(msg){
   if (/UNDO_NOT_LAST/.test(msg)) return t('undoNotLast');
   if (/UNDO_LOCKED/.test(msg)) return t('undoLocked');
   if (/UNDO_NOT_FOUND/.test(msg)) return t('undoGone');
+  if (/captcha/i.test(msg)) return t('captchaFail');
   if (/TOO_SOON/.test(msg)) return t('coTooSoon');
   if (/NOT_IN/.test(msg)) return t('notInErr');
   if (/DEVICE/.test(msg)) return t('deviceMismatch');
@@ -675,12 +679,48 @@ const isAndroidWeb = () => !NATIVE && !isIOS() && (/android/i.test(navigator.use
 const clientKind = () => NATIVE ? PLATFORM + '-app' + (APP_BUILD ? ':' + APP_BUILD : '') : 'web-' + (isIOS() ? 'ios' : isAndroidWeb() ? 'android' : 'other');
 const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
+// ── CAPTCHA on every password sign-in (Cloudflare Turnstile, 25 Oct 2026) ──
+//  TURNSTILE_SITE_KEY = the PUBLIC site key of the widget "Petrokima HR sign-in". Empty = no CAPTCHA (nothing is shown, nothing sent).
+//  Supabase checks the token only once "CAPTCHA protection" is switched on (Authentication → Attack Protection); before that it is ignored.
+//  Each token is good for one sign-in: a fresh one is taken for every attempt. Usually nothing is shown; Cloudflare shows a small box
+//  to tick only when it is not sure the person is human.
+const TURNSTILE_SITE_KEY = '0x4AAAAAAFkp9jltaXJo9weC';   // widget "Petrokima HR sign-in" (public key)
+let tsLoad = null;
+function loadTurnstile(){
+  if (window.turnstile) return Promise.resolve(window.turnstile);
+  if (tsLoad) return tsLoad;
+  tsLoad = new Promise((res, rej) => {
+    const s = document.createElement('script'); s.async = true;
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.onload = () => window.turnstile ? res(window.turnstile) : rej(new Error('captcha-load'));
+    s.onerror = () => { tsLoad = null; rej(new Error('captcha-load')); };
+    document.head.appendChild(s);
+    setTimeout(() => { if (!window.turnstile) { tsLoad = null; rej(new Error('captcha-load-timeout')); } }, 15000);   // never wait for ever
+  });
+  return tsLoad;
+}
+async function captchaToken(boxId, lang){
+  if (!TURNSTILE_SITE_KEY) return undefined;
+  const box = document.getElementById(boxId); if (!box) return undefined;
+  const ts = await loadTurnstile();
+  return new Promise((resolve, reject) => {
+    let id = null, done = false;
+    const finish = (fn, v) => { if (done) return; done = true; clearTimeout(timer); setTimeout(() => { try { ts.remove(id); } catch(e){} box.style.display = 'none'; }, 0); fn(v); };
+    const timer = setTimeout(() => finish(reject, new Error('captcha-timeout')), 90000);
+    box.innerHTML = ''; box.style.display = 'block';
+    id = ts.render(box, { sitekey: TURNSTILE_SITE_KEY, action: 'signin', appearance: 'interaction-only', language: lang || 'auto',
+      callback: tok => finish(resolve, tok),
+      'error-callback': code => { finish(reject, new Error('captcha-failed ' + code)); return true; },
+      'timeout-callback': () => finish(reject, new Error('captcha-timeout')) });
+  });
+}
 function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
 async function doLogin(){
   const code=$('li-code').value.trim(), pass=$('li-pass').value;
   if (!code || !pass) return errBox('li-err', t('fillLogin'));
   const b=$('li-go'); b.disabled=true; b.innerHTML='<div class="spin"></div>';
-  const { data, error } = await sb.auth.signInWithPassword({ email: loginName(code), password: pass });
+  let cap; try { cap = await captchaToken('li-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }   // check unavailable: Supabase decides (works while its CAPTCHA switch is off)
+  const { data, error } = await sb.auth.signInWithPassword({ email: loginName(code), password: pass, options: cap ? { captchaToken: cap } : undefined });
   b.disabled=false; b.textContent=t('signIn');
   if (error) return errBox('li-err', /invalid/i.test(error.message) ? t('wrongLogin') : friendly(error.message));
   errBox('li-err'); tempPass = pass; $('li-pass').value=''; localStorage.setItem('pk_code', code);
@@ -1598,7 +1638,7 @@ function renderPayslips(){
     $('pay-list').innerHTML = `<div style="text-align:center;padding:18px 6px"><div style="font-size:40px">🔒</div><div class="t1" style="margin-top:6px">${esc(t('payLockTitle'))}</div>
       <div class="hint">${esc(t('payLockSub'))}</div>
       <div class="field" style="margin-top:12px"><input id="pay-pass" type="password" autocomplete="current-password" placeholder="${esc(t('password'))}"></div>
-      <button class="btn" id="pay-go">${esc(t('payUnlock'))}</button><div class="err" id="pay-err"></div></div>`;
+      <div id="pay-cap" style="display:none;margin:0 0 10px"></div><button class="btn" id="pay-go">${esc(t('payUnlock'))}</button><div class="err" id="pay-err"></div></div>`;
     $('pay-go').onclick = unlockPayslips; $('pay-pass').onkeydown = e => { if (e.key === 'Enter') unlockPayslips(); };
     return;
   }
@@ -1614,7 +1654,8 @@ async function unlockPayslips(){
   if (!navigator.onLine) return errBox('pay-err', t('payNeedNet'));
   $('pay-go').disabled = true;
   const email = ((((await sb.auth.getSession()).data || {}).session || {}).user || {}).email || (APP.me && APP.me.email);   // the account signed in right now
-  const { error } = await withTimeout(sb.auth.signInWithPassword({ email, password: pw }), 15000);
+  let cap; try { cap = await captchaToken('pay-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }
+  const { error } = await withTimeout(sb.auth.signInWithPassword({ email, password: pw, options: cap ? { captchaToken: cap } : undefined }), 15000);
   $('pay-go').disabled = false;
   if (error) return errBox('pay-err', /invalid|credentials/i.test(error.message) ? t('payWrongPass') : friendly(error.message));
   const r = await withTimeout(sb.from('payroll_run_lines').select('*').eq('emp_id', APP.me.emp_id).order('period', { ascending:false }), 15000);
