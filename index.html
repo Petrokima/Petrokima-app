@@ -173,6 +173,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <div class="muted" style="font-size:12px;margin-top:12px" data-t="locNote"></div>
       </div>
       <div id="co-card"></div>
+      <div id="sp-card"></div>
       <div class="card"><div class="sec" data-t="today"></div><div class="list" id="today-list"></div></div>
       <div class="card"><div class="sec" id="month-title"></div><div class="list" id="month-list"></div></div>
     </div>
@@ -302,6 +303,12 @@ const T = {
   mockLoc:'A fake-location app is active on this phone. Turn it off (and remove it from Developer options → Select mock location app), then try again.',
   outsideSite:'You are about {d} from {site}. Check in when you arrive at the site.',
   outsideSiteOut:'You are about {d} from {site}. Check-out is only allowed there — if you have already left, ask HR to add your check-out.',
+  spTitle:"Set a site's location",spHint:'HR has allowed you to save project locations. Stand at the site (in the open, not deep inside a building) and save it.',
+  spBtn:"Set a site's location",spPickHint:'Choose the project you are standing at now.',spHas:'Has a location — set by {by} on {d}',spNone:'No location yet',
+  spSaveHere:'📍 Save my current location for this site',spReplace:'This project already has a location (set by {by} on {d}). Saving replaces it.',
+  spNote:'Note (optional, e.g. main gate)',spGetting:'Getting an accurate location…',spSaved:'Location of {site} saved (±{acc} m). HR has been told.',
+  spAccuracy:'Your location is only accurate to ±{n} m (needed: {max} m or better). Go outside, wait a few seconds and try again.',
+  spNotAllowed:'HR has not given you the right to set site locations.',
   appRequired:'Please check in with the Petrokima app, not the internet browser. Download it from download.petrokima-hr.com',
   updateRequired:'Your Petrokima app is out of date. Install the new version (download.petrokima-hr.com), then check in again.',
   badDevice:'This phone could not be identified. Close the app and open it again.',
@@ -397,6 +404,12 @@ const T = {
   mockLoc:'يوجد تطبيق لتزييف الموقع يعمل على هذا الهاتف. أوقفه (واحذفه من خيارات المطوّر ← تطبيق الموقع الوهمي) ثم حاول مرة أخرى.',
   outsideSite:'أنت على بعد حوالي {d} من {site}. سجّل الحضور عند وصولك إلى الموقع.',
   outsideSiteOut:'أنت على بعد حوالي {d} من {site}. لا يُسمح بتسجيل الانصراف إلا من هناك — إذا كنت قد غادرت بالفعل، اطلب من الموارد البشرية إضافة انصرافك.',
+  spTitle:'تحديد موقع مشروع',spHint:'سمحت لك الموارد البشرية بحفظ مواقع المشروعات. قف في الموقع (في مكان مفتوح وليس داخل مبنى) واحفظه.',
+  spBtn:'تحديد موقع مشروع',spPickHint:'اختر المشروع الذي تقف فيه الآن.',spHas:'له موقع — حدده {by} في {d}',spNone:'لا يوجد موقع بعد',
+  spSaveHere:'📍 حفظ موقعي الحالي لهذا المشروع',spReplace:'هذا المشروع له موقع بالفعل (حدده {by} في {d}). الحفظ سيستبدله.',
+  spNote:'ملاحظة (اختيارية، مثل: البوابة الرئيسية)',spGetting:'جارٍ تحديد موقع دقيق…',spSaved:'تم حفظ موقع {site} (±{acc} م). تم إبلاغ الموارد البشرية.',
+  spAccuracy:'دقة موقعك ±{n} م فقط (المطلوب {max} م أو أفضل). اخرج إلى مكان مفتوح وانتظر ثواني ثم حاول مرة أخرى.',
+  spNotAllowed:'لم تمنحك الموارد البشرية صلاحية تحديد مواقع المشروعات.',
   appRequired:'من فضلك سجّل الحضور من تطبيق بتروكيما وليس من متصفح الإنترنت. حمّله من download.petrokima-hr.com',
   updateRequired:'إصدار تطبيق بتروكيما لديك قديم. ثبّت الإصدار الجديد (download.petrokima-hr.com) ثم سجّل الحضور مرة أخرى.',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
@@ -565,6 +578,8 @@ function friendly(msg){
   if (/UNDO_LOCKED/.test(msg)) return t('undoLocked');
   if (/UNDO_NOT_FOUND/.test(msg)) return t('undoGone');
   if (/captcha/i.test(msg)) return t('captchaFail');
+  if (/ACCURACY:/.test(msg)) { const m = msg.match(/±(\S+) m \(needed: (\d+)/) || []; return t('spAccuracy', { n: m[1] || '?', max: m[2] || 50 }); }
+  if (/NOT_ALLOWED:/.test(msg)) return t('spNotAllowed');
   if (/TOO_SOON/.test(msg)) return t('coTooSoon');
   if (/NOT_IN/.test(msg)) return t('notInErr');
   if (/DEVICE/.test(msg)) return t('deviceMismatch');
@@ -746,7 +761,7 @@ async function afterLogin(user){
   }
   show('scr-main');
   try { await loadAll(); } catch(e){ if (!useCache(user.id)) throw e; }
-  APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000);
+  APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000); loadSiteRight();
   setupPush(); setupWebPush(); openViewFromLink();
 }
 async function firstLogin(){
@@ -983,6 +998,56 @@ async function leftCheck(){
   const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: 'left', local_time: r.data.time, place: r.data.place };
   coSheet(`<div class="state warn" style="text-align:start;margin-bottom:12px">🚶 ${esc(t('coLeftNow', { place: r.data.place || '', t: r.data.time || '' }))}</div>`, c);
 }
+// ── 91: trusted employees (chosen by HR) save a project's map point where they stand ──
+async function loadSiteRight(){
+  if (!navigator.onLine || !APP.ready) return;
+  try { const { data, error } = await withTimeout(sb.rpc('can_set_site_points'), 8000); if (!error) APP.canSetSite = data === true; } catch(e) {}
+  renderSpCard();
+}
+function renderSpCard(){
+  const b = $('sp-card'); if (!b) return;
+  b.innerHTML = APP.canSetSite ? `<div class="card"><div class="sec">📍 ${esc(t('spTitle'))}</div><div class="hint" style="margin-bottom:10px">${esc(t('spHint'))}</div>
+    <button class="btn" id="sp-open">📍 ${esc(t('spBtn'))}</button></div>` : '';
+}
+let spT;
+function spSheet(){
+  sheet(`<h2>📍 ${esc(t('spTitle'))}</h2><div class="hint">${esc(t('spPickHint'))}</div>
+    <div class="field" style="margin-top:10px"><input id="sp-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
+    <div id="sp-res"><div class="hint">${esc(t('typeMore'))}</div></div>`);
+  $('sp-q').addEventListener('input', () => { clearTimeout(spT); spT = setTimeout(spSearch, 300); });
+}
+async function spSearch(){
+  const q = $('sp-q').value.trim(), box = $('sp-res');
+  if (q.length < 2) { box.innerHTML = `<div class="hint">${esc(t('typeMore'))}</div>`; return; }
+  let data, error;
+  try { ({ data, error } = await withTimeout(sb.rpc('site_point_search', { p_q: q }), 8000)); } catch(e) { error = { message: t('serverDown') }; }
+  if (error) { box.innerHTML = `<div class="hint neg">${esc(friendly(error.message))}</div>`; return; }
+  box.innerHTML = (data || []).map(p => `<button class="site" data-sp="${esc(p.id)}" data-name="${esc(p.name || '')}" data-has="${p.has_point ? 1 : ''}" data-by="${esc(p.set_by || '')}" data-at="${esc(String(p.set_at || '').slice(0, 10))}">
+      <b>${esc(p.name || p.id)}</b><span>${esc(p.id)} · ${p.has_point ? '📍 ' + esc(t('spHas', { by: p.set_by || '—', d: p.set_at ? dShort(String(p.set_at).slice(0, 10)) : '—' })) : esc(t('spNone'))}</span></button>`).join('')
+    || `<div class="hint">${esc(t('noSites'))}</div>`;
+}
+function spPick(d){
+  const site = d.name || d.sp;
+  sheet(`<h2>📍 ${esc(site)}</h2><div class="hint">${esc(d.sp)}</div>
+    ${d.has ? `<div class="hint" style="color:var(--warn,#b45309);margin-top:8px">⚠ ${esc(t('spReplace', { by: d.by || '—', d: d.at ? dShort(d.at) : '—' }))}</div>` : ''}
+    <div class="field" style="margin-top:12px"><input id="sp-note" maxlength="300" placeholder="${esc(t('spNote'))}"></div>
+    <button class="btn green big" id="sp-save">${esc(t('spSaveHere'))}</button>`);
+  $('sp-save').onclick = () => spSave(d.sp, site);
+}
+async function spSave(code, site){
+  const btn = $('sp-save'), label = btn.textContent;
+  btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('spGetting'))}`;
+  const g = await getLocation(true);
+  if (g.err) { btn.disabled = false; btn.textContent = label; return locationHelp(g.err, () => spPick({ sp: code, name: site })); }
+  btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`;
+  let res;
+  try { res = await withTimeout(sb.rpc('set_site_point_here', { p_project: code, p_lat: g.lat, p_lng: g.lng, p_accuracy: g.accuracy,
+          p_mock: typeof g.mock === 'boolean' ? g.mock : null, p_client_kind: clientKind(), p_note: ($('sp-note') && $('sp-note').value.trim()) || null }), 15000); }
+  catch(e) { res = { error: { message: t('serverDown') } }; }
+  if (res.error) { btn.disabled = false; btn.textContent = label; return toast(friendly(res.error.message), true); }
+  closeSheet(); toast(t('spSaved', { site, acc: g.accuracy }));
+}
+
 async function afterStatus(){
   const o = APP.status && APP.status.open;
   if (!o) { if (APP.watch || store.get('pk_watch', null)) stopWatch(); return; }
@@ -1267,13 +1332,13 @@ function selectSite(btn){
   pickSel = { code: btn.dataset.site, name: btn.dataset.name };
   const go=$('site-go'); go.disabled=false; go.textContent = `▶ ${t('confirmIn')} ${pickSel.name || pickSel.code}`;
 }
-async function nativeLocation(){
+async function nativeLocation(fresh){
   const G = nativePlugin('Geolocation');
   try {
     let perm = await G.checkPermissions();
     if (perm.location !== 'granted') perm = await G.requestPermissions({ permissions:['location'] });
     if (perm.location === 'denied') return { err:1 };
-    const p = await G.getCurrentPosition({ enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge:60000 });
+    const p = await G.getCurrentPosition({ enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge: fresh ? 0 : 60000 });
     const out = { lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy), mock:null };
     // Android app: ask the phone whether this location came from a fake-location app
     const LG = PLATFORM === 'android' ? nativePlugin('LocationGuard') : null;
@@ -1284,12 +1349,12 @@ async function nativeLocation(){
     return { err: /denied|permission/i.test(m) ? 1 : /disabled|services|not enabled/i.test(m) ? 1 : /time/i.test(m) ? 3 : 2 };
   }
 }
-function getLocation(){
-  if (NATIVE && nativePlugin('Geolocation')) return nativeLocation();
+function getLocation(fresh){
+  if (NATIVE && nativePlugin('Geolocation')) return nativeLocation(fresh);
   return new Promise(res => {
     if (!navigator.geolocation) return res({ err:1 });
     navigator.geolocation.getCurrentPosition(p => res({ lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy) }),
-      e => res({ err: (e && e.code) || 2 }), { enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge:60000 });
+      e => res({ err: (e && e.code) || 2 }), { enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge: fresh ? 0 : 60000 });
   });
 }
 function locationHelp(code, retry){
@@ -2057,9 +2122,11 @@ document.addEventListener('click', async ev => {
   if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG);
     const tk = localStorage.getItem('pk_push_token'); if (tk && APP.ready) sb.rpc('save_push_token', { p_token: tk, p_platform: 'android', p_lang: LANG }).then(()=>{}, ()=>{});   // notifications follow the app language
     const ep = localStorage.getItem('pk_push_web'); if (ep && APP.ready) sb.rpc('set_push_lang', { p_token: ep, p_lang: LANG }).then(()=>{}, ()=>{});
-    applyLang(); renderPushCard(); return; }
+    applyLang(); renderPushCard(); renderSpCard(); return; }
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
   if (x === $('sheet')) return closeSheet();
+  if (x.closest('#sp-open')) return spSheet();                                       // 91: set a site's location
+  const sp = x.closest('.site[data-sp]'); if (sp) return spPick(sp.dataset);
   const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
   const sl = x.closest('[data-slip]'); if (sl) return slipSheet(sl.dataset.slip);
   const cx = x.closest('[data-cancel]'); if (cx) return askCancel(cx.dataset.cancel);
