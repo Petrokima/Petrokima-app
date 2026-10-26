@@ -84,6 +84,21 @@ public class LocationGuardPlugin extends Plugin {
         r.put("checked", seen);
         call.resolve(r);
     }
+
+    // 92: "time since the phone was switched on" (cannot be changed by the user, unlike the clock) and how many times the
+    // phone has started. The server uses them to find the real time of a check-in made without internet.
+    @PluginMethod
+    public void uptime(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("ms", SystemClock.elapsedRealtime());
+        int boots = -1;
+        if (Build.VERSION.SDK_INT >= 24) {
+            try { boots = android.provider.Settings.Global.getInt(getContext().getContentResolver(), android.provider.Settings.Global.BOOT_COUNT, -1); }
+            catch (Exception e) { boots = -1; }
+        }
+        r.put("boot", boots);
+        call.resolve(r);
+    }
 }
 `);
 const mainJava = path.join(javaDir, 'MainActivity.java');

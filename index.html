@@ -629,8 +629,8 @@ const withTimeout = (p, ms) => Promise.race([ Promise.resolve(p), new Promise(re
 // send a check-in; if the database does not know the newer location fields yet, send it without them
 async function insertClock(rec){
   const r = await sb.from('clock_events').insert(rec);
-  if (r.error && /mock_location|client_kind|is_switch/.test(String(r.error.message || '')) && /column|schema/i.test(String(r.error.message || ''))) {
-    const { mock_location, client_kind, is_switch, ...old } = rec; return sb.from('clock_events').insert(old);
+  if (r.error && /mock_location|client_kind|is_switch|mono_|boot_/.test(String(r.error.message || '')) && /column|schema/i.test(String(r.error.message || ''))) {
+    const { mock_location, client_kind, is_switch, mono_tap_ms, mono_send_ms, boot_tap, boot_send, ...old } = rec; return sb.from('clock_events').insert(old);
   }
   return r;
 }
@@ -691,6 +691,14 @@ const ANDROID_APP_PAGE = 'https://download.petrokima-hr.com/';
 const isAndroidWeb = () => !NATIVE && !isIOS() && (/android/i.test(navigator.userAgent || '')
   || /android/i.test(((navigator.userAgentData || {}).platform) || '')
   || ((navigator.maxTouchPoints || 0) > 0 && /linux/i.test(navigator.userAgent || '')));
+// 92: the Android app's "time since switched on" counter + start count (the user cannot change them; the server uses them
+// to find the real time of a check-in sent later). null on iPhone / web / older Android apps.
+async function upTime(){
+  if (!NATIVE || PLATFORM !== 'android') return null;
+  const LG = nativePlugin('LocationGuard'); if (!LG || typeof LG.uptime !== 'function') return null;
+  try { const r = await Promise.race([ LG.uptime(), new Promise(res => setTimeout(() => res(null), 1500)) ]);
+        return r && typeof r.ms === 'number' ? { ms: Math.round(r.ms), boot: typeof r.boot === 'number' ? r.boot : -1 } : null; } catch(e) { return null; }
+}
 const clientKind = () => NATIVE ? PLATFORM + '-app' + (APP_BUILD ? ':' + APP_BUILD : '') : 'web-' + (isIOS() ? 'ios' : isAndroidWeb() ? 'android' : 'other');
 const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
 function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
@@ -1373,6 +1381,7 @@ async function clock(type, code, btn, isSwitch){
   if (g.err && !(APP.status && APP.status.no_location_ok)) return locationHelp(g.err, () => { closeSheet(); clock(type, code, null, isSwitch); });
   if (g.err) { g.lat = null; g.lng = null; g.accuracy = null; }       // allowed by an exception the admin set — the server marks it
   const tapAt = new Date().toISOString();          // the moment the employee checked in (not when the server answered)
+  const upTap = await upTime();                     // 92: the phone's counter at the same moment
   const rec = { client_id: uid(), emp_id: APP.me.emp_id, event_type:type, project_code: code || null, device_id: deviceId(), lat:g.lat, lng:g.lng, accuracy:g.accuracy,
                 device: (navigator.userAgent || '').slice(0, 150), mock_location: typeof g.mock === 'boolean' ? g.mock : null, client_kind: clientKind(), ...(isSwitch ? { is_switch:true } : {}) };   // review: switch flag (night shift)
   const pendingBefore = queue().length;
@@ -1389,7 +1398,7 @@ async function clock(type, code, btn, isSwitch){
   }
   // no internet, server not reachable, or older check-ins still waiting: keep it on the phone, in order
   const q = queue();
-  q.push({ ...rec, offline:true, client_at: tapAt, _name: code ? ((pickSel && pickSel.name) || code) : '' });
+  q.push({ ...rec, offline:true, client_at: tapAt, ...(upTap ? { mono_tap_ms: upTap.ms, boot_tap: upTap.boot } : {}), _name: code ? ((pickSel && pickSel.name) || code) : '' });
   store.set('pk_queue', q);
   if (type === 'in') APP.cameBack = false;
   applyEvent(APP.status, q[q.length-1]); saveCache(); closeSheet(); renderHome();
@@ -1438,7 +1447,8 @@ async function flushQueue(){
   try {
     while (q.length && !q[0]._err){
       const { _name, _err, _off, _applied, ...rec } = q[0];
-      const res = await withTimeout(insertClock({ ...rec, device_now: new Date().toISOString() }), 15000);   // the server compares the clocks
+      const upSend = rec.mono_tap_ms != null ? await upTime() : null;          // 92: counter again at sending → real tap time
+      const res = await withTimeout(insertClock({ ...rec, device_now: new Date().toISOString(), ...(upSend ? { mono_send_ms: upSend.ms, boot_send: upSend.boot } : {}) }), 15000);   // the server compares the clocks
       const error = res.error;
       // review fix: always work on the CURRENT saved queue (a tap made while sending must not be lost)
       const dropQ = id => { const cur = queue().filter(e => e.client_id !== id); store.set('pk_queue', cur); return cur; };
