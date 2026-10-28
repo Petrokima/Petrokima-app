@@ -111,6 +111,17 @@ if (fs.existsSync(mainJava)) {
         registerPlugin(LocationGuardPlugin.class);
         registerPlugin(LeaveWatchPlugin.class);
         super.onCreate(savedInstanceState);
+        // Back button / back gesture: the app goes back one step (closes the open window, previous tab, Home).
+        // Only when there is nothing left to go back to does the app move to the background (it is not closed).
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                android.webkit.WebView w = getBridge() != null ? getBridge().getWebView() : null;
+                if (w == null) { moveTaskToBack(true); return; }
+                w.evaluateJavascript("(function(){try{return !!(window.pkBack && window.pkBack());}catch(e){return false;}})()",
+                    v -> { if (!"true".equals(v)) moveTaskToBack(true); });
+            }
+        });
     }
 }`);
     if (!a.includes('LocationGuardPlugin') || !a.includes('LeaveWatchPlugin')) throw new Error('Could not register LocationGuard / LeaveWatch in MainActivity.java');

@@ -2120,7 +2120,17 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-att]'); if (a) return openAttachment(a.dataset.att);
   const ib = e.target.closest('[data-inbox]'); if (ib) return inboxSheet(ib.dataset.inbox);
 });
-function go(view){ if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+// Android back button (the app calls window.pkBack() first; false = nothing left to go back to → the app goes to the background)
+//   1) an open window (bottom sheet) closes  2) the previous tab opens  3) from another tab with no history → Home
+const VSTACK = [];
+window.pkBack = function(){
+  if ($('sheet').classList.contains('on')) { closeSheet(); return true; }
+  if (!APP.ready || !$('scr-main').classList.contains('on')) return false;
+  while (VSTACK.length){ const v = VSTACK.pop(); if (v !== APP.view && document.getElementById('v-' + v)) { go(v, true); return true; } }
+  if (APP.view !== 'home') { go('home', true); return true; }
+  return false;
+};
+function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP

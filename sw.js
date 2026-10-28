@@ -2,7 +2,7 @@
 // Check-ins and requests always go live to the server (never cached).
 // v29 (20 Oct 2026): new version only so iPhones install a fresh worker under the corrected Cloudflare security rule —
 // a worker keeps the security rule it was installed with until sw.js itself changes.
-const VERSION = 'pk-mobile-v44';
+const VERSION = 'pk-mobile-v45';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './vendor/supabase.js?v=2.117.3'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
