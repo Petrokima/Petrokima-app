@@ -55,7 +55,9 @@ const PK_ERR = (function(){
     capture(err, where){ try { lib.withScope(s => { if (where) s.setTag('where', String(where)); lib.captureException(err); }); } catch(e){} }
   };
 })();
+/** @type {string} */
 const APK_REPO  = '';           // GitHub repository that publishes the Android app (owner/name)
+/** @type {string} */
 const APK_DOWNLOAD = '';        // your own download address for the Android app (set by the build) — empty = GitHub's link
 // Running inside the Android or iPhone app?
 const NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
@@ -138,9 +140,9 @@ const T = {
   noCache:'No internet connection. Connect once to sign in.',
   approvals:'Approvals',teamReqTitle:'Vacation and permission requests from your team',noTeamReq:'No requests from your team',salLine:'💼 Basic salary — {emp}',salFromTo:'{cur} → {new} EGP from {d}',salBy:'Requested by {by}',offlineList:'No internet — searching the saved project list',noSiteCache:'No internet and no saved project list yet — open the app once with internet',reqElement:'Request a variable element',element:'Element',reqType:'By',byAmount:'Amount (EGP)',byDays:'Days',byHours:'Hours',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'Anonymous',sendAnon:'Send anonymously — HR and the board member will not see your name',anonMine:'🕶 Sent anonymously',
   reqPenalty:'Request a penalty',reqIncentive:'Request an incentive',employee:'Employee',penType:'Penalty type',penAmount:'Fixed amount (EGP)',penHours:'Hours of pay',penDays:'Days of pay',
-  quantity:'Quantity',incAmount:'Incentive amount (EGP)',payMonth:'Payroll month',incDate:'Date of the incident',reason:'Reason',needReason:'Choose the employee, enter the quantity and write the reason',
+  quantity:'Quantity',incAmount:'Incentive amount (EGP)',payMonth:'Payroll month',incDate:'Date of the incident',needReason:'Choose the employee, enter the quantity and write the reason',
   actFlow:'Goes to the board member for approval, then HR.',penLine:'⚖️ Penalty — {emp}: {q} {u}',incLine:'🏅 Incentive — {emp}: {q} EGP',u_Amount:'EGP',u_Hours:'hour(s)',u_Days:'day(s)',
-  cancelReq:'Cancel',cancelled:'Request cancelled',boardTitle:'⚖️ Penalties & incentives — your approval',noBoard:'Nothing waiting for your approval',
+  boardTitle:'⚖️ Penalties & incentives — your approval',noBoard:'Nothing waiting for your approval',
   approve:'Approve',reject:'Reject',noteOpt:'Note (optional)',reqBy:'Requested by',stWB:'Waiting for board member',stWHR:'Waiting for HR',
   agreeClose:'✔ Agree to close',closeNote:'Closing note (optional)',closedBoth:'Closed by HR and you',waitHrClose:'You agreed — waiting for HR to confirm',waitMgrClose:'HR wants to close it — confirm if you agree',news:'News',newsTitle:'Announcements & decisions',noNews:'No announcements yet',annKind:'Announcement',decKind:'Administrative decision',openAtt:'Open attachment',
   bday:'Petrokima family wishes you a happy birthday 🎉',bdaySub:'Wishing you a wonderful year ahead.',
@@ -149,7 +151,7 @@ const T = {
   hrReqTitle:'Requests to HR',reqHire:'Request new employees',reqTrain:'Request training',howMany:'Number of employees',jobName:'Job name',jobDesc:'Job description',
   neededBy:'Needed by (optional)',notes:'Notes (optional)',needJob:'Job name and job description are required',topic:'Training topic',whoTrain:'Who needs the training',
   prefDate:'Preferred date (optional)',needTrain:'Choose at least one employee and write the training topic',sentHR:'Sent to HR ✓',noMgrReq:'No requests sent yet',
-  hireLine:'{n} × {job}',trainLine:'{topic} — {n} employee(s)',inboxTitle:'📥 Complaints & suggestions',noInbox:'Nothing received',status:'Status',saveReply:'Save',from:'From',birthYear:'Your year of birth',yearWrong:'The year of birth does not match our records ({n} left).',acctLockedYear:'Too many wrong answers — your account is locked. Ask HR to reset it.',needYear:'Enter the year you were born (4 digits, e.g. 1988).',firstHint:'First time? Use the temporary password HR gave you. If your account is locked, contact HR.',
+  hireLine:'{n} × {job}',trainLine:'{topic} — {n} employee(s)',inboxTitle:'📥 Complaints & suggestions',noInbox:'Nothing received',status:'Status',saveReply:'Save',birthYear:'Your year of birth',yearWrong:'The year of birth does not match our records ({n} left).',acctLockedYear:'Too many wrong answers — your account is locked. Ask HR to reset it.',needYear:'Enter the year you were born (4 digits, e.g. 1988).',firstHint:'First time? Use the temporary password HR gave you. If your account is locked, contact HR.',
   payLockTitle:'Your payslips are protected',payLockSub:'Enter your password to view them.',payUnlock:'Show my payslips',payWrongPass:'Wrong password',payNeedNet:'Connect to the internet to view your payslips.',payLock:'🔒 Lock',
   firstMustChange:'Choose your own password now. It must be at least 8 characters and different from your first password.',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
   teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
@@ -161,7 +163,7 @@ const T = {
   annualNoticeErr:'Annual leave must be requested at least {n} day(s) before it starts. For today, choose emergency (casual) leave.',
   pastDateErr:'Emergency leave can be requested for today or a later day, not for past days.',mgrNote:'Your note',
   approvedFinal:'Approved ✓',teamTitle:'Project Allowance for your team',teamNote:'Calculated from their attendance at projects. Nothing is paid until you approve and HR then approves.',
-  approve:'Approve',reject:'Reject',rejectWhy:'Reason for rejecting',approvedMsg:'Approved — sent to HR ✓',rejectedMsg:'Rejected',noTeam:'Nothing to approve',
+  rejectWhy:'Reason for rejecting',approvedMsg:'Approved — sent to HR ✓',rejectedMsg:'Rejected',noTeam:'Nothing to approve',
   aaWait:'Waiting for you',aaHR:'Approved by you — waiting for HR',aaOk:'Approved — will be paid',aaNo:'Rejected',day:'day',daysW:'days',at:'at',
   locAppAndroid:'Android: open the phone Settings → Apps → Petrokima → Permissions → Location → “Allow only while using the app”. Also make sure Location is switched ON in the quick settings.',
   locAppIos:'iPhone: open Settings → Petrokima → Location → “While Using the App”, and switch Precise Location on.',
@@ -239,9 +241,9 @@ const T = {
   noCache:'لا يوجد اتصال بالإنترنت. اتصل مرة واحدة لتسجيل الدخول.',
   approvals:'الموافقات',teamReqTitle:'طلبات الإجازات والأذونات من فريقك',noTeamReq:'لا توجد طلبات من فريقك',salLine:'💼 الراتب الأساسي — {emp}',salFromTo:'{cur} ← {new} جنيه اعتباراً من {d}',salBy:'مقدم من {by}',offlineList:'لا يوجد إنترنت — البحث في قائمة المشروعات المحفوظة',noSiteCache:'لا يوجد إنترنت ولا توجد قائمة مشروعات محفوظة بعد — افتح التطبيق مرة مع الإنترنت',reqElement:'طلب عنصر متغير',element:'العنصر',reqType:'بالـ',byAmount:'مبلغ (جنيه)',byDays:'أيام',byHours:'ساعات',elLine:'💰 {el} — {emp}: {q} {u}',anonymous:'مجهول',sendAnon:'إرسال دون ذكر اسمي — لن تعرف الموارد البشرية ولا عضو مجلس الإدارة من أرسلها',anonMine:'🕶 أُرسلت دون ذكر الاسم',
   reqPenalty:'طلب جزاء',reqIncentive:'طلب حافز',employee:'الموظف',penType:'نوع الجزاء',penAmount:'مبلغ ثابت (جنيه)',penHours:'ساعات من الأجر',penDays:'أيام من الأجر',
-  quantity:'الكمية',incAmount:'قيمة الحافز (جنيه)',payMonth:'شهر الرواتب',incDate:'تاريخ الواقعة',reason:'السبب',needReason:'اختر الموظف وأدخل الكمية واكتب السبب',
+  quantity:'الكمية',incAmount:'قيمة الحافز (جنيه)',payMonth:'شهر الرواتب',incDate:'تاريخ الواقعة',needReason:'اختر الموظف وأدخل الكمية واكتب السبب',
   actFlow:'يُرسل إلى عضو مجلس الإدارة للموافقة ثم الموارد البشرية.',penLine:'⚖️ جزاء — {emp}: {q} {u}',incLine:'🏅 حافز — {emp}: {q} جنيه',u_Amount:'جنيه',u_Hours:'ساعة',u_Days:'يوم',
-  cancelReq:'إلغاء',cancelled:'تم إلغاء الطلب',boardTitle:'⚖️ الجزاءات والحوافز — بانتظار موافقتك',noBoard:'لا توجد طلبات بانتظار موافقتك',
+  boardTitle:'⚖️ الجزاءات والحوافز — بانتظار موافقتك',noBoard:'لا توجد طلبات بانتظار موافقتك',
   approve:'موافقة',reject:'رفض',noteOpt:'ملاحظة (اختياري)',reqBy:'مقدم من',stWB:'بانتظار عضو مجلس الإدارة',stWHR:'بانتظار الموارد البشرية',
   agreeClose:'✔ أوافق على الإغلاق',closeNote:'ملاحظة الإغلاق (اختياري)',closedBoth:'أُغلق بموافقة الموارد البشرية وموافقتك',waitHrClose:'وافقت — بانتظار تأكيد الموارد البشرية',waitMgrClose:'الموارد البشرية تطلب الإغلاق — أكّد إن كنت موافقاً',news:'الأخبار',newsTitle:'الإعلانات والقرارات',noNews:'لا توجد إعلانات بعد',annKind:'إعلان',decKind:'قرار إداري',openAtt:'فتح المرفق',
   bday:'عائلة بتروكيما تتمنى لك عيد ميلاد سعيد 🎉',bdaySub:'نتمنى لك عاماً رائعاً.',
@@ -250,7 +252,7 @@ const T = {
   hrReqTitle:'طلبات إلى الموارد البشرية',reqHire:'طلب تعيين موظفين جدد',reqTrain:'طلب تدريب',howMany:'عدد الموظفين',jobName:'المسمى الوظيفي',jobDesc:'الوصف الوظيفي',
   neededBy:'مطلوب قبل (اختياري)',notes:'ملاحظات (اختياري)',needJob:'المسمى الوظيفي والوصف الوظيفي مطلوبان',topic:'موضوع التدريب',whoTrain:'من يحتاج التدريب',
   prefDate:'التاريخ المفضل (اختياري)',needTrain:'اختر موظفاً واحداً على الأقل واكتب موضوع التدريب',sentHR:'تم الإرسال إلى الموارد البشرية ✓',noMgrReq:'لم ترسل طلبات بعد',
-  hireLine:'{n} × {job}',trainLine:'{topic} — {n} موظف',inboxTitle:'📥 الشكاوى والاقتراحات',noInbox:'لا يوجد شيء',status:'الحالة',saveReply:'حفظ',from:'من',birthYear:'سنة ميلادك',yearWrong:'سنة الميلاد غير مطابقة لسجلاتنا (متبقٍ {n} محاولات).',acctLockedYear:'تجاوزت عدد المحاولات — تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',needYear:'أدخل سنة ميلادك (٤ أرقام، مثال: 1988).',firstHint:'أول مرة؟ استخدم كلمة المرور المؤقتة التي أعطتها لك الموارد البشرية. إذا كان حسابك مقفلاً، تواصل مع الموارد البشرية.',
+  hireLine:'{n} × {job}',trainLine:'{topic} — {n} موظف',inboxTitle:'📥 الشكاوى والاقتراحات',noInbox:'لا يوجد شيء',status:'الحالة',saveReply:'حفظ',birthYear:'سنة ميلادك',yearWrong:'سنة الميلاد غير مطابقة لسجلاتنا (متبقٍ {n} محاولات).',acctLockedYear:'تجاوزت عدد المحاولات — تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',needYear:'أدخل سنة ميلادك (٤ أرقام، مثال: 1988).',firstHint:'أول مرة؟ استخدم كلمة المرور المؤقتة التي أعطتها لك الموارد البشرية. إذا كان حسابك مقفلاً، تواصل مع الموارد البشرية.',
   payLockTitle:'مفرداتك محمية',payLockSub:'أدخل كلمة المرور لعرضها.',payUnlock:'عرض مفرداتي',payWrongPass:'كلمة المرور غير صحيحة',payNeedNet:'اتصل بالإنترنت لعرض مفرداتك.',payLock:'🔒 قفل',
   firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن كلمة المرور الأولى.',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
@@ -262,7 +264,7 @@ const T = {
   annualNoticeErr:'الإجازة السنوية تُطلب قبل بدايتها بـ {n} يوم على الأقل. لليوم نفسه اختر إجازة عارضة.',
   pastDateErr:'الإجازة العارضة تُطلب لليوم أو لأيام قادمة، وليس لأيام سابقة.',mgrNote:'ملاحظتك',
   approvedFinal:'تمت الموافقة ✓',teamTitle:'بدل المشروع لفريقك',teamNote:'محسوب من حضورهم في المشروعات. لا يُصرف أي مبلغ إلا بعد موافقتك ثم موافقة الموارد البشرية.',
-  approve:'موافقة',reject:'رفض',rejectWhy:'سبب الرفض',approvedMsg:'تمت الموافقة — أُرسل إلى الموارد البشرية ✓',rejectedMsg:'تم الرفض',noTeam:'لا توجد طلبات للموافقة',
+  rejectWhy:'سبب الرفض',approvedMsg:'تمت الموافقة — أُرسل إلى الموارد البشرية ✓',rejectedMsg:'تم الرفض',noTeam:'لا توجد طلبات للموافقة',
   aaWait:'في انتظار موافقتك',aaHR:'وافقت عليه — في انتظار الموارد البشرية',aaOk:'معتمد — سيُصرف',aaNo:'مرفوض',day:'يوم',daysW:'أيام',at:'في',
   locAppAndroid:'أندرويد: افتح إعدادات الهاتف ← التطبيقات ← بتروكيما ← الأذونات ← الموقع ← «السماح فقط أثناء استخدام التطبيق». وتأكد أيضاً من تشغيل الموقع من الإعدادات السريعة.',
   locAppIos:'آيفون: افتح الإعدادات ← بتروكيما ← الموقع ← «أثناء استخدام التطبيق»، وشغّل «الموقع الدقيق».',
@@ -341,7 +343,7 @@ Object.assign(T.ar, { reqMission:'مأمورية خارجية', misTitle:'🚗 �
 T.en.st['Waiting for employee'] = 'Waiting for the employee to acknowledge'; T.ar.st['Waiting for employee'] = 'في انتظار تأكيد الموظف';
 function applyLang(){
   document.documentElement.lang = LANG; document.documentElement.dir = LANG==='ar' ? 'rtl' : 'ltr';
-  document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
+  (/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-t]'))).forEach(el => el.textContent = t(el.dataset.t));
   document.querySelectorAll('[data-lang]').forEach(el => el.textContent = t('langBtn'));
   if ($('ios-steps')) $('ios-steps').textContent = t('iosSteps');
   if (APP.ready) renderAll();
@@ -350,6 +352,7 @@ function applyLang(){
 // ═════════════════════════════════════════════════════════
 //  HELPERS
 // ═════════════════════════════════════════════════════════
+/** @type {(id: string) => any} — any page element (field, button, list …) by its id */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
@@ -614,7 +617,7 @@ async function loadDocs(){
 }
 function renderDocs(){
   const box = $('doc-card'); if (!box) return;
-  const L = (APP.docs || []).filter(d => d.status !== 'Accepted' || (Date.now() - new Date(d.reviewed_at || 0)) < 7 * 864e5);
+  const L = (APP.docs || []).filter(d => d.status !== 'Accepted' || (Date.now() - new Date(d.reviewed_at || 0).getTime()) < 7 * 864e5);
   if (!L.length) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="card"><div class="sec">${esc(t('docTitle'))}</div><div class="list">${L.map(d => {
     const open = d.status === 'Requested' || d.status === 'Returned';
@@ -671,7 +674,7 @@ const dfield = k => (APP.dfields || []).find(f => f.key === k) || { key:k, en:k,
 const dfLabel = f => LANG === 'ar' ? (f.ar || f.en) : f.en;
 function renderDreqs(){
   const box = $('dreq-card'); if (!box) return;
-  const L = (APP.dreqs || []).filter(d => ['Requested','Returned','Answered'].includes(d.status) || (Date.now() - new Date(d.reviewed_at || d.answered_at || 0)) < 7 * 864e5);
+  const L = (APP.dreqs || []).filter(d => ['Requested','Returned','Answered'].includes(d.status) || (Date.now() - new Date(d.reviewed_at || d.answered_at || 0).getTime()) < 7 * 864e5);
   if (!L.length) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="card"><div class="sec">${esc(t('dreqTitle'))}</div><div class="list">${L.map(d => {
     const open = d.status === 'Requested' || d.status === 'Returned';
@@ -739,7 +742,7 @@ async function loadCoReqs(){
 }
 function renderCoReqs(){
   const box = $('co-card'); if (!box) return;
-  const L = (APP.coreqs || []).filter(c => c.status === 'Waiting' || (c.status !== 'Checked out' && Date.now() - new Date(c.handled_at || c.tried_at) < 3 * 864e5));
+  const L = (APP.coreqs || []).filter(c => c.status === 'Waiting' || (c.status !== 'Checked out' && Date.now() - new Date(c.handled_at || c.tried_at).getTime() < 3 * 864e5));
   if (!L.length) { box.innerHTML = ''; return; }
   box.innerHTML = `<div class="card"><div class="sec">${esc(t('coTitle'))}</div><div class="list">${L.map(c => {
     const what = t(c.kind === 'left' ? 'coLeftAt' : 'coTriedAt', { t: c.local_time || '', place: c.place || '' });
@@ -1036,7 +1039,7 @@ function tick(){
   if (m !== null){ const mm=Math.floor(m)%1440; $('clk-time').textContent = `${pad(Math.floor(mm/60))}:${pad(mm%60)}`; }
   if (APP.undoShown && !undoUntil(APP.status)) { APP.undoShown = false; renderHome(); return; }
   const o = APP.status && APP.status.open, el = $('clk-dur');
-  if (o && el && m !== null){ const dayOff = Math.round((dObj(APP.status.date) - dObj(o.date))/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
+  if (o && el && m !== null){ const dayOff = Math.round((dObj(APP.status.date).getTime() - dObj(o.date).getTime())/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
 }
 // Day finished = checked out, at least one period today, nothing waiting to be sent, and he has not pressed "I came back"
 function undoUntil(st){ return st && st.undo && Number(st.undo.until_ms) > serverNowMs() ? Number(st.undo.until_ms) : 0; }
@@ -1333,7 +1336,7 @@ function leaveSheet(){
   const hint = () => {
     const f=$('lv-f').value, to=$('lv-to').value, ty=$('lv-t').value, d=num($('lv-d').value), out=[];
     if (f&&to&&to<f) out.push(`<span class="neg">${esc(t('toBefore'))}</span>`);
-    if (f&&to&&to>=f) out.push(esc(t('wd',{ c: Math.round((dObj(to)-dObj(f))/86400000)+1, w: workdays(f,to) })));
+    if (f&&to&&to>=f) out.push(esc(t('wd',{ c: Math.round((dObj(to).getTime()-dObj(f).getTime())/86400000)+1, w: workdays(f,to) })));
     if (f && f < todayStr()) out.push(esc(t('past')));
     const lb = APP.lbal;
     if (annualTypes().includes(ty)){ const left = lb ? num(lb.remaining)-num(lb.pending)-d : entitlement()-yearDays(annualTypes(),'Approved')-yearDays(annualTypes(),'Pending')-d;
@@ -1458,8 +1461,8 @@ function missionSheet(assign){
   $('mis-k-full').onclick = () => kind(false); $('mis-k-part').onclick = () => kind(true);
   if (assign) {
     const cnt = () => { const n = document.querySelectorAll('.mis-who:checked').length; $('mis-cnt').textContent = t('misChosen', { n }); $('mis-all').checked = n === team.length && n > 0; };
-    $('mis-all').onchange = () => { document.querySelectorAll('.mis-who').forEach(c => c.checked = $('mis-all').checked); cnt(); };
-    document.querySelectorAll('.mis-who').forEach(c => c.onchange = cnt);
+    $('mis-all').onchange = () => { (/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who'))).forEach(c => c.checked = $('mis-all').checked); cnt(); };
+    (/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who'))).forEach(c => c.onchange = cnt);
   }
   $('mis-go').onclick = async () => {
     const f = part ? $('mis-d').value : $('mis-f').value, to = part ? $('mis-d').value : $('mis-t').value;
@@ -1467,7 +1470,7 @@ function missionSheet(assign){
     if (!f || !to || to < f) return toast(t('misBadDates'), true);
     if (part && (!tf || !tt || tt <= tf)) return toast(t('misBadTimes'), true);
     if (!pl) return toast(t('misNeedPlace'), true);
-    const who = assign ? [...document.querySelectorAll('.mis-who:checked')].map(c => c.value) : null;
+    const who = assign ? [.../** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who:checked'))].map(c => c.value) : null;
     if (assign && !who.length) return toast(t('misNoWho'), true);
     if (!navigator.onLine) return toast(t('offline'), true);
     $('mis-go').disabled = true;
@@ -1507,6 +1510,7 @@ function renderTeamMissions(){
   return L.filter(m => m.status === 'Waiting for manager').length;
 }
 const _renderTeamMis = renderTeam;
+// @ts-expect-error — renderTeam is deliberately extended here (missions are added to the team screen)
 renderTeam = function(){
   _renderTeamMis.apply(this, arguments);
   const w = renderTeamMissions();
@@ -1514,6 +1518,7 @@ renderTeam = function(){
   if (w) { const b = $('team-badge'); const n = (Number(b.textContent) || 0) * (b.style.display === 'none' ? 0 : 1) + w; b.style.display = ''; b.textContent = n; }
 };
 const _renderRequestsMis = renderRequests;
+// @ts-expect-error — renderRequests is deliberately extended here (mission notices)
 renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMisAck(); };
 
 // ═════════════════════════════════════════════════════════
@@ -1830,7 +1835,7 @@ function trainSheet(){
     <div class="field"><label>${esc(t('prefDate'))}</label><input id="tr-dt" type="date"></div>
     <button class="btn" id="tr-go">${esc(t('send'))}</button>`);
   $('tr-go').onclick = async () => {
-    const ids = [...document.querySelectorAll('[data-tr]:checked')].map(c => c.dataset.tr), tp = $('tr-t').value.trim();
+    const ids = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-tr]:checked'))].map(c => c.dataset.tr), tp = $('tr-t').value.trim();
     if (!ids.length || !tp) return toast(t('needTrain'), true); if (!navigator.onLine) return toast(t('offline'), true);
     $('tr-go').disabled = true;
     const { data, error } = await sb.from('training_requests').insert({ manager_emp:APP.me.emp_id, emp_ids:ids, topic:tp, details:$('tr-d').value.trim() || null, preferred_date:$('tr-dt').value || null }).select();
@@ -1906,10 +1911,10 @@ function closeHireSheet(id){
   };
 }
 document.addEventListener('click', async e => {
-  const b = e.target.closest('[data-board]'); if (b) return boardSheet(b.dataset.board, b.dataset.ok === '1');
-  const sb2 = e.target.closest('[data-salb]'); if (sb2) return salarySheet(sb2.dataset.salb, sb2.dataset.ok === '1');
-  const c = e.target.closest('[data-close-hire]'); if (c) return closeHireSheet(c.dataset.closeHire);
-  const x = e.target.closest('[data-cancel-act]'); if (x){
+  const b = /** @type {HTMLElement} */ (e.target).closest('[data-board]'); if (b) return boardSheet(b.dataset.board, b.dataset.ok === '1');
+  const sb2 = /** @type {HTMLElement} */ (e.target).closest('[data-salb]'); if (sb2) return salarySheet(sb2.dataset.salb, sb2.dataset.ok === '1');
+  const c = /** @type {HTMLElement} */ (e.target).closest('[data-close-hire]'); if (c) return closeHireSheet(c.dataset.closeHire);
+  const x = /** @type {HTMLElement} */ (e.target).closest('[data-cancel-act]'); if (x){
     const { error } = await sb.rpc('cancel_manager_action', { p_id:x.dataset.cancelAct }); if (error) return toast(friendly(error.message), true);
     const m = (APP.mgrReqs || []).find(m => m.kind==='act' && m.r.id === x.dataset.cancelAct); if (m) m.r.status = 'Cancelled'; toast(t('cancelled')); renderVoice(); }
 });
@@ -1928,8 +1933,8 @@ function inboxSheet(id){
   };
 }
 document.addEventListener('click', e => {
-  const a = e.target.closest('[data-att]'); if (a) return openAttachment(a.dataset.att);
-  const ib = e.target.closest('[data-inbox]'); if (ib) return inboxSheet(ib.dataset.inbox);
+  const a = /** @type {HTMLElement} */ (e.target).closest('[data-att]'); if (a) return openAttachment(a.dataset.att);
+  const ib = /** @type {HTMLElement} */ (e.target).closest('[data-inbox]'); if (ib) return inboxSheet(ib.dataset.inbox);
 });
 // Android back button (the app calls window.pkBack() first; false = nothing left to go back to → the app goes to the background)
 //   1) an open window (bottom sheet) closes  2) the previous tab opens  3) from another tab with no history → Home
@@ -1941,7 +1946,7 @@ window.pkBack = function(){
   if (APP.view !== 'home') { go('home', true); return true; }
   return false;
 };
-function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); (/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.tab'))).forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP
@@ -1949,7 +1954,7 @@ function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.pus
 let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (APP.ready) renderProfile(); });
 document.addEventListener('click', async ev => {
-  const x = ev.target;
+  const x = /** @type {HTMLElement} */ (ev.target);
   if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG);
     const tk = localStorage.getItem('pk_push_token'); if (tk && APP.ready) sb.rpc('save_push_token', { p_token: tk, p_platform: 'android', p_lang: LANG }).then(()=>{}, ()=>{});   // notifications follow the app language
     const ep = localStorage.getItem('pk_push_web'); if (ep && APP.ready) sb.rpc('set_push_lang', { p_token: ep, p_lang: LANG }).then(()=>{}, ()=>{});
@@ -2035,7 +2040,7 @@ setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQu
   if (isAndroidWeb()) {                                   // Android phones must use the Petrokima app, not the browser
     message(t('androidUseApp'));
     $('msg-body').insertAdjacentHTML('beforeend', `<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:16px" href="${ANDROID_APP_PAGE}">⬇ ${esc(t('androidGetApp'))}</a>`);
-    const back = document.querySelector('#scr-msg [data-act="signout"]'); if (back) back.style.display = 'none';
+    const back = /** @type {HTMLElement | null} */ (document.querySelector('#scr-msg [data-act="signout"]')); if (back) back.style.display = 'none';
     return;
   }
   if (!window.supabase || !SUPABASE_KEY || SUPABASE_KEY.startsWith('PASTE')) return message(t('configMissing'));
