@@ -13,6 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=39">
 <title>Petrokima</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="vendor/sentry.js?v=11.7.0"></script>
 <script src="vendor/supabase.js?v=2.117.3"></script>
 <style>
 :root{--bg:#f3f5f9;--card:#fff;--line:#e3e7ef;--text:#15192a;--muted:#6b7389;--brand:#1f4fb5;--brand2:#0f9d7a;--danger:#d23b3b;--warn:#c06a17;--radius:16px}
@@ -244,6 +245,48 @@ const SUPABASE_URL = 'https://hckkrzghxxhauotyqlqr.supabase.co';
 const SUPABASE_KEY = 'PASTE-YOUR-ANON-KEY-HERE';
 const LOGIN_DOMAIN = 'petrokima.local';
 const APP_BUILD = 0;            // set automatically by the Android / iPhone build — 0 on the web
+// ═════════════════════════════════════════════════════════
+//  ERROR REPORTING (30 Oct 2026) — keep IDENTICAL in desktop/src/part0err.js and mobile/index.html (checked automatically)
+//  Unexpected errors on staff PCs and phones are reported to Sentry (EU), the standard error-monitoring service, through
+//  our Supabase function error-report (it adds the real Sentry address; until Mohammed sets it, reports are dropped).
+//  No personal data: no names, no e-mails, no ID numbers, no typed text, no page content; web addresses without their
+//  query part; the login is sent only as its internal number (UUID) and role. Off when the library is missing (on-prem copy).
+// ═════════════════════════════════════════════════════════
+const PK_ERR = (function(){
+  const lib = window.Sentry, off = { user(){}, capture(){} };
+  if (!lib || typeof lib.init !== 'function' || !/^https:$/.test(location.protocol) && location.hostname !== 'localhost') return off;
+  const scrub = s => typeof s !== 'string' ? s : s
+    .replace(/\b[23]\d{13}\b/g, '[id]').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[email]')
+    .replace(/eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/g, '[token]').replace(/sb_(publishable|secret)_[\w-]+/g, '[key]');
+  const bare = u => { try { const x = new URL(u, location.href); return x.origin + x.pathname; } catch(e){ return ''; } };
+  try {
+    lib.init({
+      dsn: 'https://public@o0.ingest.sentry.io/0',                       // placeholder — the real address is added by error-report
+      tunnel: 'https://hckkrzghxxhauotyqlqr.supabase.co/functions/v1/error-report',
+      release: typeof APP_BUILD !== 'undefined' ? 'pk-phone@' + (APP_BUILD ? 'android-' + APP_BUILD : 'web') : 'pk-desktop@web',
+      environment: location.hostname === 'localhost' ? 'android-app' : location.hostname,
+      sendDefaultPii: false, maxBreadcrumbs: 30, attachStacktrace: true,
+      beforeBreadcrumb(b){
+        if (b.category === 'console' || b.category === 'ui.input') return null;          // never what people type or logs
+        if (b.data){ if (b.data.url) b.data.url = bare(b.data.url); if (b.data.from) b.data.from = bare(b.data.from); if (b.data.to) b.data.to = bare(b.data.to); }
+        if (b.message) b.message = scrub(b.message);
+        return b;
+      },
+      beforeSend(e){
+        if (e.request){ e.request = { url: bare(e.request.url || '') }; }
+        if (e.message) e.message = scrub(e.message);
+        (e.exception && e.exception.values || []).forEach(v => { v.value = scrub(v.value); });
+        if (e.user) e.user = { id: e.user.id };
+        delete e.extra;
+        return e;
+      }
+    });
+  } catch(e){ return off; }
+  return {
+    user(u){ try { lib.setUser(u && u.id ? { id: u.id } : null); lib.setTag('role', (u && u.role) || 'none'); } catch(e){} },
+    capture(err, where){ try { lib.withScope(s => { if (where) s.setTag('where', String(where)); lib.captureException(err); }); } catch(e){} }
+  };
+})();
 const APK_REPO  = '';           // GitHub repository that publishes the Android app (owner/name)
 const APK_DOWNLOAD = '';        // your own download address for the Android app (set by the build) — empty = GitHub's link
 // Running inside the Android or iPhone app?
@@ -759,7 +802,7 @@ async function afterLogin(user){
   if (!me || !me.role) return message(t('noRole'));
   if (!me.active) return message(t('inactive'));
   if (!me.emp_id) return message(t('notLinked'));
-  APP.me = me;
+  APP.me = me; PK_ERR.user(me);
   if (me.must_change_password){ ['fl-year','fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
   const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
   if (regErr || !['ok','registered'].includes(reg)){

@@ -8,11 +8,15 @@ fs.mkdirSync(path.join(out, 'vendor'), { recursive: true });
 for (const f of fs.readdirSync(src)) if (!['sw.js'].includes(f)) fs.copyFileSync(path.join(src, f), path.join(out, f));
 fs.copyFileSync(path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), path.join(out, 'vendor', 'supabase.js'));
 fs.copyFileSync(path.join(root, 'node_modules', '@capacitor', 'core', 'dist', 'capacitor.js'), path.join(out, 'vendor', 'capacitor.js'));
+// error reporting library (self-hosted copy, see mobile/vendor/sentry.js) — shipped at the repository root as vendor/sentry.js
+const sentrySrc = [path.join(root, 'vendor', 'sentry.js'), path.join(src, 'vendor', 'sentry.js'), path.join(root, '..', 'mobile', 'vendor', 'sentry.js')].find(f => fs.existsSync(f));
+if (sentrySrc) fs.copyFileSync(sentrySrc, path.join(out, 'vendor', 'sentry.js')); else console.warn('⚠ vendor/sentry.js not found — the app will run without error reporting');
 
 let html = fs.readFileSync(path.join(out, 'index.html'), 'utf8');
 const cdn = /<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2|vendor\/supabase\.js)[^"]*"[^>]*><\/script>/;
 if (!cdn.test(html)) throw new Error('Could not find the Supabase script tag in web/index.html');
 html = html.replace(cdn, '<script src="vendor/capacitor.js"></script>\n<script src="vendor/supabase.js"></script>');
+html = html.replace(/<script src="vendor\/sentry\.js\?v=[^"]*"><\/script>/, sentrySrc ? '<script src="vendor/sentry.js"></script>' : '');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '');                       // web-app install files are not needed inside the app
 const key = process.env.SUPABASE_ANON_KEY || '';
 if (key) html = html.replace("'PASTE-YOUR-ANON-KEY-HERE'", JSON.stringify(key));
