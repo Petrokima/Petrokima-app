@@ -428,9 +428,24 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
 // ═════════════════════════════════════════════════════════
 //  SIGN-IN
 // ═════════════════════════════════════════════════════════
-const APP = { ready:false, me:null, emp:null, status:null, statusAt:0, leaves:[], perms:[], reqs:[], slips:[], att:[], manager:null, view:'home' };
+/** Everything the app has loaded for the signed-in employee (types: types/globals.d.ts and the database description).
+ * @type {{ ready: boolean, me: Row<'app_users'> & { emp_id: string }, emp: Employee | null, status: ClockStatus | null, statusAt: number,
+ *   leaves: Leave[], perms: Permission[], reqs: HrRequest[], slips: any[], att: AttendanceRow[],
+ *   manager: FnResult<'my_manager'>[number] | null, view: string,
+ *   offline?: boolean, updatedAt?: number, team?: AllowanceApproval[], teamReq?: { kind: string, r: any }[],
+ *   myProjects?: FnResult<'my_projects'>, myTeam?: FnResult<'my_team'>, hra?: any[], lbal?: any,
+ *   docs?: Row<'doc_requests'>[], dreqs?: Row<'data_requests'>[], dfields?: any[] | null, coreqs?: Row<'checkout_requests'>[],
+ *   watch?: any, canSetSite?: boolean, varElements?: FnResult<'variable_elements'>, salReqs?: Row<'salary_change_requests'>[],
+ *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
+ *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
+ *   mgrReqs?: { kind: string, r: any }[], undoShown?: boolean, cameBack?: boolean, missions?: Mission[],
+ *   teamMissions?: Mission[], payUnlocked?: boolean }}
+ *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
+ *       and every screen that reads it opens only after that.
+ *   r in teamReq / mgrReqs: one of several kinds of request (see kind); slips: payslip packages (my_payslips). */
+const APP = { ready:false, me:/** @type {any} — set at sign-in */ (null), emp:null, status:null, statusAt:0, leaves:[], perms:[], reqs:[], slips:[], att:[], manager:null, view:'home' };
 /** @type {PhoneDb} — the database connection (typed: every table, column and database function is checked) */
-let sb = null;
+let sb = /** @type {any} — set at start-up, before anything reads from the database */ (null);
 let tempPass = '';
 // ── things kept on the phone so the app works without internet ──
 const store = { get:(k,d)=>{ try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch(e){ return d; } }, set:(k,v)=>{ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
@@ -601,7 +616,7 @@ async function firstLogin(){
   if (data !== 'ok' && /year of birth|wrong answers|year you were born/i.test(data)) return errBox('fl-err', friendly(data).replace(/^Enter the year.*$/, t('needYear')));
   if (data !== 'ok') return errBox('fl-err', /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data);
   tempPass=''; toast(t('passSet'));
-  const { data: s } = await sb.auth.getSession(); await afterLogin(s.session.user);
+  const { data: s } = await sb.auth.getSession(); await afterLogin(/** @type {NonNullable<typeof s.session>} — signed in a moment ago */ (s.session).user);
 }
 async function signOut(){
   try { const tk = localStorage.getItem('pk_push_token'); if (tk) { await sb.rpc('remove_push_token', { p_token: tk }); localStorage.removeItem('pk_push_token'); } } catch(e){}
@@ -635,7 +650,7 @@ async function docShrink(file){
   try {
     const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(file); });
     const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
-    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); /** @type {CanvasRenderingContext2D} — always available for a new canvas */ (c.getContext('2d')).drawImage(img, 0, 0, c.width, c.height);
     const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
     return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type:'image/jpeg' }) : file;
   } catch(e){ return file; }
@@ -670,7 +685,7 @@ function docSheet(id){
 async function loadDreqs(){
   try { const r = await sb.from('data_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
         APP.dreqs = r.error ? [] : (r.data || []); } catch(e){ APP.dreqs = []; }
-  if (!APP.dfields) { try { const f = await sb.rpc('data_fields'); APP.dfields = f.error ? null : f.data; } catch(e){} }
+  if (!APP.dfields) { try { const f = await sb.rpc('data_fields'); APP.dfields = f.error ? null : /** @type {any[]} — the list of fields employees may update */ (f.data); } catch(e){} }
 }
 const dfield = k => (APP.dfields || []).find(f => f.key === k) || { key:k, en:k, ar:k, kind:'text' };
 const dfLabel = f => LANG === 'ar' ? (f.ar || f.en) : f.en;
@@ -694,7 +709,7 @@ function dreqInput(f, v){
 }
 function dreqSheet(id){
   const d = (APP.dreqs || []).find(x => x.id === id); if (!d) return;
-  const prev = d.status === 'Returned' && d.answer ? d.answer : {}, e = APP.emp || {};
+  const prev = d.status === 'Returned' && d.answer ? d.answer : {}, e = APP.emp || /** @type {Employee} */ ({});
   const flds = (d.fields || []).map(dfield);
   sheet(`<h2>${esc(t('dreqTitle'))}</h2>${d.message ? `<div class="hint">💬 ${esc(d.message)}</div>` : ''}
     ${d.status === 'Returned' && d.review_note ? `<div class="hint" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
@@ -713,7 +728,7 @@ function dreqSheet(id){
   };
 }
 function contactSheet(){
-  const e = APP.emp || {};
+  const e = APP.emp || /** @type {Employee} */ ({});
   sheet(`<h2>${esc(t('myContactTitle'))}</h2>
     <div class="field"><label>${esc(t('personalMobile'))}</label><input type="tel" id="mc-mobile" inputmode="tel" dir="ltr" value="${esc(e.mobile || '')}"></div>
     <div class="field"><label>${esc(t('personalEmail'))}</label><input type="email" id="mc-email" dir="ltr" autocapitalize="off" value="${esc(e.personal_email || '')}"></div>
@@ -773,7 +788,8 @@ async function reportAwayCheckout(g, refusal){
   try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'tried' }); } catch(e){ r = { error: e }; }
   if (!r || r.error || !r.data) return toast(refusal + (r && r.error && /TOO_SOON/.test(String(r.error.message || '')) ? ' ' + t('coTooSoon') : ''), true);
   await loadCoReqs(); renderCoReqs();
-  const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: r.data.kind || 'tried', local_time: r.data.time, place: r.data.place };
+  const rd = /** @type {CheckoutReport} — checked two lines above */ (r.data);
+  const c = (APP.coreqs || []).find(x => x.id === rd.id) || { id: rd.id, kind: rd.kind || 'tried', local_time: rd.time, place: rd.place };
   coSheet(`<div class="hint" style="color:var(--text)">${esc(refusal)}</div><div class="state on" style="text-align:start;margin-bottom:12px">✅ ${esc(t('coToldHR', { t: r.data.time || '', place: r.data.place || '' }))}</div>`, c);
 }
 const LW = () => PLATFORM === 'android' ? nativePlugin('LeaveWatch') : null;
@@ -1042,7 +1058,7 @@ function tick(){
   if (m !== null){ const mm=Math.floor(m)%1440; $('clk-time').textContent = `${pad(Math.floor(mm/60))}:${pad(mm%60)}`; }
   if (APP.undoShown && !undoUntil(APP.status)) { APP.undoShown = false; renderHome(); return; }
   const o = APP.status && APP.status.open, el = $('clk-dur');
-  if (o && el && m !== null){ const dayOff = Math.round((dObj(APP.status.date).getTime() - dObj(o.date).getTime())/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
+  if (o && el && m !== null){ const dayOff = Math.round((dObj(/** @type {ClockStatus} — o is set, so the status is there */ (APP.status).date).getTime() - dObj(o.date).getTime())/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
 }
 // Day finished = checked out, at least one period today, nothing waiting to be sent, and he has not pressed "I came back"
 function undoUntil(st){ return st && st.undo && Number(st.undo.until_ms) > serverNowMs() ? Number(st.undo.until_ms) : 0; }
@@ -1058,7 +1074,7 @@ function dayEndedView(st){
   return true;
 }
 async function undoCheckout(btn){
-  const st = APP.status || {}; if (!st.undo) return;
+  const st = APP.status || /** @type {ClockStatus} */ ({}); if (!st.undo) return;
   if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div>`; }
   const { error } = await sb.rpc('undo_checkout', { p_event: st.undo.id });
   try { await loadStatus(); } catch(e){}
@@ -1068,7 +1084,7 @@ async function undoCheckout(btn){
 }
 function renderHome(){
   $('bday-box').innerHTML = birthdayCard();
-  const st = APP.status || {}, o = st.open;
+  const st = APP.status || /** @type {ClockStatus} */ ({}), o = st.open;
   $('clk-upd').textContent = APP.updatedAt ? t('updated', { t: new Date(APP.updatedAt).toLocaleTimeString(loc(), { hour:'2-digit', minute:'2-digit' }) }) : '';
   $('clk-date').textContent = st.date ? dObj(st.date).toLocaleDateString(loc(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '';
   if (o){
@@ -1121,8 +1137,8 @@ function openSitePicker(mode){
   sheet(`<h2>${esc(t('whereWork'))}</h2>
     ${APP.status && APP.status.no_project && !openIsNone && !fromHome ? `<button class="btn green big" id="noproj-go" style="margin-bottom:14px">▶ ${esc(t('inNoProject'))}</button><div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('orSite'))}</div>` : ''}
     ${(APP.myProjects||[]).length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('myProjects'))}</div>
-      ${APP.myProjects.length > 8 ? `<div class="field"><input id="myp-q" placeholder="${esc(t('filterProj'))}" autocomplete="off"></div>` : ''}
-      <div id="myp-list">${APP.myProjects.filter(p => p.id !== openCode).map(siteBtn).join('')}</div>`
+      ${(APP.myProjects || []).length > 8 ? `<div class="field"><input id="myp-q" placeholder="${esc(t('filterProj'))}" autocomplete="off"></div>` : ''}
+      <div id="myp-list">${(APP.myProjects || []).filter(p => p.id !== openCode).map(siteBtn).join('')}</div>`
     : `${recent.length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('recent'))}</div>${recent.filter(r=>r.code!==openCode).map(siteBtn).join('')}` : ''}
     ${navigator.onLine ? '' : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}
     <div class="field" style="margin-top:12px"><input id="site-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
@@ -1130,7 +1146,7 @@ function openSitePicker(mode){
     <button class="btn green big" id="site-go" disabled data-mode="${mode}">▶ ${esc(t('checkIn'))}</button>`);
   if ($('site-q')) $('site-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(searchSites, 300); });
   if ($('myp-q')) $('myp-q').addEventListener('input', () => { const q = $('myp-q').value.trim().toLowerCase();
-    $('myp-list').innerHTML = APP.myProjects.filter(p => p.id !== openCode && (!q || (p.id + ' ' + (p.name||'')).toLowerCase().includes(q))).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`; });
+    $('myp-list').innerHTML = (APP.myProjects || []).filter(p => p.id !== openCode && (!q || (p.id + ' ' + (p.name||'')).toLowerCase().includes(q))).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`; });
 }
 function siteBtn(s){ return `<button class="site" data-site="${esc(s.code||s.id)}" data-name="${esc(s.name||'')}"><b>${esc(s.name || s.code || s.id)}</b><span>${esc(s.code||s.id)}${s.location?' · '+esc(s.location):''}</span></button>`; }
 async function searchSites(){
@@ -1296,7 +1312,7 @@ function confirmOut(){
 // ═════════════════════════════════════════════════════════
 const annualTypes = () => S.casualCountsAnnual==='no' ? ['Annual'] : ['Annual','Casual'];
 function yearDays(types, status){ const y=todayStr().slice(0,4); return APP.leaves.filter(l=>types.includes(l.leave_type)&&l.status===status).reduce((s,l)=>s+leaveDaysIn(l,`${y}-01-01`,`${y}-12-31`),0); }
-function entitlement(){ const e=APP.emp; return (e && e.annual_leave_days!==null && e.annual_leave_days!==undefined && e.annual_leave_days!=='') ? num(e.annual_leave_days) : num(S.annualLeaveDefault); }
+function entitlement(){ const e=APP.emp; return (e && e.annual_leave_days!==null && e.annual_leave_days!==undefined) ? num(e.annual_leave_days) : num(S.annualLeaveDefault); }
 const reqStage = r => r.status==='Pending' && r.manager_status==='Pending' ? 'Waiting for manager' : r.status==='Pending' && r.manager_status==='Approved' ? 'Waiting for HR' : r.status;
 // when a request was sent, in the phone's language
 const sentAt = ts => ts ? new Date(ts).toLocaleString(LANG==='ar' ? 'ar-EG' : 'en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
@@ -1312,6 +1328,7 @@ function renderRequests(){
   $('req-stats').innerHTML = `<div class="stat"><div class="v num">${fmt(annLeft)}</div><div class="l">${esc(t('annualLeft'))}${annPend?`<br>(${fmt(annPend)} ${esc(tm('st','Pending'))})`:''}${emLeft!==null?`<br>${esc(t('emergLeft'))}: <b class="num">${fmt(emLeft)}</b>`:''}${lb && lb.eligible_from > todayStr() && !lb.early_ok ? `<br><span class="neg">${esc(t('leaveFrom', { d: dShort(lb.eligible_from) }))}</span>` : ''}</div></div>
     <div class="stat"><div class="v num">${used}/${lim}</div><div class="l">${esc(t('permsUsed'))}</div></div>
     <div class="stat"><div class="v num">${open}</div><div class="l">${esc(t('openReq'))}</div></div>`;
+  /** @type {any[]} — leaves, permissions, HR requests and missions in one list (see k) */
   const items = [
     ...APP.leaves.map(l=>({ k:'leave', id:l.id, at:l.created_at, icon:'🌴', title:t('leaveTitle',{ t: tm('lt',l.leave_type) }), sub:`${niceDate(l.date_from)} → ${niceDate(l.date_to)} · ${fmt(l.days)} ${t('days')}`, st:reqStage(l), reply:[l.manager_note, l.decision_note].filter(Boolean).join(' · ') })),
     ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmtH(p.hours)}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
@@ -1475,7 +1492,7 @@ function missionSheet(assign){
     if (part && (!tf || !tt || tt <= tf)) return toast(t('misBadTimes'), true);
     if (!pl) return toast(t('misNeedPlace'), true);
     const who = assign ? [.../** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who:checked'))].map(c => c.value) : null;
-    if (assign && !who.length) return toast(t('misNoWho'), true);
+    if (assign && !(who || []).length) return toast(t('misNoWho'), true);
     if (!navigator.onLine) return toast(t('offline'), true);
     $('mis-go').disabled = true;
     const args = { p_from:f, p_to:to, p_time_from:tf, p_time_to:tt, p_place:pl, p_purpose:$('mis-pu').value.trim() || null, p_project:$('mis-pr').value.trim() || null };
@@ -1550,7 +1567,7 @@ async function unlockPayslips(){
   $('pay-go').disabled = true;
   const email = ((((await sb.auth.getSession()).data || {}).session || {}).user || {}).email || (APP.me && APP.me.email);   // the account signed in right now
   let cap; try { cap = await captchaToken('pay-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }
-  const { error } = await withTimeout(sb.auth.signInWithPassword({ email, password: pw, options: cap ? { captchaToken: cap } : undefined }), 15000);
+  const { error } = await withTimeout(sb.auth.signInWithPassword({ email: /** @type {string} — if missing, the sign-in simply fails with a message */ (email), password: pw, options: cap ? { captchaToken: cap } : undefined }), 15000);
   $('pay-go').disabled = false;
   if (error) return errBox('pay-err', /invalid|credentials/i.test(error.message) ? t('payWrongPass') : friendly(error.message));
   const r = await withTimeout(sb.from('payroll_run_lines').select('*').eq('emp_id', APP.me.emp_id).order('period', { ascending:false }), 15000);
@@ -1568,7 +1585,7 @@ function slipSheet(period){
     <div class="kv" style="font-size:18px"><span class="k"><b>${esc(t('net'))}</b></span><span class="v num pos">${fmt(l.net)}</span></div>`);
 }
 function renderProfile(){
-  const e = APP.emp || {}, m = APP.manager;
+  const e = APP.emp || /** @type {Employee} */ ({}), m = APP.manager;
   const kv = (k,v,ltr) => v ? `<div class="kv"><span class="k">${esc(t(k))}</span><span class="v ${ltr?'num':''}">${esc(v)}</span></div>` : '';
   $('prof-card').innerHTML = `<div class="sec" style="font-size:17px">${esc(LANG==='ar' ? (e.name_ar||e.name_en) : (e.name_en||e.name_ar))}</div>
     ${kv('code', e.id, true)}${kv('job', e.job_name)}${kv('dept', e.department)}${kv('unit', e.unit)}${kv('manager', m ? (LANG==='ar' ? (m.name_ar||m.name_en) : (m.name_en||m.name_ar)) : '')}
@@ -1663,7 +1680,7 @@ function hraSheet(key){
 }
 // the manager manages one team member's projects
 async function teamProjSheet(empId){
-  const m = (APP.myTeam||[]).find(x => x.id === empId) || { id:empId }, nm = (LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || empId;
+  const m = (APP.myTeam||[]).find(x => x.id === empId) || /** @type {FnResult<'my_team'>[number]} */ ({ id:empId }), nm = (LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || empId;
   if (!navigator.onLine) return toast(t('offline'), true);
   const { data, error } = await sb.rpc('team_projects', { p_emp: empId });
   if (error) return toast(friendly(error.message), true);
@@ -1727,7 +1744,7 @@ async function checkAppUpdate(force){
     }
   } catch(e){}
 }
-function renderAll(){ if(!APP.ready) return; const e=APP.emp||{};
+function renderAll(){ if(!APP.ready) return; const e=APP.emp||/** @type {Employee} */ ({});
   $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
   $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
   renderHome(); renderCoReqs(); renderRequests(); renderDocs(); renderDreqs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
@@ -1738,16 +1755,16 @@ const dShort = ts => ts ? new Date(ts).toLocaleDateString(LANG==='ar' ? 'ar-EG' 
 const stLbl = s => ({ 'Waiting for board':{en:'Waiting for board member',ar:'بانتظار عضو مجلس الإدارة'}, 'Waiting for HR':{en:'Waiting for HR',ar:'بانتظار الموارد البشرية'}, Approved:{en:'Approved',ar:'تمت الموافقة'}, Cancelled:{en:'Cancelled',ar:'ملغي'}, New:{en:'New',ar:'جديد'}, 'In review':{en:'In review',ar:'قيد المراجعة'}, Closed:{en:'Closed',ar:'مغلق'}, 'In progress':{en:'In progress',ar:'جارٍ التنفيذ'}, Done:{en:'Done',ar:'تم'}, Rejected:{en:'Rejected',ar:'مرفوض'} }[s] || {en:s,ar:s})[LANG==='ar'?'ar':'en'];
 const stChip = s => `<span class="chip ${({'Waiting for board':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Cancelled:'c-grey',New:'c-orange','In review':'c-blue','In progress':'c-blue',Closed:'c-green',Done:'c-green',Rejected:'c-red'})[s]||'c-grey'}">${esc(stLbl(s))}</span>`;
 function renderNews(){
-  const L = APP.news || [], unread = L.filter(a => !APP.newsRead.has(a.id)).length;
+  const L = APP.news || [], unread = L.filter(a => !APP.newsRead?.has(a.id)).length;
   $('news-badge').style.display = unread ? '' : 'none'; $('news-badge').textContent = unread;
-  $('news-list').innerHTML = L.map(a => `<div class="it" style="display:block${APP.newsRead.has(a.id) ? '' : ';border-inline-start:4px solid #d64545'}">
+  $('news-list').innerHTML = L.map(a => `<div class="it" style="display:block${APP.newsRead?.has(a.id) ? '' : ';border-inline-start:4px solid #d64545'}">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span class="chip ${a.kind==='decision'?'c-blue':'c-green'}">${a.kind==='decision' ? '📜 ' + esc(t('decKind')) : '📢 ' + esc(t('annKind'))}</span><span class="muted" style="font-size:12px">${esc(dShort(a.created_at))}</span></div>
       <div class="t1">${esc(a.title)}</div>${a.body ? `<div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(a.body)}</div>` : ''}
       ${a.attachment_path ? `<button class="btn ghost small" style="margin-top:8px" data-att="${esc(a.attachment_path)}">📎 ${esc(t('openAtt'))} — ${esc(a.attachment_name || '')}</button>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noNews'))}</div>`;
 }
 async function markNewsRead(){
-  const unread = (APP.news || []).filter(a => !APP.newsRead.has(a.id)); if (!unread.length || !navigator.onLine) return;
-  unread.forEach(a => APP.newsRead.add(a.id)); renderNews();
+  const unread = (APP.news || []).filter(a => !APP.newsRead?.has(a.id)); if (!unread.length || !navigator.onLine) return;
+  unread.forEach(a => APP.newsRead?.add(a.id)); renderNews();
   await sb.from('announcement_reads').insert(unread.map(a => ({ ann_id:a.id, emp_id:APP.me.emp_id }))).then(() => {}, () => {});
 }
 async function openAttachment(path){
@@ -1839,7 +1856,7 @@ function trainSheet(){
     <div class="field"><label>${esc(t('prefDate'))}</label><input id="tr-dt" type="date"></div>
     <button class="btn" id="tr-go">${esc(t('send'))}</button>`);
   $('tr-go').onclick = async () => {
-    const ids = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-tr]:checked'))].map(c => c.dataset.tr), tp = $('tr-t').value.trim();
+    const ids = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-tr]:checked'))].map(c => /** @type {string} */ (c.dataset.tr)), tp = $('tr-t').value.trim();
     if (!ids.length || !tp) return toast(t('needTrain'), true); if (!navigator.onLine) return toast(t('offline'), true);
     $('tr-go').disabled = true;
     const { data, error } = await sb.from('training_requests').insert({ manager_emp:APP.me.emp_id, emp_ids:ids, topic:tp, details:$('tr-d').value.trim() || null, preferred_date:$('tr-dt').value || null }).select();
@@ -1919,7 +1936,7 @@ document.addEventListener('click', async e => {
   const sb2 = /** @type {HTMLElement} */ (e.target).closest('[data-salb]'); if (sb2) return salarySheet(sb2.dataset.salb, sb2.dataset.ok === '1');
   const c = /** @type {HTMLElement} */ (e.target).closest('[data-close-hire]'); if (c) return closeHireSheet(c.dataset.closeHire);
   const x = /** @type {HTMLElement} */ (e.target).closest('[data-cancel-act]'); if (x){
-    const { error } = await sb.rpc('cancel_manager_action', { p_id:x.dataset.cancelAct }); if (error) return toast(friendly(error.message), true);
+    const { error } = await sb.rpc('cancel_manager_action', { p_id:/** @type {string} */ (x.dataset.cancelAct) }); if (error) return toast(friendly(error.message), true);
     const m = (APP.mgrReqs || []).find(m => m.kind==='act' && m.r.id === x.dataset.cancelAct); if (m) m.r.status = 'Cancelled'; toast(t('cancelled')); renderVoice(); }
 });
 function inboxSheet(id){
