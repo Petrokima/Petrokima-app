@@ -163,7 +163,7 @@ const T = {
   annualNoticeErr:'Annual leave must be requested at least {n} day(s) before it starts. For today, choose emergency (casual) leave.',
   pastDateErr:'Emergency leave can be requested for today or a later day, not for past days.',mgrNote:'Your note',
   approvedFinal:'Approved ✓',teamTitle:'Project Allowance for your team',teamNote:'Calculated from their attendance at projects. Nothing is paid until you approve and HR then approves.',
-  rejectWhy:'Reason for rejecting',approvedMsg:'Approved — sent to HR ✓',rejectedMsg:'Rejected',noTeam:'Nothing to approve',
+  rejectWhy:'Reason for rejecting',removeProj:'Remove this project',removeWhy:'Reason for removing (required)',needWhy:'Write the reason (at least 3 characters)',approvedMsg:'Approved — sent to HR ✓',rejectedMsg:'Rejected',noTeam:'Nothing to approve',
   aaWait:'Waiting for you',aaHR:'Approved by you — waiting for HR',aaOk:'Approved — will be paid',aaNo:'Rejected',day:'day',daysW:'days',at:'at',
   locAppAndroid:'Android: open the phone Settings → Apps → Petrokima → Permissions → Location → “Allow only while using the app”. Also make sure Location is switched ON in the quick settings.',
   locAppIos:'iPhone: open Settings → Petrokima → Location → “While Using the App”, and switch Precise Location on.',
@@ -256,7 +256,7 @@ const T = {
   payLockTitle:'مفرداتك محمية',payLockSub:'أدخل كلمة المرور لعرضها.',payUnlock:'عرض مفرداتي',payWrongPass:'كلمة المرور غير صحيحة',payNeedNet:'اتصل بالإنترنت لعرض مفرداتك.',payLock:'🔒 قفل',
   firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن كلمة المرور الأولى.',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
-  projectsN:'{n} مشروع',noProjAssigned:'بدون مشروعات — يسجّل في أي مشروع',addProject:'أضف مشروعاً — اكتب الكود أو الاسم…',projAdded:'تمت إضافة المشروع ✓',projRemoved:'تم حذف المشروع',
+  projectsN:'{n} مشروع',noProjAssigned:'بدون مشروعات — يسجّل في أي مشروع',addProject:'أضف مشروعاً — اكتب الكود أو الاسم…',projAdded:'تمت إضافة المشروع ✓',projRemoved:'تمت إزالة المشروع',
   removeProjQ:'حذف هذا المشروع من {name}؟',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',
   sentAt:'أُرسل',lateRule:'إذن التأخير الصباحي يُطلب قبل الساعة {time} من نفس اليوم.',
   leaveRules:'الإجازة السنوية: تُطلب قبل بدايتها بـ {n} يوم على الأقل. الإجازة العارضة: يمكن طلبها في نفس اليوم.',
@@ -264,7 +264,7 @@ const T = {
   annualNoticeErr:'الإجازة السنوية تُطلب قبل بدايتها بـ {n} يوم على الأقل. لليوم نفسه اختر إجازة عارضة.',
   pastDateErr:'الإجازة العارضة تُطلب لليوم أو لأيام قادمة، وليس لأيام سابقة.',mgrNote:'ملاحظتك',
   approvedFinal:'تمت الموافقة ✓',teamTitle:'بدل المشروع لفريقك',teamNote:'محسوب من حضورهم في المشروعات. لا يُصرف أي مبلغ إلا بعد موافقتك ثم موافقة الموارد البشرية.',
-  rejectWhy:'سبب الرفض',approvedMsg:'تمت الموافقة — أُرسل إلى الموارد البشرية ✓',rejectedMsg:'تم الرفض',noTeam:'لا توجد طلبات للموافقة',
+  rejectWhy:'سبب الرفض',removeProj:'إزالة هذا المشروع',removeWhy:'سبب الإزالة (مطلوب)',needWhy:'اكتب السبب (3 أحرف على الأقل)',approvedMsg:'تمت الموافقة — أُرسل إلى الموارد البشرية ✓',rejectedMsg:'تم الرفض',noTeam:'لا توجد طلبات للموافقة',
   aaWait:'في انتظار موافقتك',aaHR:'وافقت عليه — في انتظار الموارد البشرية',aaOk:'معتمد — سيُصرف',aaNo:'مرفوض',day:'يوم',daysW:'أيام',at:'في',
   locAppAndroid:'أندرويد: افتح إعدادات الهاتف ← التطبيقات ← بتروكيما ← الأذونات ← الموقع ← «السماح فقط أثناء استخدام التطبيق». وتأكد أيضاً من تشغيل الموقع من الإعدادات السريعة.',
   locAppIos:'آيفون: افتح الإعدادات ← بتروكيما ← الموقع ← «أثناء استخدام التطبيق»، وشغّل «الموقع الدقيق».',
@@ -1695,12 +1695,23 @@ async function teamProjSheet(empId){
     $('tproj-res').innerHTML = (r.data||[]).filter(p => !have.has(p.id)).map(p => `<button class="site" data-tproj-add="${esc(empId)}|${esc(p.id)}"><b>＋ ${esc(p.name || p.id)}</b><span>${esc(p.id)}${p.location ? ' · ' + esc(p.location) : ''}</span></button>`).join('') || `<div class="hint">${esc(t('noSites'))}</div>`;
   }, 300); });
 }
-async function teamProjChange(key, add){
+// 100: nothing is deleted — a removed project is CLOSED with a reason and kept in the register of closed records
+function askProjRemove(key){
+  const code = key.split('|')[1] || '';
+  sheet(`<h2>✕ ${esc(t('removeProj'))}</h2><div class="t2" style="margin-bottom:8px">${esc(code)}</div>
+    <div class="field"><label for="tpr-why">${esc(t('removeWhy'))}</label><textarea id="tpr-why"></textarea></div>
+    <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="tpr-go">${esc(t('removeProj'))}</button></div>`);
+  $('tpr-go').onclick = () => { const why = $('tpr-why').value.trim();
+    if (why.length < 3) return toast(t('needWhy'), true);
+    $('tpr-go').disabled = true; teamProjChange(key, false, why); };
+}
+async function teamProjChange(key, add, why){
   const [empId, code] = key.split('|');
+  if (!navigator.onLine) return toast(t('offline'), true);
   const res = add ? await sb.from('employee_projects').insert({ emp_id: empId, project_code: code }).select()
-                  : await sb.from('employee_projects').delete().eq('emp_id', empId).eq('project_code', code).select();
-  if (res.error) return toast(friendly(res.error.message), true);
-  if (!(res.data && res.data.length)) return toast(t('notAllowed'), true);
+                  : await sb.rpc('close_records', { p_tbl: 'employee_projects', p_keys: [{ emp_id: empId, project_code: code }], p_reason: why || '' });
+  if (res.error) { const b = $('tpr-go'); if (b) b.disabled = false; return toast(friendly(String(res.error.message).replace(/^.*?\b(NO_DELETE|CLOSE_REASON|NOT_CLOSED|CLOSE_KEYS|CLOSE_TABLE): ?/, '')), true); }
+  if (add ? !(Array.isArray(res.data) && res.data.length) : !res.data) return toast(t('notAllowed'), true);
   toast(add ? t('projAdded') : t('projRemoved'));
   const r = await sb.rpc('my_team'); APP.myTeam = r.data || APP.myTeam; saveCache(); renderTeam(); teamProjSheet(empId);
 }
@@ -1989,7 +2000,7 @@ document.addEventListener('click', async ev => {
   const cx = x.closest('[data-cancel]'); if (cx) return askCancel(cx.dataset.cancel);
   const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(tp.dataset.tproj);
   const tpa = x.closest('[data-tproj-add]'); if (tpa) return teamProjChange(tpa.dataset.tprojAdd, true);
-  const tpr = x.closest('[data-tproj-rm]'); if (tpr) return teamProjChange(tpr.dataset.tprojRm, false);
+  const tpr = x.closest('[data-tproj-rm]'); if (tpr) return askProjRemove(tpr.dataset.tprojRm);
   const rok = x.closest('[data-treq-ok]'); if (rok) { rok.disabled = true; return teamReqDecide(rok.dataset.treqOk, true); }
   const rno = x.closest('[data-treq-no]'); if (rno) { const key = rno.dataset.treqNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="rno-note"></textarea></div>
