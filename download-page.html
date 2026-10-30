@@ -1,5 +1,6 @@
 <!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Petrokima HR — تحميل التطبيق</title>
 <link rel="icon" href="icon-192.png?v=39">
 <style>
@@ -14,30 +15,29 @@
   .btn{display:block;text-align:center;background:var(--blue);color:#fff;text-decoration:none;font-weight:700;font-size:18px;padding:14px;border-radius:14px;margin-top:8px}
   .btn.alt{background:var(--teal)} ol{padding-inline-start:20px;margin:6px 0} .en{direction:ltr;text-align:left}
   .lang{position:absolute;top:14px;inset-inline-start:14px;background:#ffffff22;color:#fff;border:0;border-radius:10px;padding:6px 12px;font-family:inherit;cursor:pointer}
+  .lang-switch{position:absolute;opacity:0;pointer-events:none}
+  .en{display:none} .lang-switch:checked ~ * .en{display:inline} .lang-switch:checked ~ * .ar{display:none}
+  .lang-switch:checked ~ header, .lang-switch:checked ~ main{direction:ltr}
+  .lang-switch:focus-visible ~ header .lang{outline:2px solid #fff}
 </style></head>
 <body>
-<header style="position:relative"><button class="lang" onclick="sw()">English</button>
-  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-ar="تطبيق بتروكيما للموارد البشرية" data-en="Petrokima HR app">تطبيق بتروكيما للموارد البشرية</h1>
-  <p data-ar="الحضور والطلبات ومفردات الراتب — على هاتفك" data-en="Attendance, requests and payslips — on your phone">الحضور والطلبات ومفردات الراتب — على هاتفك</p></header>
+<input type="checkbox" id="lang" class="lang-switch" aria-label="English / العربية">
+<header style="position:relative"><label for="lang" class="lang"><span class="ar">English</span><span class="en">العربية</span></label>
+  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1><span class="ar">تطبيق بتروكيما للموارد البشرية</span><span class="en">Petrokima HR app</span></h1>
+  <p><span class="ar">الحضور والطلبات ومفردات الراتب — على هاتفك</span><span class="en">Attendance, requests and payslips — on your phone</span></p></header>
 <main>
-  <div class="card"><h2>🤖 <span data-ar="أندرويد" data-en="Android">أندرويد</span></h2>
-    <ol><li data-ar="اضغط الزر أدناه لتنزيل التطبيق." data-en="Tap the button below to download the app.">اضغط الزر أدناه لتنزيل التطبيق.</li>
-      <li data-ar="افتح الملف Petrokima.apk واسمح بالتثبيت إذا طُلب منك." data-en="Open Petrokima.apk and allow the installation if asked.">افتح الملف Petrokima.apk واسمح بالتثبيت إذا طُلب منك.</li>
-      <li data-ar="إذا ظهر تحذير: «مزيد من التفاصيل» ← «التثبيت على أي حال»." data-en="If a warning appears: More details → Install anyway.">إذا ظهر تحذير: «مزيد من التفاصيل» ← «التثبيت على أي حال».</li></ol>
-    <a class="btn" href="Petrokima.apk" data-ar="⬇ تنزيل تطبيق أندرويد" data-en="⬇ Download for Android">⬇ تنزيل تطبيق أندرويد</a></div>
-  <div class="card"><h2>🍎 <span data-ar="آيفون" data-en="iPhone">آيفون</span></h2>
-    <ol><li data-ar="افتح الرابط أدناه في متصفح سفاري." data-en="Open the link below in Safari.">افتح الرابط أدناه في متصفح سفاري.</li>
-      <li data-ar="اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»." data-en="Tap Share, then “Add to Home Screen”.">اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».</li>
-      <li data-ar="افتح التطبيق دائماً من الأيقونة الجديدة." data-en="Always open the app from the new icon.">افتح التطبيق دائماً من الأيقونة الجديدة.</li></ol>
-    <a class="btn alt" href="__APP_URL__" data-ar="فتح التطبيق على آيفون" data-en="Open the app on iPhone">فتح التطبيق على آيفون</a></div>
-  <div class="card"><h2>🔑 <span data-ar="أول تسجيل دخول" data-en="First sign-in">أول تسجيل دخول</span></h2>
-    <p data-ar="كود الموظف + كلمة المرور الأولى: Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191). بعدها اختر كلمة مرور خاصة بك."
-       data-en="Employee code + first password: Petro@ followed by the last 4 digits of your national ID (e.g. Petro@5191). Then choose your own password.">كود الموظف + كلمة المرور الأولى: Petro@ ثم آخر ٤ أرقام من رقمك القومي (مثال: Petro@5191). بعدها اختر كلمة مرور خاصة بك.</p></div>
-  <p style="text-align:center;color:var(--muted);font-size:13px" data-ar="الإصدار __VERSION__" data-en="Version __VERSION__">الإصدار __VERSION__</p>
+  <div class="card"><h2>🤖 <span><span class="ar">أندرويد</span><span class="en">Android</span></span></h2>
+    <ol><li><span class="ar">اضغط الزر أدناه لتنزيل التطبيق.</span><span class="en">Tap the button below to download the app.</span></li>
+      <li><span class="ar">افتح الملف Petrokima.apk واسمح بالتثبيت إذا طُلب منك.</span><span class="en">Open Petrokima.apk and allow the installation if asked.</span></li>
+      <li><span class="ar">إذا ظهر تحذير: «مزيد من التفاصيل» ← «التثبيت على أي حال».</span><span class="en">If a warning appears: More details → Install anyway.</span></li></ol>
+    <a class="btn" href="Petrokima.apk"><span class="ar">⬇ تنزيل تطبيق أندرويد</span><span class="en">⬇ Download for Android</span></a></div>
+  <div class="card"><h2>🍎 <span><span class="ar">آيفون</span><span class="en">iPhone</span></span></h2>
+    <ol><li><span class="ar">افتح الرابط أدناه في متصفح سفاري.</span><span class="en">Open the link below in Safari.</span></li>
+      <li><span class="ar">اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية».</span><span class="en">Tap Share, then “Add to Home Screen”.</span></li>
+      <li><span class="ar">افتح التطبيق دائماً من الأيقونة الجديدة.</span><span class="en">Always open the app from the new icon.</span></li></ol>
+    <a class="btn alt" href="__APP_URL__"><span class="ar">فتح التطبيق على آيفون</span><span class="en">Open the app on iPhone</span></a></div>
+  <div class="card"><h2>🔑 <span><span class="ar">أول تسجيل دخول</span><span class="en">First sign-in</span></span></h2>
+    <p><span class="ar">ادخل بكود الموظف وكلمة المرور المؤقتة التي تعطيها لك الموارد البشرية، ثم اختر كلمة مرور خاصة بك.</span><span class="en">Sign in with your employee code and the temporary password HR gives you, then choose your own password.</span></p></div>
+  <p style="text-align:center;color:var(--muted);font-size:13px"><span class="ar">الإصدار __VERSION__</span><span class="en">Version __VERSION__</span></p>
 </main>
-<script>
-  let L = 'ar';
-  function sw(){ L = L === 'ar' ? 'en' : 'ar'; document.documentElement.lang = L; document.documentElement.dir = L === 'ar' ? 'rtl' : 'ltr';
-    document.querySelectorAll('[data-ar]').forEach(e => e.textContent = e.dataset[L]); document.querySelector('.lang').textContent = L === 'ar' ? 'English' : 'العربية'; }
-</script>
 </body></html>
