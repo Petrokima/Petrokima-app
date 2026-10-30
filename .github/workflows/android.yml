@@ -4,7 +4,7 @@ name: Build Android app
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'test/**']      # test/… branches build a TEST app only (see the last step)
   workflow_dispatch:
 
 permissions:
@@ -64,6 +64,7 @@ jobs:
           APP_BUILD: ${{ github.run_number }}
           APK_REPO: ${{ github.repository }}
           APK_DOWNLOAD: ${{ vars.DOWNLOAD_DOMAIN && format('https://{0}/Petrokima.apk', vars.DOWNLOAD_DOMAIN) || '' }}
+          ANDROID_STRICT_CSP: ${{ startsWith(github.ref, 'refs/heads/test/') && '1' || '' }}
         run: node scripts/prepare-web.js
 
       - name: Create the Android project
@@ -117,6 +118,7 @@ jobs:
         run: cp android/app/build/outputs/apk/release/app-release.apk Petrokima.apk
 
       - name: Build the download page
+        if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p site
           cp Petrokima.apk site/Petrokima.apk
@@ -130,6 +132,7 @@ jobs:
           DOWNLOAD_DOMAIN: ${{ vars.DOWNLOAD_DOMAIN }}
 
       - name: Publish the download page (GitHub Pages)
+        if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453   # v4.1.0 — pinned (review)
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -138,6 +141,7 @@ jobs:
           force_orphan: true
 
       - name: Publish the download
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.6.2 — pinned (review)
         with:
           tag_name: v1.0.${{ github.run_number }}
@@ -148,3 +152,16 @@ jobs:
             https://github.com/${{ github.repository }}/releases/latest/download/Petrokima.apk
           files: Petrokima.apk
           make_latest: true
+
+      - name: Publish a TEST version (test/… branches only — not on the download page, never offered to staff)
+        if: startsWith(github.ref, 'refs/heads/test/')
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.6.2 — pinned (review)
+        with:
+          tag_name: test-1.0.${{ github.run_number }}
+          name: TEST ONLY — Petrokima Android 1.0.${{ github.run_number }} (${{ github.ref_name }})
+          body: |
+            TEST version for one phone only — not for staff. Built from branch ${{ github.ref_name }}.
+            Direct link: https://github.com/${{ github.repository }}/releases/download/test-1.0.${{ github.run_number }}/Petrokima.apk
+          files: Petrokima.apk
+          prerelease: true
+          make_latest: false

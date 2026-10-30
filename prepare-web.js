@@ -29,8 +29,9 @@ html = html.replace(/<script src="vendor\/sentry\.js\?v=[^"]*"><\/script>/, sent
 html = html.replace(/<script src="app\.js\?v=[^"]*"><\/script>/, '<script src="app.js"></script>');
 html = html.replace(/href="fonts\/cairo\.css\?v=[^"]*"/, 'href="fonts/cairo.css"');
 // The web pages carry a strict security policy. Inside the app it is left out for now: Capacitor adds its own start-up code
-// to the page, which such a policy may block — to be switched on after testing on a phone.
-html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\n?/, '');
+// to the page, which such a policy may block — test builds (branches test/…) keep it, to try it on a phone first.
+if (process.env.ANDROID_STRICT_CSP === '1') console.log('✔ TEST build: strict security policy kept in the app');
+else html = html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>\n?/, '');
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '');                       // web-app install files are not needed inside the app
 if (/<script(?![^>]*\bsrc=)[^>]*>/i.test(html)) throw new Error('index.html must not contain code (inline <script>) — it belongs in app.js');
 fs.writeFileSync(path.join(out, 'index.html'), html);
