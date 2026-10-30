@@ -2,8 +2,8 @@
 // Check-ins and requests always go live to the server (never cached).
 // v29 (20 Oct 2026): new version only so iPhones install a fresh worker under the corrected Cloudflare security rule —
 // a worker keeps the security rule it was installed with until sw.js itself changes.
-const VERSION = 'pk-mobile-v50';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './vendor/supabase.js?v=2.117.3', './vendor/sentry.js?v=11.7.0', './app.js?v=pk-mobile-v50',
+const VERSION = 'pk-mobile-v51';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './vendor/supabase.js?v=2.117.3', './vendor/sentry.js?v=11.7.0', './app.js?v=pk-mobile-v51',
                './fonts/cairo.css?v=5.3.0', './fonts/cairo-arabic-400-normal.woff2', './fonts/cairo-arabic-600-normal.woff2', './fonts/cairo-arabic-700-normal.woff2', './fonts/cairo-arabic-800-normal.woff2', './fonts/cairo-latin-400-normal.woff2', './fonts/cairo-latin-600-normal.woff2', './fonts/cairo-latin-700-normal.woff2', './fonts/cairo-latin-800-normal.woff2', './fonts/cairo-latin-ext-400-normal.woff2', './fonts/cairo-latin-ext-600-normal.woff2', './fonts/cairo-latin-ext-700-normal.woff2', './fonts/cairo-latin-ext-800-normal.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

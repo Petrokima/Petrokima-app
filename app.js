@@ -429,7 +429,9 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
 //  SIGN-IN
 // ═════════════════════════════════════════════════════════
 const APP = { ready:false, me:null, emp:null, status:null, statusAt:0, leaves:[], perms:[], reqs:[], slips:[], att:[], manager:null, view:'home' };
-let sb = null, tempPass = '';
+/** @type {PhoneDb} — the database connection (typed: every table, column and database function is checked) */
+let sb = null;
+let tempPass = '';
 // ── things kept on the phone so the app works without internet ──
 const store = { get:(k,d)=>{ try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch(e){ return d; } }, set:(k,v)=>{ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
 const queue = () => store.get('pk_queue', []);
@@ -701,7 +703,7 @@ function dreqSheet(id){
     <button class="btn" id="dq-go">${esc(t('dreqSend'))}</button>`);
   $('dq-go').onclick = async () => {
     if (!navigator.onLine) return toast(t('offline'), true);
-    const vals = {}; for (const f of flds) { const v = ($('dq-' + f.key).value || '').trim(); if (!v) return toast(t('dreqNeed'), true); vals[f.key] = v; }
+    /** @type {Record<string, string>} */ const vals = {}; for (const f of flds) { const v = ($('dq-' + f.key).value || '').trim(); if (!v) return toast(t('dreqNeed'), true); vals[f.key] = v; }
     const btn = $('dq-go'); btn.disabled = true;
     const { data, error } = await sb.rpc('answer_data_request', { p_id: d.id, p_vals: vals });
     btn.disabled = false;
@@ -719,7 +721,8 @@ function contactSheet(){
     <button class="btn" id="mc-go">${esc(t('saveL'))}</button>`);
   $('mc-go').onclick = async () => {
     if (!navigator.onLine) return toast(t('offline'), true);
-    const vals = {}, cur = { mobile: e.mobile || '', personal_email: e.personal_email || '', address: e.address || '' };
+    /** @type {Record<string, string>} */ const vals = {};
+    const cur = { mobile: e.mobile || '', personal_email: e.personal_email || '', address: e.address || '' };
     [['mobile','mc-mobile'],['personal_email','mc-email'],['address','mc-address']].forEach(([k, id]) => { const v = $(id).value.trim(); if (v && v !== cur[k]) vals[k] = v; });
     if (!Object.keys(vals).length) return toast(t('noChange'));
     const btn = $('mc-go'); btn.disabled = true;
@@ -898,7 +901,7 @@ async function webSubscribe(ask){
   const want = b64ToBytes(key), have = sub && sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
   if (sub && have && (have.length !== want.length || have.some((b, i) => b !== want[i]))) { await sub.unsubscribe(); sub = null; }   // key changed
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
-  const { error } = await sb.rpc('save_push_web', { p_sub: sub.toJSON(), p_lang: LANG });
+  const { error } = await sb.rpc('save_push_web', { p_sub: /** @type {Json} */ (sub.toJSON()), p_lang: LANG });
   if (error) throw error;
   localStorage.setItem('pk_push_web', sub.endpoint);
   return true;
@@ -1390,18 +1393,19 @@ function hrSheet(){
     send('hr_requests', { emp_id:APP.me.emp_id, request_type:ty, details:d||null, status:'Pending' }, $('hq-go'));
   };
 }
+/** @param {'attendance_permissions' | 'employee_leaves' | 'hr_requests'} table — where the request is saved */
 async function send(table, rec, btn){
   if (!navigator.onLine) return toast(t('offline'), true);
   btn.disabled = true;
   const { data, error } = await sb.from(table).insert(rec).select();
   btn.disabled = false;
   if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-  closeSheet(); toast((table==='employee_leaves' || table==='attendance_permissions') && data[0].manager_status==='Pending' ? t('sentMgr') : t('sent')); await loadAll(); renderAll();
+  closeSheet(); toast((table==='employee_leaves' || table==='attendance_permissions') && /** @type {{ manager_status?: string }} — only leaves and permissions have a manager step */ (data[0]).manager_status==='Pending' ? t('sentMgr') : t('sent')); await loadAll(); renderAll();
 }
 function askCancel(key){
   sheet(`<h2>${esc(t('cancelQ'))}</h2><div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="cx-go">${esc(t('yes'))}</button></div>`);
   $('cx-go').onclick = async () => {
-    const [k,id]=key.split(':'), table={ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' }[k];
+    const [k,id]=key.split(':'), table=/** @type {Record<string, 'employee_leaves' | 'attendance_permissions' | 'hr_requests'>} */ ({ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' })[k];
     if (k === 'mis') { const { error } = await sb.rpc('cancel_mission', { p_id:id }); if (error) return toast(friendly(error.message), true); closeSheet(); toast(t('cancelled')); await loadAll(); renderAll(); return; }
     const { data, error } = await sb.from(table).update({ status:'Cancelled' }).eq('id', id).select();
     if (error || !(data && data.length)) return toast(t('cantCancel'), true);
