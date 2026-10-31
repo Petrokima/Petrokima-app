@@ -1321,28 +1321,10 @@ const sentAt = ts => ts ? new Date(ts).toLocaleString(LANG==='ar' ? 'ar-EG' : 'e
 // latest time to ask for a late-arrival permission: shift start + the allowed minutes (Settings)
 function lateDeadline(){ const [h,m] = String(S.shiftStart || '08:00').split(':').map(Number); const tot = h*60 + m + (Number(S.permDeadlineMin) || 30);
   return `${String(Math.floor(tot/60)%24).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`; }
-function renderRequests(){
-  const ent=entitlement(), taken=yearDays(annualTypes(),'Approved'), pend=yearDays(annualTypes(),'Pending');
-  const cyc=cycleOf(todayStr()), lim=num(S.permissionsPerMonth)||2, used=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
-  const open = APP.leaves.filter(l=>l.status==='Pending').length + APP.perms.filter(p=>p.status==='Pending').length + APP.reqs.filter(r=>r.status==='Pending'||r.status==='In progress').length;
-  const lb = APP.lbal, annLeft = lb ? num(lb.remaining) : ent-taken, annPend = lb ? num(lb.pending) : pend;
-  const emLeft = lb ? Math.max(0, num(lb.emergency_cap) - num(lb.emergency_taken) - num(lb.emergency_pending)) : null;
-  $('req-stats').innerHTML = `<div class="stat"><div class="v num">${fmt(annLeft)}</div><div class="l">${esc(t('annualLeft'))}${annPend?`<br>(${fmt(annPend)} ${esc(tm('st','Pending'))})`:''}${emLeft!==null?`<br>${esc(t('emergLeft'))}: <b class="num">${fmt(emLeft)}</b>`:''}${lb && lb.eligible_from > todayStr() && !lb.early_ok ? `<br><span class="neg">${esc(t('leaveFrom', { d: dShort(lb.eligible_from) }))}</span>` : ''}</div></div>
-    <div class="stat"><div class="v num">${used}/${lim}</div><div class="l">${esc(t('permsUsed'))}</div></div>
-    <div class="stat"><div class="v num">${open}</div><div class="l">${esc(t('openReq'))}</div></div>`;
-  /** @type {any[]} — leaves, permissions, HR requests and missions in one list (see k) */
-  const items = [
-    ...APP.leaves.map(l=>({ k:'leave', id:l.id, at:l.created_at, icon:'🌴', title:t('leaveTitle',{ t: tm('lt',l.leave_type) }), sub:`${niceDate(l.date_from)} → ${niceDate(l.date_to)} · ${fmt(l.days)} ${t('days')}`, st:reqStage(l), reply:[l.manager_note, l.decision_note].filter(Boolean).join(' · ') })),
-    ...APP.perms.map(p=>({ k:'perm', id:p.id, at:p.requested_at, icon:'✋', title:tm('pt',p.type), sub:`${niceDate(p.date)} · ${fmtH(p.hours)}`, st:reqStage(p), reply:[p.manager_note, p.decision_note].filter(Boolean).join(' · ') })),
-    ...APP.reqs.map(r=>({ k:'req', id:r.id, at:r.created_at, icon:'📨', title:tm('ht',r.request_type), sub:r.details||'', st:r.status, reply:r.hr_response||'' })),
-    ...(APP.missions||[]).map(m=>({ k:'mis', id:m.id, at:m.created_at, icon:'🚗', title:`${t('reqMission')} · ${m.place}`, sub:misWhen(m) + (m.origin==='manager' ? ' · ' + t('misAssignedBy') : ''),
-       st:m.status, stHtml: misChip(m, false), reply:[m.purpose, m.manager_note, m.hr_note].filter(Boolean).join(' · '), noCancel: m.origin==='manager' })),
-  ].sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
-  $('req-list').innerHTML = items.map(x => `<div class="it"><div style="font-size:22px">${x.icon}</div><div class="grow"><div class="t1">${esc(x.title)}</div>
-      <div class="t2">${esc(x.sub)}</div>${x.at?`<div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(x.at))}</div>`:''}${x.reply?`<div class="t2" style="color:var(--text)">💬 ${esc(x.reply)}</div>`:''}</div>
-      <div style="text-align:end">${x.stHtml || chip(x.st)}${['Pending','Waiting for manager','Waiting for HR'].includes(x.st)&&!x.noCancel?`<div style="margin-top:6px"><button class="btn ghost small" data-cancel="${x.k}:${x.id}">${esc(t('cancelReq'))}</button></div>`:''}</div></div>`).join('')
-    || `<div class="empty">${esc(t('noRequests'))}</div>`;
-}
+// The figures at the top of the Requests tab and "My requests" are React since 31 Oct 2026 — react/src/phone/requests. Kept here:
+// the leave arithmetic above (also used by the request windows), the windows, Cancel (data-cancel → askCancel) and the mission
+// notice (renderMisAck, added by the wrapper below).
+function renderRequests(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function opt(list, group){ return list.map(v=>`<option value="${esc(v)}">${esc(tm(group,v))}</option>`).join(''); }
 function leaveSheet(){
   sheet(`<h2>🌴 ${esc(t('reqLeave'))}</h2>

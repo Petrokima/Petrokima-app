@@ -181,7 +181,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     </div>
     <!-- REQUESTS -->
     <div class="view" id="v-req">
-      <div class="stats" id="req-stats"></div>
+      <div id="react-req-stats"></div>   <!-- the figures and "My requests" are React: react/src/phone/requests -->
       <div style="display:grid;gap:10px;margin-bottom:14px">
         <button class="btn" data-act="req-leave">🌴 <span data-t="reqLeave"></span></button>
         <button class="btn" data-act="req-perm">✋ <span data-t="reqPerm"></span></button>
@@ -192,7 +192,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       <div id="mis-ack"></div>
       <div id="doc-card"></div>
       <div id="dreq-card"></div>
-      <div class="card"><div class="sec" data-t="myRequests"></div><div class="list" id="req-list"></div></div>
+      <div class="card"><div class="sec" data-t="myRequests"></div><div id="react-req-list"></div></div>
       <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
     </div>
     <!-- NEWS: announcements & decisions -->
@@ -238,8 +238,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v55"></script>
+<script src="app.js?v=pk-mobile-v56"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v55"></script>
+<script src="react.js?v=pk-mobile-v56"></script>
 </body>
 </html>
