@@ -1003,7 +1003,7 @@ async function loadAll(){
     all(sb.from('employee_leaves').select('*').eq('emp_id', id).order('date_from', { ascending:false })),
     all(sb.from('attendance_permissions').select('*').eq('emp_id', id).order('date', { ascending:false })),
     all(sb.from('hr_requests').select('*').eq('emp_id', id).order('created_at', { ascending:false })),
-    Promise.resolve([]),                                   // payslips are loaded only after the password (unlockPayslips)
+    Promise.resolve([]),                                   // payslips are loaded only after the password (payslipUnlock)
     sb.rpc('my_manager').then(r => r.data || [], () => []),
     all(sb.from('allowance_approvals').select('*').eq('manager_id', id).order('submitted_at', { ascending:false })),
     all(sb.from('employee_leaves').select('*').eq('manager_id', id).order('date_from', { ascending:false }).limit(60)),
@@ -1547,34 +1547,21 @@ renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMi
 // ═════════════════════════════════════════════════════════
 //  PAYSLIPS & PROFILE
 // ═════════════════════════════════════════════════════════
-function renderPayslips(){
-  if (!APP.payUnlocked){
-    $('pay-list').innerHTML = `<div style="text-align:center;padding:18px 6px"><div style="font-size:40px">🔒</div><div class="t1" style="margin-top:6px">${esc(t('payLockTitle'))}</div>
-      <div class="hint">${esc(t('payLockSub'))}</div>
-      <div class="field" style="margin-top:12px"><input id="pay-pass" type="password" autocomplete="current-password" placeholder="${esc(t('password'))}"></div>
-      <div id="pay-cap" style="display:none;margin:0 0 10px"></div><button class="btn" id="pay-go">${esc(t('payUnlock'))}</button><div class="err" id="pay-err"></div></div>`;
-    $('pay-go').onclick = unlockPayslips; $('pay-pass').onkeydown = e => { if (e.key === 'Enter') unlockPayslips(); };
-    return;
-  }
-  $('pay-list').innerHTML = `<div style="text-align:end;margin-bottom:6px"><button class="btn ghost small" id="pay-lock">${esc(t('payLock'))}</button></div>`;
-  $('pay-list').innerHTML += APP.slips.map(l => `<div class="it" data-slip="${esc(l.period)}" style="cursor:pointer"><div style="font-size:22px">💰</div>
-      <div class="grow"><div class="t1">${esc(periodLabel(l.period))}</div><div class="t2">${esc(t('gross'))} <span class="num">${fmt(l.gross)}</span> · ${esc(t('ded'))} <span class="num">${fmt(l.deductions)}</span></div></div>
-      <div class="num pos" style="font-size:16px">${fmt(l.net)}</div></div>`).join('') || `<div class="empty">${esc(t('noSlips'))}</div>`;
-  $('pay-lock').onclick = () => { APP.payUnlocked = false; APP.slips = []; renderPayslips(); };
-}
-// the payslips need the password every time they are opened
-async function unlockPayslips(){
-  const pw = $('pay-pass').value; if (!pw) return;
-  if (!navigator.onLine) return errBox('pay-err', t('payNeedNet'));
-  $('pay-go').disabled = true;
+// The Payslips tab (lock screen and list) is React since 31 Oct 2026 — react/src/phone/payslips. Kept here: the password check and
+// the reading of the payslips (payslipUnlock, through the React bridge), locking again (lockPayslips; also when the tab is left
+// or the screen turns off — go() / visibilitychange) and the payslip window (slipSheet, data-slip page-wide handler).
+function renderPayslips(){ if (typeof PKM !== 'undefined') PKM.render(); }
+function lockPayslips(){ APP.payUnlocked = false; APP.slips = []; renderPayslips(); }
+/** the payslips need the password every time they are opened: '' = opened, otherwise the message to show @param {string} pw */
+async function payslipUnlock(pw){
+  if (!navigator.onLine) return t('payNeedNet');
   const email = ((((await sb.auth.getSession()).data || {}).session || {}).user || {}).email || (APP.me && APP.me.email);   // the account signed in right now
   let cap; try { cap = await captchaToken('pay-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }
   const { error } = await withTimeout(sb.auth.signInWithPassword({ email: /** @type {string} — if missing, the sign-in simply fails with a message */ (email), password: pw, options: cap ? { captchaToken: cap } : undefined }), 15000);
-  $('pay-go').disabled = false;
-  if (error) return errBox('pay-err', /invalid|credentials/i.test(error.message) ? t('payWrongPass') : friendly(error.message));
+  if (error) return /invalid|credentials/i.test(error.message) ? t('payWrongPass') : friendly(error.message);
   const r = await withTimeout(sb.from('payroll_run_lines').select('*').eq('emp_id', APP.me.emp_id).order('period', { ascending:false }), 15000);
-  if (r.error) return errBox('pay-err', friendly(r.error.message));
-  APP.slips = r.data || []; APP.payUnlocked = true; renderPayslips();
+  if (r.error) return friendly(r.error.message);
+  APP.slips = r.data || []; APP.payUnlocked = true; renderPayslips(); return '';
 }
 function slipSheet(period){
   const l = APP.slips.find(x=>x.period===period); if (!l) return;
@@ -1753,14 +1740,9 @@ function renderAll(){ if(!APP.ready) return; const e=APP.emp||/** @type {Employe
 const dShort = ts => ts ? new Date(ts).toLocaleDateString(LANG==='ar' ? 'ar-EG' : 'en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
 const stLbl = s => ({ 'Waiting for board':{en:'Waiting for board member',ar:'بانتظار عضو مجلس الإدارة'}, 'Waiting for HR':{en:'Waiting for HR',ar:'بانتظار الموارد البشرية'}, Approved:{en:'Approved',ar:'تمت الموافقة'}, Cancelled:{en:'Cancelled',ar:'ملغي'}, New:{en:'New',ar:'جديد'}, 'In review':{en:'In review',ar:'قيد المراجعة'}, Closed:{en:'Closed',ar:'مغلق'}, 'In progress':{en:'In progress',ar:'جارٍ التنفيذ'}, Done:{en:'Done',ar:'تم'}, Rejected:{en:'Rejected',ar:'مرفوض'} }[s] || {en:s,ar:s})[LANG==='ar'?'ar':'en'];
 const stChip = s => `<span class="chip ${({'Waiting for board':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Cancelled:'c-grey',New:'c-orange','In review':'c-blue','In progress':'c-blue',Closed:'c-green',Done:'c-green',Rejected:'c-red'})[s]||'c-grey'}">${esc(stLbl(s))}</span>`;
-function renderNews(){
-  const L = APP.news || [], unread = L.filter(a => !APP.newsRead?.has(a.id)).length;
-  $('news-badge').style.display = unread ? '' : 'none'; $('news-badge').textContent = unread;
-  $('news-list').innerHTML = L.map(a => `<div class="it" style="display:block${APP.newsRead?.has(a.id) ? '' : ';border-inline-start:4px solid #d64545'}">
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span class="chip ${a.kind==='decision'?'c-blue':'c-green'}">${a.kind==='decision' ? '📜 ' + esc(t('decKind')) : '📢 ' + esc(t('annKind'))}</span><span class="muted" style="font-size:12px">${esc(dShort(a.created_at))}</span></div>
-      <div class="t1">${esc(a.title)}</div>${a.body ? `<div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(a.body)}</div>` : ''}
-      ${a.attachment_path ? `<button class="btn ghost small" style="margin-top:8px" data-att="${esc(a.attachment_path)}">📎 ${esc(t('openAtt'))} — ${esc(a.attachment_name || '')}</button>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noNews'))}</div>`;
-}
+// The News list and the red number on its tab are React since 31 Oct 2026 — react/src/phone/news. Kept here: marking read when
+// the tab opens (markNewsRead) and opening an attachment (data-att, page-wide handler).
+function renderNews(){ if (typeof PKM !== 'undefined') PKM.render(); }
 async function markNewsRead(){
   const unread = (APP.news || []).filter(a => !APP.newsRead?.has(a.id)); if (!unread.length || !navigator.onLine) return;
   unread.forEach(a => APP.newsRead?.add(a.id)); renderNews();
@@ -1966,7 +1948,7 @@ window.pkBack = function(){
   if (APP.view !== 'home') { go('home', true); return true; }
   return false;
 };
-function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); (/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.tab'))).forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (typeof PKM !== 'undefined') PKM.tabShown(view); if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); (/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.tab'))).forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP
