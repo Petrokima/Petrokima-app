@@ -289,11 +289,13 @@ Object.assign(T.en, { dreqTitle:'📝 HR asks you to update your data', dreqFill
   dreqSaved:'Saved ✓', dreqAccepted:'✅ HR saved your data', dreqReturned:'↩ HR returned it — please correct and send again', dreqNeed:'Fill in every field',
   dreqDirectNote:'Personal mobile, e-mail and address are saved at once; other data is saved after HR checks it.', choose:'— choose —',
   myContact:'✏️ Update my contact details', myContactTitle:'My contact details', contactSaved:'Your contact details are saved ✓',
+  screenFail:'This part could not be shown. Close the app and open it again. The problem was reported automatically.',
   personalEmail:'Personal e-mail', personalMobile:'Personal mobile', addressL:'Address', saveL:'Save', noChange:'Nothing changed' });
 Object.assign(T.ar, { dreqTitle:'📝 الموارد البشرية تطلب تحديث بياناتك', dreqFill:'✏️ إدخال البيانات', dreqSend:'إرسال للموارد البشرية', dreqSentHR:'تم الإرسال — في انتظار مراجعة الموارد البشرية',
   dreqSaved:'تم الحفظ ✓', dreqAccepted:'✅ تم حفظ بياناتك', dreqReturned:'↩ أعادته الموارد البشرية — برجاء التصحيح والإرسال مرة أخرى', dreqNeed:'برجاء ملء كل الخانات',
   dreqDirectNote:'الموبايل والبريد الإلكتروني الشخصي والعنوان تُحفظ فوراً؛ باقي البيانات تُحفظ بعد مراجعة الموارد البشرية.', choose:'— اختر —',
   myContact:'✏️ تحديث بيانات الاتصال', myContactTitle:'بيانات الاتصال الخاصة بي', contactSaved:'تم حفظ بيانات الاتصال ✓',
+  screenFail:'تعذّر عرض هذا الجزء. أغلق التطبيق وافتحه من جديد. تم الإبلاغ عن المشكلة تلقائياً.',
   personalEmail:'البريد الإلكتروني الشخصي', personalMobile:'الموبايل الشخصي', addressL:'العنوان', saveL:'حفظ', noChange:'لم يتغير شيء' });
 Object.assign(T.en, { captchaFail:'The security check did not load. Check your internet and try again.' });
 Object.assign(T.ar, { captchaFail:'لم يكتمل فحص الأمان. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.' });
@@ -1584,23 +1586,9 @@ function slipSheet(period){
     <div class="kv"><span class="k"><b>${esc(t('ded'))}</b></span><span class="v num neg">${fmt(l.deductions)}</span></div>
     <div class="kv" style="font-size:18px"><span class="k"><b>${esc(t('net'))}</b></span><span class="v num pos">${fmt(l.net)}</span></div>`);
 }
-function renderProfile(){
-  const e = APP.emp || /** @type {Employee} */ ({}), m = APP.manager;
-  const kv = (k,v,ltr) => v ? `<div class="kv"><span class="k">${esc(t(k))}</span><span class="v ${ltr?'num':''}">${esc(v)}</span></div>` : '';
-  $('prof-card').innerHTML = `<div class="sec" style="font-size:17px">${esc(LANG==='ar' ? (e.name_ar||e.name_en) : (e.name_en||e.name_ar))}</div>
-    ${kv('code', e.id, true)}${kv('job', e.job_name)}${kv('dept', e.department)}${kv('unit', e.unit)}${kv('manager', m ? (LANG==='ar' ? (m.name_ar||m.name_en) : (m.name_en||m.name_ar)) : '')}
-    ${kv('entity', e.entity)}${kv('hired', e.employment_date, true)}${kv('personalMobile', e.mobile, true)}${kv('personalEmail', e.personal_email, true)}${kv('addressL', e.address)}${kv('email', e.email, true)}
-    ${kv('nidL', e.national_id ? '•••• ' + String(e.national_id).slice(-4) : '', true)}
-    ${APP.status && APP.status.device ? `<div class="kv"><span class="k">${esc(t('phoneReg'))}</span><span class="v">📱 ${esc(APP.status.device.label || '')} · ${esc(t('thisPhone'))}</span></div>` : ''}
-    <button class="btn ghost" data-act="my-contact" style="margin-top:12px">${esc(t('myContact'))}</button>`;
-  const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const ic = $('install-card');
-  if (standalone || NATIVE) ic.style.display='none';
-  else if (installEvt) { ic.style.display=''; ic.innerHTML = `<div class="sec">📲 ${esc(t('install'))}</div><div class="hint">${esc(t('installAndroid'))}</div><button class="btn green" data-act="install">${esc(t('installBtn'))}</button>`; }
-  else if (ios) { ic.style.display=''; ic.innerHTML = `<div class="sec">📲 ${esc(t('install'))}</div><div class="hint" style="margin:0">${esc(t('installIos'))}</div>`; }
-  else ic.style.display='none';
-}
+// The Profile tab (profile card + "install the app" card) is React since 31 Oct 2026 — react/src/phone/profile. The buttons keep
+// data-act="my-contact" / "install" (handled below, as before).
+function renderProfile(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function passSheet(){
   sheet(`<h2>🔑 ${esc(t('changePass'))}</h2>
     <div class="field"><label>${esc(t('newPass'))}</label><input type="password" id="cp1" autocomplete="new-password"></div>

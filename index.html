@@ -216,8 +216,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     <div class="view" id="v-pay"><div class="card"><div class="sec" data-t="payslips"></div><div class="list" id="pay-list"></div></div></div>
     <!-- PROFILE -->
     <div class="view" id="v-prof">
-      <div class="card" id="prof-card"></div>
-      <div class="card" id="install-card" style="display:none"></div>
+      <!-- the profile card and the "install the app" card are React: react/src/phone/profile -->
+      <div id="react-profile"></div>
       <div style="display:grid;gap:10px">
         <button class="btn ghost" data-act="chpass">🔑 <span data-t="changePass"></span></button>
         <button class="btn red" data-act="signout" data-t="signOut"></button>
@@ -238,6 +238,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v53"></script>
+<script src="app.js?v=pk-mobile-v54"></script>
+<!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
+<script src="react.js?v=pk-mobile-v54"></script>
 </body>
 </html>

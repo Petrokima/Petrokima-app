@@ -20,6 +20,10 @@ if (fontDir) fs.cpSync(path.dirname(fontDir), path.join(out, 'fonts'), { recursi
 // the app's code
 const appSrc = find('app.js');
 if (!appSrc) throw new Error('app.js is missing (it must sit next to index.html)');
+// the screens moved to React (react.js = react/dist/pk-phone.js of the source repository; published next to app.js)
+const reactSrc = find('react.js') || [path.join(root, '..', 'react', 'dist', 'pk-phone.js')].find(f => fs.existsSync(f));
+if (!reactSrc) throw new Error('react.js is missing (the phone React screens — it must sit next to app.js; in the source repository run: cd react && npm run build)');
+fs.copyFileSync(reactSrc, path.join(out, 'react.js'));
 
 let html = fs.readFileSync(path.join(out, 'index.html'), 'utf8');
 const cdn = /<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2|vendor\/supabase\.js)[^"]*"[^>]*><\/script>/;
@@ -27,6 +31,8 @@ if (!cdn.test(html)) throw new Error('Could not find the Supabase script tag in 
 html = html.replace(cdn, '<script src="vendor/capacitor.js"></script>\n<script src="vendor/supabase.js"></script>');
 html = html.replace(/<script src="vendor\/sentry\.js\?v=[^"]*"><\/script>/, sentrySrc ? '<script src="vendor/sentry.js"></script>' : '');
 html = html.replace(/<script src="app\.js\?v=[^"]*"><\/script>/, '<script src="app.js"></script>');
+if (!/<script src="react\.js\?v=[^"]*"><\/script>/.test(html)) throw new Error('Could not find the react.js script tag in web/index.html');
+html = html.replace(/<script src="react\.js\?v=[^"]*"><\/script>/, '<script src="react.js"></script>');
 html = html.replace(/href="fonts\/cairo\.css\?v=[^"]*"/, 'href="fonts/cairo.css"');
 // The strict security policy stays in the app too (tested on a phone 30 Oct 2026, build test-1.0.48: everything works).
 html = html.replace(/<link rel="manifest"[^>]*>\n?/, '');                       // web-app install files are not needed inside the app
