@@ -634,18 +634,8 @@ async function loadDocs(){
   try { const r = await sb.from('doc_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
         APP.docs = r.error ? [] : (r.data || []); } catch(e){ APP.docs = []; }
 }
-function renderDocs(){
-  const box = $('doc-card'); if (!box) return;
-  const L = (APP.docs || []).filter(d => d.status !== 'Accepted' || (Date.now() - new Date(d.reviewed_at || 0).getTime()) < 7 * 864e5);
-  if (!L.length) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="card"><div class="sec">${esc(t('docTitle'))}</div><div class="list">${L.map(d => {
-    const open = d.status === 'Requested' || d.status === 'Returned';
-    const st = d.status === 'Submitted' ? t('docSent') : d.status === 'Accepted' ? t('docAccepted') : d.status === 'Returned' ? t('docReturned') : '';
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(t('docNid'))}</div>
-      ${d.message ? `<div class="t2">💬 ${esc(d.message)}</div>` : ''}${d.review_note ? `<div class="t2" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
-      ${st ? `<div class="t2">${esc(st)}</div>` : ''}
-      ${open ? `<button class="btn small" style="margin-top:8px" data-act="doc-answer" data-id="${esc(d.id)}">📎 ${esc(t('docAnswer'))}</button>` : ''}</div></div>`; }).join('')}</div></div>`;
-}
+// the "📄 Documents HR asked for" card is React since 31 Oct 2026 — react/src/phone/reqcards (📎 keeps data-act="doc-answer" → docSheet)
+function renderDocs(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // phone photos are made smaller (max 1600 px, JPEG) before sending; PDFs are sent as they are
 async function docShrink(file){
   if (!/^image\/(jpeg|png|webp)$/i.test(file.type) || file.size < 900000) return file;
@@ -691,18 +681,8 @@ async function loadDreqs(){
 }
 const dfield = k => (APP.dfields || []).find(f => f.key === k) || { key:k, en:k, ar:k, kind:'text' };
 const dfLabel = f => LANG === 'ar' ? (f.ar || f.en) : f.en;
-function renderDreqs(){
-  const box = $('dreq-card'); if (!box) return;
-  const L = (APP.dreqs || []).filter(d => ['Requested','Returned','Answered'].includes(d.status) || (Date.now() - new Date(d.reviewed_at || d.answered_at || 0).getTime()) < 7 * 864e5);
-  if (!L.length) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="card"><div class="sec">${esc(t('dreqTitle'))}</div><div class="list">${L.map(d => {
-    const open = d.status === 'Requested' || d.status === 'Returned';
-    const st = d.status === 'Answered' ? t('dreqSentHR') : d.status === 'Accepted' ? t('dreqAccepted') : d.status === 'Completed' ? t('dreqSaved') : d.status === 'Returned' ? t('dreqReturned') : '';
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc((d.fields || []).map(k => dfLabel(dfield(k))).join(' · '))}</div>
-      ${d.message ? `<div class="t2">💬 ${esc(d.message)}</div>` : ''}${d.status === 'Returned' && d.review_note ? `<div class="t2" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
-      ${st ? `<div class="t2">${esc(st)}</div>` : ''}
-      ${open ? `<button class="btn small" style="margin-top:8px" data-act="dreq-answer" data-id="${esc(d.id)}">${esc(t('dreqFill'))}</button>` : ''}</div></div>`; }).join('')}</div></div>`;
-}
+// the "📝 HR asks you to update your data" card is React since 31 Oct 2026 — react/src/phone/reqcards (✏️ keeps data-act="dreq-answer" → dreqSheet)
+function renderDreqs(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function dreqInput(f, v){
   const id = 'dq-' + f.key, val = v == null ? '' : String(v).slice(0, f.kind === 'date' ? 10 : 200);
   if (f.kind === 'select') return `<select id="${id}"><option value="">${esc(t('choose'))}</option>${(f.options || []).map(o => `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(LANG === 'ar' ? (DREQ_OPT_AR[o] || o) : o)}</option>`).join('')}</select>`;
@@ -1434,14 +1414,8 @@ async function loadMissionsP(){
     APP.missions = mine.data || []; APP.teamMissions = team.data || [];
   } catch(e) { APP.missions = APP.missions || []; APP.teamMissions = APP.teamMissions || []; }
 }
-function renderMisAck(){
-  const box = $('mis-ack'); if (!box) return;
-  const L = (APP.missions || []).filter(m => m.status === 'Waiting for employee');
-  box.innerHTML = L.map(m => `<div class="card" style="border:2px solid var(--warn,#e07b39)"><div class="sec">🚗 ${esc(t('misAckTitle'))}</div>
-      <div class="t1" style="font-weight:600">${esc(m.place)}</div><div class="t2">${esc(misWhen(m))}${m.project_code ? ' · ' + esc(m.project_code) : ''}</div>
-      ${m.purpose ? `<div class="t2">💬 ${esc(m.purpose)}</div>` : ''}<div class="hint">ℹ ${esc(t('misAckNote'))}</div>
-      <button class="btn green" style="margin-top:8px" data-mis-ack="${esc(m.id)}">${esc(t('misAckBtn'))}</button></div>`).join('');
-}
+// the "your manager assigned you a mission" notice is React since 31 Oct 2026 — react/src/phone/reqcards (✋ calls misAck)
+function renderMisAck(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function missionSheet(assign){
   const team = APP.myTeam || [], sites = (store.get('pk_sites', null) || {}).list || [];
   sheet(`<h2>${esc(assign ? '🚗 ' + t('misAssign') : t('misTitle'))}</h2>
@@ -1971,7 +1945,6 @@ document.addEventListener('click', async ev => {
   if (x.id === 'noproj-go') return clock('in', null, x, true);   // only offered when switching
   const nph = x.closest('#noproj-home'); if (nph) return clock('in', null, nph);
   if (x.id === 'out-go') return clock('out', null, x);
-  const mk = x.closest('[data-mis-ack]'); if (mk) { mk.disabled = true; return misAck(mk.dataset.misAck); }
   const mok = x.closest('[data-mis-ok]'); if (mok) { mok.disabled = true; return misDecide(mok.dataset.misOk, true); }
   const mno = x.closest('[data-mis-no]'); if (mno) { const id = mno.dataset.misNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="mno-note"></textarea></div>

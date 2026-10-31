@@ -189,9 +189,10 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <button class="btn ghost" data-act="req-mission">🚗 <span data-t="reqMission"></span></button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn ghost" data-act="fb-complaint">⚠️ <span data-t="complaint"></span></button><button class="btn ghost" data-act="fb-suggestion">💡 <span data-t="suggestion"></span></button></div>
       </div>
-      <div id="mis-ack"></div>
-      <div id="doc-card"></div>
-      <div id="dreq-card"></div>
+      <!-- mission notice, documents and data HR asked for: React (react/src/phone/reqcards) -->
+      <div id="react-mis-ack"></div>
+      <div id="react-doc-card"></div>
+      <div id="react-dreq-card"></div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div id="react-req-list"></div></div>
       <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
     </div>
@@ -238,8 +239,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v56"></script>
+<script src="app.js?v=pk-mobile-v57"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v56"></script>
+<script src="react.js?v=pk-mobile-v57"></script>
 </body>
 </html>
