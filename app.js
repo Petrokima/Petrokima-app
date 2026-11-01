@@ -1714,43 +1714,9 @@ function birthdayCard(){
   return APP.birthday ? `<div class="card" style="background:linear-gradient(135deg,#ee2624,#b4151a);color:#fff;text-align:center;padding:22px 16px">
       <div style="font-size:44px">🎂</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.5">${esc(t('bday'))}</div><div style="opacity:.9;margin-top:4px">${esc(t('bdaySub'))}</div></div>` : '';
 }
-function renderVoice(){
-  const fb = APP.myFeedback || [];
-  $('fb-card').style.display = fb.length ? '' : 'none';
-  $('fb-list').innerHTML = fb.map(f => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
-      <div class="t2">${esc(dShort(f.created_at))}${f.anonymous ? ' · ' + esc(t('anonMine')) : ''}</div>${f.reply ? `<div class="t2" style="margin-top:6px;background:rgba(31,79,181,.08);padding:8px;border-radius:8px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('');
-  const mgr = (APP.myTeam || []).length > 0;
-  $('mreq-card').style.display = mgr ? '' : 'none';
-  $('mreq-list').innerHTML = (APP.mgrReqs || []).map(({kind, r}) => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
-      <div class="t1">${kind==='hire' ? '👥 ' + esc(t('hireLine', { n:r.headcount, job:r.job_name })) : kind==='train' ? '🎓 ' + esc(t('trainLine', { topic:r.topic, n:(r.emp_ids||[]).length }))
-        : esc(actLine(r))}</div>${stChip(r.status)}</div>
-      <div class="t2">${esc(dShort(r.created_at))}${kind==='act' ? ' · ' + esc(r.apply_period) : ''}</div>${kind==='act' ? `<div class="t2">${esc(r.reason)}</div>` : ''}
-      ${r.board_note ? `<div class="t2" style="margin-top:4px"><b>${esc(r.board_by || '')}:</b> ${esc(r.board_note)}</div>` : ''}${r.hr_note ? `<div class="t2" style="margin-top:6px"><b>HR:</b> ${esc(r.hr_note)}</div>` : ''}
-      ${kind==='hire' && r.status !== 'Closed' && (r.hr_closed || r.mgr_closed) ? `<div class="t2" style="margin-top:4px">${esc(t(r.mgr_closed ? 'waitHrClose' : 'waitMgrClose'))}</div>` : ''}
-      ${kind==='hire' && r.status === 'Closed' ? `<div class="t2" style="margin-top:4px">✔ ${esc(t('closedBoth'))}</div>` : ''}
-      ${kind==='hire' && r.status !== 'Closed' && !r.mgr_closed ? `<button class="btn ghost small" style="margin-top:8px" data-close-hire="${esc(r.id)}">${esc(t('agreeClose'))}</button>` : ''}
-      ${kind==='act' && r.status === 'Waiting for board' ? `<button class="btn ghost small" style="margin-top:8px" data-cancel-act="${esc(r.id)}">${esc(t('cancelReq'))}</button>` : ''}</div>`).join('') || (mgr ? `<div class="empty">${esc(t('noMgrReq'))}</div>` : '');
-  const ba = APP.boardActions || [];
-  $('board-card').style.display = APP.me.board_approver ? '' : 'none';
-  const waitB = ba.filter(a => a.status === 'Waiting for board');
-  const sr = APP.salReqs || [], srWait = sr.filter(r => r.status === 'Waiting for board');
-  const n0 = x => Number(x || 0).toLocaleString(LANG==='ar' ? 'ar-EG' : 'en-US');
-  const salHtml = [...srWait, ...sr.filter(r => r.status !== 'Waiting for board').slice(0, 5)].map(r => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
-      <div class="t1">${esc(t('salLine', { emp: r.emp_name || r.emp_id }))}</div>${stChip(r.status)}</div>
-      <div class="t2" style="direction:ltr;text-align:${LANG==='ar' ? 'right' : 'left'}">${esc(t('salFromTo', { cur: r.current_amount == null ? '—' : n0(r.current_amount), new: n0(r.new_amount), d: dShort(r.effective_from) }))}</div>
-      <div class="t2">${esc(r.reason)}</div><div class="t2">${esc(t('salBy', { by: r.requested_by || '' }))}</div>
-      ${r.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-salb="${esc(r.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-salb="${esc(r.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('');
-  $('board-list').innerHTML = [...waitB, ...ba.filter(a => a.status !== 'Waiting for board').slice(0, 10)].map(a => `<div class="it" style="display:block"><div style="display:flex;justify-content:space-between;gap:8px">
-      <div class="t1">${esc(actLine(a))}</div>${stChip(a.status)}</div>
-      <div class="t2">${esc(t('reqBy'))}: ${esc(a.manager_name || a.manager_emp)} · ${esc(a.apply_period)}</div><div class="t2">${esc(a.reason)}</div>
-      ${a.status === 'Waiting for board' ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn small" data-board="${esc(a.id)}" data-ok="1">${esc(t('approve'))}</button><button class="btn ghost small" data-board="${esc(a.id)}" data-ok="0">${esc(t('reject'))}</button></div>` : ''}</div>`).join('');
-  $('board-list').innerHTML = (salHtml + $('board-list').innerHTML) || `<div class="empty">${esc(t('noBoard'))}</div>`;
-  const inbox = APP.inbox || [];
-  $('inbox-card').style.display = APP.me.receives_feedback ? '' : 'none';
-  $('inbox-list').innerHTML = inbox.map(f => `<div class="it" style="display:block" data-inbox="${esc(f.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><div class="t1">${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</div>${stChip(f.status)}</div>
-      <div class="t2">${esc(t('from'))}: ${esc(f.anonymous ? '🕶 ' + t('anonymous') : (f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id))} · ${esc(dShort(f.created_at))}</div><div class="t2" style="white-space:pre-wrap;margin-top:4px">${esc(f.body)}</div>
-      ${f.reply ? `<div class="t2" style="margin-top:6px"><b>${esc(t('reply'))}:</b> ${esc(f.reply)}</div>` : ''}</div>`).join('') || `<div class="empty">${esc(t('noInbox'))}</div>`;
-}
+// The voice cards — my complaints & suggestions, the manager's requests to HR, the board member's approvals and the complaints
+// inbox — are React since 1 Nov 2026 (react/src/phone/voice). Their buttons keep the old data-… names handled below.
+function renderVoice(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function feedbackSheet(kind){
   sheet(`<h2>${kind==='complaint'?'⚠️ ' + esc(t('complaint')):'💡 ' + esc(t('suggestion'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('fbNote'))}</div>
     <div class="field"><label>${esc(t('subject'))}</label><input id="fb-s" maxlength="120"></div>

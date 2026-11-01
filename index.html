@@ -194,23 +194,20 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       <div id="react-doc-card"></div>
       <div id="react-dreq-card"></div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div id="react-req-list"></div></div>
-      <div class="card" id="fb-card" style="display:none"><div class="sec" data-t="myFeedback"></div><div class="list" id="fb-list"></div></div>
+      <div id="react-fb-card"></div>   <!-- React: react/src/phone/voice -->
     </div>
     <!-- NEWS: announcements & decisions -->
     <div class="view" id="v-news"><div class="card"><div class="sec" data-t="newsTitle"></div><div id="react-news"></div></div></div>   <!-- the list is React: react/src/phone/news -->
     <!-- TEAM APPROVALS (managers) -->
     <div class="view" id="v-team">
       <div class="card" id="hra-card" style="display:none"><div class="sec">🔔 <span data-t="hraTitle"></span></div><div class="hint" id="hra-note"></div><div class="list" id="hra-list"></div></div>
-      <div class="card" id="board-card" style="display:none"><div class="sec" data-t="boardTitle"></div><div class="list" id="board-list"></div></div>
-      <div class="card" id="inbox-card" style="display:none"><div class="sec" data-t="inboxTitle"></div><div class="list" id="inbox-list"></div></div>
+      <div id="react-board-card"></div>
+      <div id="react-inbox-card"></div>
       <div class="card" id="treq-card"><div class="sec" data-t="teamReqTitle"></div><div class="list" id="treq-list"></div></div>
       <div class="card" id="tmis-card" style="display:none"><div class="sec" data-t="misTeamTitle"></div>
         <div id="tmis-assign" style="margin-bottom:10px"><button class="btn ghost" data-act="mis-assign">🚗 <span data-t="misAssign"></span></button></div>
         <div class="list" id="tmis-list"></div></div>
-      <div class="card" id="mreq-card" style="display:none"><div class="sec" data-t="hrReqTitle"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px"><button class="btn ghost" data-act="req-hire">👥 <span data-t="reqHire"></span></button><button class="btn ghost" data-act="req-train">🎓 <span data-t="reqTrain"></span></button>
-          <button class="btn ghost" data-act="req-penalty">⚖️ <span data-t="reqPenalty"></span></button><button class="btn ghost" data-act="req-element">💰 <span data-t="reqElement"></span></button></div>
-        <div class="list" id="mreq-list"></div></div>
+      <div id="react-mreq-card"></div>   <!-- React: react/src/phone/voice -->
       <div class="card" id="tproj-card" style="display:none"><div class="sec" data-t="teamProj"></div><div class="hint" data-t="teamProjNote"></div><div class="list" id="tproj-list"></div></div>
       <div class="card"><div class="sec" data-t="teamTitle"></div><div class="hint" data-t="teamNote"></div><div class="list" id="team-list"></div></div></div>
     <!-- PAYSLIPS -->
@@ -239,8 +236,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v57"></script>
+<script src="app.js?v=pk-mobile-v58"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v57"></script>
+<script src="react.js?v=pk-mobile-v58"></script>
 </body>
 </html>
