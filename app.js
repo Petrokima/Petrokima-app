@@ -441,7 +441,7 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
  *   watch?: any, canSetSite?: boolean, varElements?: FnResult<'variable_elements'>, salReqs?: Row<'salary_change_requests'>[],
  *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
  *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
- *   mgrReqs?: { kind: string, r: any }[], undoShown?: boolean, cameBack?: boolean, missions?: Mission[],
+ *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, missions?: Mission[],
  *   teamMissions?: Mission[], payUnlocked?: boolean }}
  *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
  *       and every screen that reads it opens only after that.
@@ -972,26 +972,11 @@ async function loadStatus(){
 //  HOME — check in / out
 // ═════════════════════════════════════════════════════════
 function serverNowMin(){ const st=APP.status; if(!st) return null; if (APP.offline) { const p=localParts(serverNowMs()); return toMin(p.time) + new Date().getSeconds()/60; } return toMin(st.now) + (Date.now()-APP.statusAt)/60000; }
-function tick(){
-  const m = serverNowMin();
-  if (m !== null){ const mm=Math.floor(m)%1440; $('clk-time').textContent = `${pad(Math.floor(mm/60))}:${pad(mm%60)}`; }
-  if (APP.undoShown && !undoUntil(APP.status)) { APP.undoShown = false; renderHome(); return; }
-  const o = APP.status && APP.status.open, el = $('clk-dur');
-  if (o && el && m !== null){ const dayOff = Math.round((dObj(/** @type {ClockStatus} — o is set, so the status is there */ (APP.status).date).getTime() - dObj(o.date).getTime())/86400000); const d = m + dayOff*1440 - toMin(o.in); el.textContent = `${Math.floor(d/60)}:${pad(Math.floor(d%60))}`; }
-}
-// Day finished = checked out, at least one period today, nothing waiting to be sent, and he has not pressed "I came back"
+// every 15 s (and after each redraw): the React clock card reads the time again — the big time, how long I have been in, and
+// "undo check-out" disappearing when its 5 minutes are over (react/src/phone/clock)
+function tick(){ if (typeof PKM !== 'undefined') PKM.render(); }
+// until when the last check-out may still be undone (0 = not any more) — the React clock card shows ↩ while it is set
 function undoUntil(st){ return st && st.undo && Number(st.undo.until_ms) > serverNowMs() ? Number(st.undo.until_ms) : 0; }
-function dayEndedView(st){
-  const today = (st && st.today) || [];
-  if (APP.cameBack || !today.length || today.some(x => !x.out) || queue().length) return false;
-  const last = today.map(x => x.out).sort().pop(), tot = today.reduce((s, x) => s + num(x.hours), 0), u = undoUntil(st);
-  $('clk-state').innerHTML = `<div class="state off" style="padding:18px 14px"><div style="font-size:22px;font-weight:800">✅ ${esc(t('dayEnded', { t: last }))}</div>
-    <div class="num" style="font-size:17px;margin-top:6px">${esc(t('dayTotal', { h: fmtH(tot) }))}</div></div>`;
-  $('clk-btns').innerHTML = (u ? `<button class="btn big" data-act="undo-out" style="background:#b45309;margin-bottom:10px">${esc(t('undoOut', { t: localParts(u).time }))}</button>` : '')
-    + `<button class="btn ghost small" data-act="came-back" style="width:100%">${esc(t('cameBack'))}</button>`;
-  APP.undoShown = !!u;
-  return true;
-}
 async function undoCheckout(btn){
   const st = APP.status || /** @type {ClockStatus} */ ({}); if (!st.undo) return;
   if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div>`; }
@@ -1001,35 +986,9 @@ async function undoCheckout(btn){
   if (error) return toast(friendly(error.message), true);
   toast(t('undoneOut'));
 }
-function renderHome(){
-  const st = APP.status || /** @type {ClockStatus} */ ({}), o = st.open;
-  $('clk-upd').textContent = APP.updatedAt ? t('updated', { t: new Date(APP.updatedAt).toLocaleTimeString(loc(), { hour:'2-digit', minute:'2-digit' }) }) : '';
-  $('clk-date').textContent = st.date ? dObj(st.date).toLocaleDateString(loc(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '';
-  if (o){
-    const notToday = o.date !== st.date;
-    $('clk-state').innerHTML = `<div class="state ${notToday?'warn':'on'}">${notToday ? esc(t('openFrom',{ d:niceDate(o.date), t:o.in })) + '<br>' : ''}
-      ${esc(t('checkedIn'))} <b>${esc(o.code ? (o.name || o.code) : t('noProject'))}</b><br>${esc(t('since'))} <b class="num">${esc(o.in)}</b> · ${esc(t('hSince'))} <b class="num" id="clk-dur"></b></div>`;
-    $('clk-btns').innerHTML = `<div class="row"><button class="btn ghost big" data-act="switch">🔁 ${esc(t('switchSite'))}</button><button class="btn red big" data-act="out">⏹ ${esc(t('checkOut'))}</button></div>`;
-  } else if (dayEndedView(st)) {
-    // checked out for the day: show it as finished; a small button lets him check in again if he really came back
-  } else {
-    $('clk-state').innerHTML = `<div class="state off">${esc(t('notIn'))}</div>`;
-    $('clk-btns').innerHTML = (APP.cameBack ? `<div class="hint" style="margin:0 0 10px">${esc(t('cameBackNote'))}</div>` : '') + (st.no_project
-      ? `<div style="display:grid;gap:10px"><button class="btn green big" data-act="in">🏗 ${esc(t('inSite'))}</button>
-           <button class="btn big" id="noproj-home" style="background:#0f6f9d">▶ ${esc(t('inNoProject'))}</button></div>`
-      : `<button class="btn green big" data-act="in">▶ ${esc(t('checkIn'))}</button>`);
-  }
-  const q = queue(), pend = q.length;
-  const saved = pend ? `<div class="state warn" style="margin-top:0;text-align:start">⏳ ${esc(t('waiting', { n: pend }))}
-      ${q.map(ev => `<div style="margin-top:6px;font-size:13.5px">${ev.event_type==='in' ? '▶' : '⏹'} <b class="num">${esc(localParts(new Date(ev.client_at).getTime() + clockOffset()).time)}</b>
-        ${ev.event_type==='in' ? esc(ev.project_code ? (ev._name || ev.project_code) : t('noProject')) : esc(t('checkOut'))}
-        ${ev._err ? `<div class="neg" style="font-weight:700">✖ ${esc(t('failedItem'))}: ${esc(ev._err)} <button class="btn ghost small" data-retry="${esc(ev.client_id)}" style="margin-inline-start:6px">${esc(t('tryAgain'))}</button><button class="btn ghost small" data-discard="${esc(ev.client_id)}" style="margin-inline-start:6px">${esc(t('discard'))}</button></div>` : ''}</div>`).join('')}
-      ${navigator.onLine && !q[0]._err ? `<button class="btn ghost small" data-act="sync" style="margin-top:8px">${esc(t('sendNow'))}</button>` : ''}</div>` : '';
-  $('clk-state').insertAdjacentHTML('afterbegin', (APP.offline ? `<div class="state warn" style="margin-top:0">📴 ${esc(t('offlineMode'))}</div>` : '') + saved);
-  // "Today" and "This payroll month" are React (react/src/phone/homelists — it reads APP.status and APP.att)
-  if (typeof PKM !== 'undefined') PKM.render();
-  tick();
-}
+// Home is React (react/src/phone: clock = the clock card, homecards = the cards around it, homelists = Today + This payroll month);
+// it reads APP.status, APP.att, the queue and the flags below. Checking in / out, GPS, the queue and reading stay here.
+function renderHome(){ tick(); }
 // site picker
 let pickSel = null, searchT;
 function openSitePicker(mode){
@@ -1109,11 +1068,14 @@ function locationHelp(code, retry){
     <button class="btn" id="loc-retry">${esc(t('tryAgain'))}</button>`);
   $('loc-retry').onclick = retry;
 }
-async function clock(type, code, btn, isSwitch){
+// phase: the React "check in without a project" button shows the progress (getting the location / sending), as an old button did
+/** @param {'in' | 'out'} type @param {string | null} code @param {any} [btn] @param {boolean} [isSwitch] @param {(p: '' | 'loc' | 'send') => void} [phase] */
+async function clock(type, code, btn, isSwitch, phase){
   const wasOpen = !!(APP.status && APP.status.open), label = btn ? btn.textContent : '';
   if (btn){ btn.disabled=true; btn.innerHTML = `<div class="spin"></div> ${esc(t('gettingLoc'))}`; }
   const g = await getLocation();
   if (btn){ btn.disabled=false; btn.textContent = label; }
+  if (phase) phase('');
   if (g.err && !(APP.status && APP.status.no_location_ok)) return locationHelp(g.err, () => { closeSheet(); clock(type, code, null, isSwitch); });
   if (g.err) { g.lat = null; g.lng = null; g.accuracy = null; }       // allowed by an exception the admin set — the server marks it
   const tapAt = new Date().toISOString();          // the moment the employee checked in (not when the server answered)
@@ -1123,8 +1085,10 @@ async function clock(type, code, btn, isSwitch){
   const pendingBefore = queue().length;
   if (navigator.onLine && !pendingBefore){
     if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`; }
+    if (phase) phase('send');
     const res = await withTimeout(insertClock(rec), 15000);
     if (btn){ btn.disabled = false; btn.textContent = label; }
+    if (phase) phase('');
     if (!res.error){ closeSheet(); if (type === 'in') APP.cameBack = false; try { await loadStatus(); } catch(e){} renderHome(); afterStatus().catch(() => {}); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
     if (!serverDown(res)) {                                                         // a real refusal (wrong site, no location…) — tell the employee
       const msg = friendly(res.error.message);
@@ -1519,7 +1483,6 @@ document.addEventListener('click', async ev => {
   const dsc = x.closest('[data-discard]'); if (dsc) return discardSaved(dsc.dataset.discard);
   const rty = x.closest('[data-retry]'); if (rty) { const cur = queue(); cur.forEach(e => { if (e.client_id === rty.dataset.retry) delete e._err; }); store.set('pk_queue', cur); renderHome(); return flushQueue(); }
   if (x.id === 'noproj-go') return clock('in', null, x, true);   // only offered when switching
-  const nph = x.closest('#noproj-home'); if (nph) return clock('in', null, nph);
   if (x.id === 'out-go') return clock('out', null, x);
   const mno = x.closest('[data-mis-no]'); if (mno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectMission', { id: /** @type {string} */ (mno.dataset.misNo) });
   const a = x.closest('[data-act]'); if (!a) return;
@@ -1527,7 +1490,6 @@ document.addEventListener('click', async ev => {
   if (act==='req-mission' || act==='mis-assign') return typeof PKM !== 'undefined' && PKM.openWindow(act==='req-mission' ? 'missionAsk' : 'missionAssign');
   if (act==='in' || act==='switch') return openSitePicker(act);
   if (act==='out') return confirmOut();
-  if (act==='undo-out') return undoCheckout(a);
   if (act==='came-back') { APP.cameBack = true; return renderHome(); }
   if (act==='close') return closeSheet();
   if (act==='sync') return flushQueue();

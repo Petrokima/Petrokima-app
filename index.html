@@ -166,14 +166,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
     <div class="view on" id="v-home">
       <div id="react-bday"></div>   <!-- the Home cards are React: react/src/phone/homecards -->
       <div id="react-push"></div>
-      <div class="card clock">
-        <div class="time" id="clk-time">--:--</div>
-        <div class="date" id="clk-date"></div>
-        <div id="clk-upd" style="font-size:12px;color:var(--muted);margin:-8px 0 10px"></div>
-        <div id="clk-state"></div>
-        <div id="clk-btns"></div>
-        <div class="muted" style="font-size:12px;margin-top:12px" data-t="locNote"></div>
-      </div>
+      <div id="react-clock"></div>   <!-- the clock card is React: react/src/phone/clock (check-in itself stays in app.js) -->
       <div id="react-co"></div>
       <div id="react-sp"></div>
       <div id="react-home-today"></div>   <!-- "Today" and "This payroll month" are React: react/src/phone/homelists -->
@@ -235,8 +228,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v69"></script>
+<script src="app.js?v=pk-mobile-v70"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v69"></script>
+<script src="react.js?v=pk-mobile-v70"></script>
 </body>
 </html>
