@@ -1473,29 +1473,6 @@ async function misDecide(id, ok, note){
   if (error) return toast(friendly(error.message), true);
   closeSheet(); toast(ok ? t('approvedMsg') : t('rejectedMsg')); await loadMissionsP(); renderAll();
 }
-function renderTeamMissions(){
-  const card = $('tmis-card'); if (!card) return 0;
-  const L = (APP.teamMissions || []).slice().sort((a,b) => ((a.status==='Waiting for manager'?0:1) - (b.status==='Waiting for manager'?0:1)) || String(b.created_at).localeCompare(String(a.created_at)));
-  const show = L.length || (APP.myTeam || []).length;
-  card.style.display = show ? '' : 'none';
-  $('tmis-assign').style.display = (APP.myTeam || []).length ? '' : 'none';
-  $('tmis-list').innerHTML = L.slice(0, 40).map(m => { const mine = m.status === 'Waiting for manager';
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(misName(m))} <span class="muted" style="font-size:12px">${esc(m.emp_id)}</span></div>
-      <div class="t2">🚗 ${esc(m.place)} · ${esc(misWhen(m))}${m.project_code ? ' · ' + esc(m.project_code) : ''}</div>
-      ${m.purpose ? `<div class="t2">💬 ${esc(m.purpose)}</div>` : ''}<div class="t2" style="font-size:12px">${esc(m.origin === 'manager' ? t('misIAssigned') : t('misAskedBy', { n: misName(m) || m.emp_id }))} · 🕒 ${esc(sentAt(m.created_at))}</div>
-      <div style="margin-top:6px">${misChip(m, true)}${m.origin === 'manager' && ['Waiting for employee','Waiting for HR'].includes(m.status) ? ` <button class="btn ghost small" data-cancel="mis:${esc(m.id)}">${esc(t('cancelReq'))}</button>` : ''}</div>
-      ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-mis-ok="${esc(m.id)}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-mis-no="${esc(m.id)}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
-    || `<div class="empty">${esc(t('misNone'))}</div>`;
-  return L.filter(m => m.status === 'Waiting for manager').length;
-}
-const _renderTeamMis = renderTeam;
-// @ts-expect-error — renderTeam is deliberately extended here (missions are added to the team screen)
-renderTeam = function(){
-  _renderTeamMis.apply(this, arguments);
-  const w = renderTeamMissions();
-  if ((APP.teamMissions || []).length) $('tab-team').style.display = '';
-  if (w) { const b = $('team-badge'); const n = (Number(b.textContent) || 0) * (b.style.display === 'none' ? 0 : 1) + w; b.style.display = ''; b.textContent = n; }
-};
 const _renderRequestsMis = renderRequests;
 // @ts-expect-error — renderRequests is deliberately extended here (mission notices)
 renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMisAck(); };
@@ -1545,55 +1522,10 @@ function passSheet(){
     closeSheet(); toast(t('passChanged'));
   };
 }
-function renderTeam(){
-  const team = (APP.team||[]).slice().sort((a,b) => (a.status==='Pending manager'?0:1) - (b.status==='Pending manager'?0:1));
-  // waiting-for-me first, then newest sent first (date + time) — 20 Oct 2026
-  const sentKey = x => String(x.r.created_at || x.r.requested_at || x.r.date_from || x.r.date || '');
-  const reqs = (APP.teamReq||[]).slice().sort((a,b) => ((reqStage(a.r)==='Waiting for manager'?0:1) - (reqStage(b.r)==='Waiting for manager'?0:1)) || sentKey(b).localeCompare(sentKey(a)));
-  const waiting = team.filter(a => a.status==='Pending manager').length + reqs.filter(x => reqStage(x.r)==='Waiting for manager').length;
-  $('tab-team').style.display = (team.length || reqs.length || (APP.myTeam||[]).length || APP.me.receives_feedback || APP.me.board_approver || (APP.hra||[]).length) ? '' : 'none';
-  renderHRA();
-  $('treq-card').style.display = (team.length || reqs.length || (APP.myTeam||[]).length) ? '' : 'none';
-  $('tproj-card').style.display = (APP.myTeam||[]).length ? '' : 'none';
-  $('tproj-list').innerHTML = (APP.myTeam||[]).map(m => `<div class="it"><div class="grow"><div class="t1">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></div>
-      <div class="t2">${esc(m.job_name || '')}</div><div class="t2">${m.projects ? '📌 ' + esc(t('projectsN', { n: m.projects })) : esc(t('noProjAssigned'))}</div></div>
-      <button class="btn ghost small" data-tproj="${esc(m.id)}">${esc(t('manage'))}</button></div>`).join('');
-  $('treq-list').innerHTML = reqs.slice(0,40).map(({kind, r}) => { const stg = reqStage(r), mine = stg==='Waiting for manager';
-    const what = kind==='leave' ? `🌴 ${t('leaveTitle',{ t: tm('lt', r.leave_type) })}` : `✋ ${tm('pt', r.type)}`;
-    const when = kind==='leave' ? `${niceDate(r.date_from)} → ${niceDate(r.date_to)} · ${fmt(r.days)} ${t('days')}` : `${niceDate(r.date)} · ${fmtH(r.hours)}`;
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(r.emp_name || r.emp_id)} <span class="muted" style="font-size:12px">${esc(r.emp_id)}</span></div>
-      <div class="t2">${esc(what)} · ${esc(when)}</div><div class="t2" style="font-size:12px">🕒 ${esc(t('sentAt'))} ${esc(sentAt(r.created_at || r.requested_at))}</div>${r.reason ? `<div class="t2">💬 ${esc(r.reason)}</div>` : ''}
-      <div style="margin-top:6px">${chip(mine ? 'Pending' : stg==='Waiting for HR' ? 'Waiting for HR' : r.status)}</div>
-      ${mine ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-treq-ok="${kind}:${r.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-treq-no="${kind}:${r.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div></div>`; }).join('')
-    || `<div class="empty">${esc(t('noTeamReq'))}</div>`;
-  const hraWait = (APP.hra||[]).filter(a => !a.done).length;
-  $('team-badge').style.display = (waiting + hraWait) ? '' : 'none'; $('team-badge').textContent = waiting + hraWait;
-  const st = { 'Pending manager':['c-orange','aaWait'], 'Pending HR':['c-blue','aaHR'], 'Approved':['c-green','aaOk'], 'Rejected':['c-red','aaNo'] };
-  $('team-list').innerHTML = team.map(a => { const c = st[a.status] || ['c-grey','aaNo'];
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(a.emp_name || a.emp_id)} <span class="muted" style="font-size:12px">${esc(a.emp_id)}</span></div>
-      <div class="t2">${esc(periodLabel(a.period))}${a.job_name ? ' · ' + esc(a.job_name) : ''}</div>
-      <div class="t2">${(a.details||[]).map(x => `${x.days} ${x.days===1?t('day'):t('daysW')} × <span class="num">${fmt(x.rate)}</span> ${t('at')} ${esc(x.project_name || x.project)}`).join('<br>')}</div>
-      <div style="margin-top:6px"><span class="chip ${c[0]}">${esc(t(c[1]))}</span></div>
-      ${a.status==='Pending manager' ? `<div class="row" style="margin-top:10px"><button class="btn green small" style="flex:1" data-team-ok="${a.id}">✓ ${esc(t('approve'))}</button><button class="btn ghost small" style="flex:1" data-team-no="${a.id}">✕ ${esc(t('reject'))}</button></div>` : ''}</div>
-      <div class="num" style="font-size:17px">${fmt(a.amount)}</div></div>`; }).join('') || `<div class="empty">${esc(t('noTeam'))}</div>`;
-}
-// HR alerts: HR / HR officers see everything; a manager sees his team's contracts and probation and recommends
-function renderHRA(){
-  const list = (APP.hra || []).slice().sort((a,b) => (a.done?1:0) - (b.done?1:0) || String(a.due).localeCompare(String(b.due)));
-  $('hra-card').style.display = list.length ? '' : 'none'; if (!list.length) return;
-  const asHR = list.some(a => a.as === 'hr');
-  $('hra-note').textContent = t(asHR ? 'hraNoteHR' : 'hraNoteMgr');
-  const when = n => { n = Number(n); return n < 0 ? t('hraAgo', { n: -n }) : n === 0 ? t('hraToday') : t('hraIn', { n }); };
-  const acts = a => a.as === 'manager' ? (a.kind === 'contract' ? ['renew','not_renew'] : ['confirm','not_confirm']) : ['seen'];
-  $('hra-list').innerHTML = list.slice(0, 80).map(a => {
-    const nm = (LANG==='ar' ? a.name_ar : a.name_en) || a.name_en || a.name_ar || a.emp_id;
-    const resp = (a.responses || []).map(r => `<div class="t2" style="font-size:12px">💬 ${esc(r.role==='manager' ? t('hraMgr') : t('hraHR'))}: ${esc(t('dec_' + r.decision))}${r.note ? ' — ' + esc(r.note) : ''}</div>`).join('');
-    return `<div class="it" style="align-items:flex-start${a.done ? ';opacity:.6' : ''}"><div class="grow"><div class="t1">${esc(nm)} <span class="muted" style="font-size:12px">${esc(a.emp_id)}</span></div>
-      <div class="t2">${esc(t('hk_' + a.kind))}${a.detail && a.kind === 'cert' ? ' · ' + esc(a.detail) : ''} · ${esc(niceDate(a.due))} · <span class="${Number(a.days_left) < 0 ? 'neg' : ''}">${esc(when(a.days_left))}</span></div>${resp}
-      ${a.done ? `<div style="margin-top:6px">${chip('Approved').replace(/>[^<]*</, '>' + esc(t('hraDone')) + '<')}</div>`
-               : `<div class="row" style="margin-top:10px">${acts(a).map((d, i) => `<button class="btn ${i === 0 ? 'green' : 'ghost'} small" style="flex:1" data-hra="${esc([a.kind, a.emp_id, a.ref_id || '', a.due, d].join('|'))}">${esc(t('dec_' + d))}</button>`).join('')}</div>`}</div></div>`; }).join('')
-    || `<div class="empty">${esc(t('hraNone'))}</div>`;
-}
+// The ✅ Approvals tab (its tab button + red number, HR alerts, team requests, missions, projects, allowances) is React since
+// 1 Nov 2026 — react/src/phone/approvals. Kept here: the decisions (teamReqDecide, teamDecide, misDecide), the windows (hraSheet,
+// teamProjSheet, the reject windows below) and the data loading.
+function renderTeam(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function hraSheet(key){
   const [kind, emp, ref, due, dec] = key.split('|'), a = (APP.hra || []).find(x => x.kind === kind && x.emp_id === emp && (x.ref_id || '') === ref && x.due === due); if (!a) return;
   const nm = (LANG==='ar' ? a.name_ar : a.name_en) || a.name_en || emp;
@@ -1893,13 +1825,11 @@ document.addEventListener('click', async ev => {
   const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(tp.dataset.tproj);
   const tpa = x.closest('[data-tproj-add]'); if (tpa) return teamProjChange(tpa.dataset.tprojAdd, true);
   const tpr = x.closest('[data-tproj-rm]'); if (tpr) return askProjRemove(tpr.dataset.tprojRm);
-  const rok = x.closest('[data-treq-ok]'); if (rok) { rok.disabled = true; return teamReqDecide(rok.dataset.treqOk, true); }
   const rno = x.closest('[data-treq-no]'); if (rno) { const key = rno.dataset.treqNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="rno-note"></textarea></div>
       <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="rno-go">${esc(t('reject'))}</button></div>`);
     $('rno-go').onclick = () => teamReqDecide(key, false, $('rno-note').value.trim()); return; }
   const hr1 = x.closest('[data-hra]'); if (hr1) return hraSheet(hr1.dataset.hra);
-  const tok = x.closest('[data-team-ok]'); if (tok) { tok.disabled = true; return teamDecide(tok.dataset.teamOk, true); }
   const tno = x.closest('[data-team-no]'); if (tno) { const id = tno.dataset.teamNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="tno-note"></textarea></div>
       <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="tno-go">${esc(t('reject'))}</button></div>`);
@@ -1911,7 +1841,6 @@ document.addEventListener('click', async ev => {
   if (x.id === 'noproj-go') return clock('in', null, x, true);   // only offered when switching
   const nph = x.closest('#noproj-home'); if (nph) return clock('in', null, nph);
   if (x.id === 'out-go') return clock('out', null, x);
-  const mok = x.closest('[data-mis-ok]'); if (mok) { mok.disabled = true; return misDecide(mok.dataset.misOk, true); }
   const mno = x.closest('[data-mis-no]'); if (mno) { const id = mno.dataset.misNo;
     sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="mno-note"></textarea></div>
       <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="mno-go">${esc(t('reject'))}</button></div>`);
