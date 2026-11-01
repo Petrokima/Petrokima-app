@@ -323,7 +323,6 @@ Object.assign(T.ar, { coTitle:'🚪 طلبات انصراف أُرسلت للم�
   lwTitle:'🚶 غادرت دون تسجيل الانصراف', lwBody:'أنت بعيد عن مكتبك وما زلت مسجّل حضور. تم إبلاغ الموارد البشرية — افتح التطبيق لإرسال رسالة لهم.',
   lwAskTitle:'اسمح بالموقع «طوال الوقت»', lwOpenSettings:'فتح الإعدادات',
   lwAskBody:'أثناء تسجيل حضورك، يتحقق التطبيق من وقت لآخر أنك ما زلت في مكتبك، حتى تعرف الموارد البشرية إذا غادرت دون تسجيل الانصراف.\n\nفي الشاشة التالية اختر: الأذونات ← الموقع ← «السماح طوال الوقت».' });
-const DREQ_OPT_AR = { Single:'أعزب', Married:'متزوج', Divorced:'مطلق', Widowed:'أرمل', Finished:'أدى الخدمة', Exempt:'معفى', Postponed:'مؤجل', 'Not Applicable':'لا ينطبق' };
 Object.assign(T.en, { dayEnded:'Day ended at {t}', dayTotal:'Worked today: {h}', cameBack:'I came back — check in again',
   cameBackNote:'Your check-out stays recorded. The time you were away is not counted, and HR can see it.',
   undoOut:'↩ Undo check-out (until {t})', undoneOut:'Check-out undone — you are checked in again ✓', undoLate:'More than 5 minutes have passed — check in again instead',
@@ -681,57 +680,25 @@ async function loadDreqs(){
         APP.dreqs = r.error ? [] : (r.data || []); } catch(e){ APP.dreqs = []; }
   if (!APP.dfields) { try { const f = await sb.rpc('data_fields'); APP.dfields = f.error ? null : /** @type {any[]} — the list of fields employees may update */ (f.data); } catch(e){} }
 }
-const dfield = k => (APP.dfields || []).find(f => f.key === k) || { key:k, en:k, ar:k, kind:'text' };
-const dfLabel = f => LANG === 'ar' ? (f.ar || f.en) : f.en;
-// the "📝 HR asks you to update your data" card is React since 31 Oct 2026 — react/src/phone/reqcards (✏️ keeps data-act="dreq-answer" → dreqSheet)
+// the "📝 HR asks you to update your data" card is React since 31 Oct 2026 — react/src/phone/reqcards (✏️ keeps data-act="dreq-answer" → the React answer window)
 function renderDreqs(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function dreqInput(f, v){
-  const id = 'dq-' + f.key, val = v == null ? '' : String(v).slice(0, f.kind === 'date' ? 10 : 200);
-  if (f.kind === 'select') return `<select id="${id}"><option value="">${esc(t('choose'))}</option>${(f.options || []).map(o => `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(LANG === 'ar' ? (DREQ_OPT_AR[o] || o) : o)}</option>`).join('')}</select>`;
-  const type = f.kind === 'date' ? 'date' : f.kind === 'email' ? 'email' : f.kind === 'tel' ? 'tel' : 'text';
-  return `<input type="${type}" id="${id}" value="${esc(val)}"${f.kind === 'tel' ? ' inputmode="tel" dir="ltr"' : f.kind === 'email' ? ' dir="ltr" autocapitalize="off"' : ''}>`;
+// The answer window and "✏️ Update my contact details" are React since 1 Nov 2026 — react/src/phone/mydata. They save through here.
+/** @param {string} id @param {Record<string, string>} vals — every field asked, filled in */
+async function answerDataRequest(id, vals){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { data, error } = await sb.rpc('answer_data_request', { p_id: id, p_vals: vals });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(data === 'saved' ? t('dreqSaved') : t('dreqSentHR'));
+  try { await loadAll(); renderAll(); } catch(e){ await loadDreqs(); renderDreqs(); }
 }
-function dreqSheet(id){
-  const d = (APP.dreqs || []).find(x => x.id === id); if (!d) return;
-  const prev = d.status === 'Returned' && d.answer ? d.answer : {}, e = APP.emp || /** @type {Employee} */ ({});
-  const flds = (d.fields || []).map(dfield);
-  sheet(`<h2>${esc(t('dreqTitle'))}</h2>${d.message ? `<div class="hint">💬 ${esc(d.message)}</div>` : ''}
-    ${d.status === 'Returned' && d.review_note ? `<div class="hint" style="color:var(--red,#c0392b)">↩ ${esc(d.review_note)}</div>` : ''}
-    ${flds.map(f => `<div class="field"><label>${esc(dfLabel(f))}</label>${dreqInput(f, prev[f.key] != null ? prev[f.key] : e[f.key])}</div>`).join('')}
-    ${flds.some(f => !f.direct) ? `<div class="hint">${esc(t('dreqDirectNote'))}</div>` : ''}
-    <button class="btn" id="dq-go">${esc(t('dreqSend'))}</button>`);
-  $('dq-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    /** @type {Record<string, string>} */ const vals = {}; for (const f of flds) { const v = ($('dq-' + f.key).value || '').trim(); if (!v) return toast(t('dreqNeed'), true); vals[f.key] = v; }
-    const btn = $('dq-go'); btn.disabled = true;
-    const { data, error } = await sb.rpc('answer_data_request', { p_id: d.id, p_vals: vals });
-    btn.disabled = false;
-    if (error) return toast(friendly(error.message), true);
-    closeSheet(); toast(data === 'saved' ? t('dreqSaved') : t('dreqSentHR'));
-    try { await loadAll(); renderAll(); } catch(e){ await loadDreqs(); renderDreqs(); }
-  };
-}
-function contactSheet(){
-  const e = APP.emp || /** @type {Employee} */ ({});
-  sheet(`<h2>${esc(t('myContactTitle'))}</h2>
-    <div class="field"><label>${esc(t('personalMobile'))}</label><input type="tel" id="mc-mobile" inputmode="tel" dir="ltr" value="${esc(e.mobile || '')}"></div>
-    <div class="field"><label>${esc(t('personalEmail'))}</label><input type="email" id="mc-email" dir="ltr" autocapitalize="off" value="${esc(e.personal_email || '')}"></div>
-    <div class="field"><label>${esc(t('addressL'))}</label><input type="text" id="mc-address" value="${esc(e.address || '')}"></div>
-    <button class="btn" id="mc-go">${esc(t('saveL'))}</button>`);
-  $('mc-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    /** @type {Record<string, string>} */ const vals = {};
-    const cur = { mobile: e.mobile || '', personal_email: e.personal_email || '', address: e.address || '' };
-    [['mobile','mc-mobile'],['personal_email','mc-email'],['address','mc-address']].forEach(([k, id]) => { const v = $(id).value.trim(); if (v && v !== cur[k]) vals[k] = v; });
-    if (!Object.keys(vals).length) return toast(t('noChange'));
-    const btn = $('mc-go'); btn.disabled = true;
-    const { error } = await sb.rpc('update_my_contact', { p_vals: vals });
-    btn.disabled = false;
-    if (error) return toast(friendly(error.message), true);
-    closeSheet(); toast(t('contactSaved'));
-    try { const r = await sb.from('employees').select('*').eq('id', APP.me.emp_id); if (r.data && r.data[0]) { APP.emp = r.data[0]; saveCache && saveCache(); } } catch(x){}
-    renderProfile();
-  };
+/** @param {Record<string, string>} vals — only the changed contact details */
+async function saveContact(vals){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('update_my_contact', { p_vals: vals });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(t('contactSaved'));
+  try { const r = await sb.from('employees').select('*').eq('id', APP.me.emp_id); if (r.data && r.data[0]) { APP.emp = r.data[0]; saveCache && saveCache(); } } catch(x){}
+  renderProfile();
 }
 
 // ── Check-outs HR must record (80-checkout-requests.sql) ──
@@ -1692,8 +1659,8 @@ document.addEventListener('click', async ev => {
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
   if (act==='doc-answer') return docSheet(a.dataset.id);
-  if (act==='dreq-answer') return dreqSheet(a.dataset.id);
-  if (act==='my-contact') return contactSheet();
+  if (act==='dreq-answer') return typeof PKM !== 'undefined' && PKM.openWindow('dataAnswer', { id: /** @type {string} */ (a.dataset.id) });
+  if (act==='my-contact') return typeof PKM !== 'undefined' && PKM.openWindow('contact');
   if (act==='co-msg') { const c = (APP.coreqs || []).find(x => x.id === a.dataset.id); return c && coSheet('', c); }
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
