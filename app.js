@@ -1581,87 +1581,23 @@ function birthdayCard(){
 // The voice cards — my complaints & suggestions, the manager's requests to HR, the board member's approvals and the complaints
 // inbox — are React since 1 Nov 2026 (react/src/phone/voice). Their buttons keep the old data-… names handled below.
 function renderVoice(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function feedbackSheet(kind){
-  sheet(`<h2>${kind==='complaint'?'⚠️ ' + esc(t('complaint')):'💡 ' + esc(t('suggestion'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('fbNote'))}</div>
-    <div class="field"><label>${esc(t('subject'))}</label><input id="fb-s" maxlength="120"></div>
-    <div class="field"><label>${esc(t('details'))}</label><textarea id="fb-b" rows="5"></textarea></div>
-    ${kind==='complaint' ? `<label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0 12px;font-size:14px"><input type="checkbox" id="fb-anon" style="margin-top:3px"> ${esc(t('sendAnon'))}</label>` : ''}
-    <button class="btn" id="fb-go">${esc(t('send'))}</button>`);
-  $('fb-go').onclick = async () => {
-    const sj = $('fb-s').value.trim(), bd = $('fb-b').value.trim(); if (!sj || !bd) return toast(t('needSubject'), true);
-    if (!navigator.onLine) return toast(t('offline'), true);
-    $('fb-go').disabled = true; const { data, error } = await sb.from('feedback').insert({ kind, emp_id:APP.me.emp_id, subject:sj, body:bd, anonymous: !!($('fb-anon') && $('fb-anon').checked) }).select(); $('fb-go').disabled = false;
-    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-    closeSheet(); toast(t('fbSent')); APP.myFeedback = [data[0], ...(APP.myFeedback || [])]; renderVoice();
-  };
-}
-function hireSheet(){
-  sheet(`<h2>👥 ${esc(t('reqHire'))}</h2>
-    <div class="field"><label>${esc(t('howMany'))}</label><input id="hr-n" type="number" min="1" max="100" value="1" inputmode="numeric"></div>
-    <div class="field"><label>${esc(t('jobName'))} *</label><input id="hr-j" maxlength="120"></div>
-    <div class="field"><label>${esc(t('jobDesc'))} *</label><textarea id="hr-d" rows="5"></textarea></div>
-    <div class="field"><label>${esc(t('neededBy'))}</label><input id="hr-by" type="date"></div>
-    <div class="field"><label>${esc(t('notes'))}</label><textarea id="hr-x" rows="2"></textarea></div>
-    <button class="btn" id="hr-go">${esc(t('send'))}</button>`);
-  $('hr-go').onclick = async () => {
-    const n = parseInt($('hr-n').value, 10), j = $('hr-j').value.trim(), d = $('hr-d').value.trim();
-    if (!j || !d) return toast(t('needJob'), true); if (!(n >= 1 && n <= 100)) return toast(t('howMany'), true);
-    if (!navigator.onLine) return toast(t('offline'), true);
-    $('hr-go').disabled = true;
-    const { data, error } = await sb.from('hiring_requests').insert({ manager_emp:APP.me.emp_id, headcount:n, job_name:j, job_description:d, needed_by:$('hr-by').value || null, notes:$('hr-x').value.trim() || null }).select();
-    $('hr-go').disabled = false;
-    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-    closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'hire', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
-  };
-}
-function trainSheet(){
-  const team = APP.myTeam || [];
-  sheet(`<h2>🎓 ${esc(t('reqTrain'))}</h2>
-    <div class="field"><label>${esc(t('whoTrain'))}</label><div style="max-height:200px;overflow:auto;border:1px solid var(--line,#ddd);border-radius:10px;padding:6px">${team.map(m => `<label style="display:flex;gap:8px;align-items:center;padding:6px 4px"><input type="checkbox" data-tr="${esc(m.id)}"> ${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span></label>`).join('')}</div></div>
-    <div class="field"><label>${esc(t('topic'))} *</label><input id="tr-t" maxlength="150"></div>
-    <div class="field"><label>${esc(t('details'))}</label><textarea id="tr-d" rows="3"></textarea></div>
-    <div class="field"><label>${esc(t('prefDate'))}</label><input id="tr-dt" type="date"></div>
-    <button class="btn" id="tr-go">${esc(t('send'))}</button>`);
-  $('tr-go').onclick = async () => {
-    const ids = [.../** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-tr]:checked'))].map(c => /** @type {string} */ (c.dataset.tr)), tp = $('tr-t').value.trim();
-    if (!ids.length || !tp) return toast(t('needTrain'), true); if (!navigator.onLine) return toast(t('offline'), true);
-    $('tr-go').disabled = true;
-    const { data, error } = await sb.from('training_requests').insert({ manager_emp:APP.me.emp_id, emp_ids:ids, topic:tp, details:$('tr-d').value.trim() || null, preferred_date:$('tr-dt').value || null }).select();
-    $('tr-go').disabled = false;
-    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-    closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'train', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
-  };
+// The complaint / suggestion, new employees, training and penalty / element windows are React since 1 Nov 2026 —
+// react/src/phone/voicewin. They send through here (the item goes to the top of my complaints / my requests to HR).
+/** @param {'feedback' | 'hiring_requests' | 'training_requests' | 'manager_actions'} table — where the request is saved @param {any} rec */
+async function sendVoice(table, rec){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { data, error } = await sb.from(table).insert(rec).select();
+  if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
+  const row = /** @type {any} — the saved row of whichever table */ (data[0]);
+  closeSheet();
+  if (table === 'feedback') { toast(t('fbSent')); APP.myFeedback = [row, ...(APP.myFeedback || [])]; }
+  else { toast(t('sentHR')); APP.mgrReqs = [{ kind: table==='hiring_requests' ? 'hire' : table==='training_requests' ? 'train' : 'act', r:row }, ...(APP.mgrReqs || [])]; }
+  renderVoice();
 }
 function actLine(r){
   if (r.kind === 'penalty') return t('penLine', { emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) });
   const el = (APP.varElements || []).find(x => x.code === r.element_code);
   return t('elLine', { el: (el && (LANG==='ar' ? el.name_ar : el.name_en)) || r.element_name || t('reqIncentive'), emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) });
-}
-function actionSheet(kind){
-  const team = APP.myTeam || [], per = (S.period || todayStr().slice(0,7));
-  sheet(`<h2>${kind==='penalty' ? '⚖️ ' + esc(t('reqPenalty')) : '💰 ' + esc(t('reqElement'))}</h2><div class="hint" style="margin-bottom:10px">${esc(t('actFlow'))}</div>
-    <div class="field"><label>${esc(t('employee'))}</label><select id="ma-e"><option value=""></option>${team.map(m => `<option value="${esc(m.id)}">${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} (${esc(m.id)})</option>`).join('')}</select></div>
-    ${kind==='penalty' ? `<div class="field"><label>${esc(t('penType'))}</label><select id="ma-t"><option value="Days">${esc(t('penDays'))}</option><option value="Hours">${esc(t('penHours'))}</option><option value="Amount">${esc(t('penAmount'))}</option></select></div>
-      <div class="field"><label>${esc(t('quantity'))}</label><input id="ma-q" type="number" min="0" step="0.5" inputmode="decimal"></div>
-      <div class="field"><label>${esc(t('incDate'))}</label><input id="ma-d" type="date" value="${todayStr()}"></div>`
-    : `<div class="field"><label>${esc(t('element'))}</label><select id="ma-el"><option value=""></option>${(APP.varElements||[]).map(el => `<option value="${el.code}">${esc((LANG==='ar' ? el.name_ar : el.name_en) || el.name_en || el.code)}${el.element_type==='Deduction' ? ' (−)' : ''}</option>`).join('')}</select></div>
-      <div class="field"><label>${esc(t('reqType'))}</label><select id="ma-t"><option value="Amount">${esc(t('byAmount'))}</option><option value="Days">${esc(t('byDays'))}</option><option value="Hours">${esc(t('byHours'))}</option></select></div>
-      <div class="field"><label>${esc(t('quantity'))}</label><input id="ma-q" type="number" min="0" step="0.5" inputmode="decimal"></div>`}
-    <div class="field"><label>${esc(t('payMonth'))}</label><input id="ma-p" type="month" value="${esc(per)}"></div>
-    <div class="field"><label>${esc(t('reason'))} *</label><textarea id="ma-r" rows="3"></textarea></div>
-    <button class="btn" id="ma-go">${esc(t('send'))}</button>`);
-  $('ma-go').onclick = async () => {
-    const e = $('ma-e').value, q = Number($('ma-q').value), r = $('ma-r').value.trim(), p = $('ma-p').value;
-    if (!e || !(q > 0) || !r || !/^\d{4}-\d{2}$/.test(p) || (kind==='element' && !$('ma-el').value)) return toast(t('needReason'), true);
-    if (!navigator.onLine) return toast(t('offline'), true);
-    $('ma-go').disabled = true;
-    const rec = { kind, manager_emp:APP.me.emp_id, emp_id:e, action_type:$('ma-t').value, quantity:q, apply_period:p, reason:r, incident_date: kind==='penalty' ? ($('ma-d').value || null) : null,
-                  element_code: kind==='element' ? Number($('ma-el').value) : null };
-    const { data, error } = await sb.from('manager_actions').insert(rec).select();
-    $('ma-go').disabled = false;
-    if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-    closeSheet(); toast(t('sentHR')); APP.mgrReqs = [{ kind:'act', r:data[0] }, ...(APP.mgrReqs || [])]; renderVoice();
-  };
 }
 function boardSheet(id, ok){
   const a = (APP.boardActions || []).find(x => x.id === id); if (!a) return;
@@ -1789,12 +1725,9 @@ document.addEventListener('click', async ev => {
   if (act==='sync') return flushQueue();
   if (act==='refresh') return doRefresh();
   if (act==='req-leave' || act==='req-perm' || act==='req-hr') return typeof PKM !== 'undefined' && PKM.openWindow(act === 'req-leave' ? 'leave' : act === 'req-perm' ? 'perm' : 'hr');
-  if (act==='fb-complaint') return feedbackSheet('complaint');
-  if (act==='fb-suggestion') return feedbackSheet('suggestion');
-  if (act==='req-hire') return hireSheet();
-  if (act==='req-train') return trainSheet();
-  if (act==='req-penalty') return actionSheet('penalty');
-  if (act==='req-incentive' || act==='req-element') return actionSheet('element');
+  if (act==='fb-complaint' || act==='fb-suggestion' || act==='req-hire' || act==='req-train' || act==='req-penalty' || act==='req-incentive' || act==='req-element')
+    return typeof PKM !== 'undefined' && PKM.openWindow(act==='fb-complaint' ? 'complaint' : act==='fb-suggestion' ? 'suggestion' : act==='req-hire' ? 'hire'
+      : act==='req-train' ? 'train' : act==='req-penalty' ? 'penalty' : 'element');
   if (act==='chpass') return passSheet();
   if (act==='signout') return signOut();
   if (act==='doc-answer') return docSheet(a.dataset.id);
