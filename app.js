@@ -1558,8 +1558,6 @@ function renderAll(){ if(!APP.ready) return; const e=APP.emp||/** @type {Employe
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
 // ═════════════════════════════════════════════════════════
 const dShort = ts => ts ? new Date(ts).toLocaleDateString(LANG==='ar' ? 'ar-EG' : 'en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
-const stLbl = s => ({ 'Waiting for board':{en:'Waiting for board member',ar:'بانتظار عضو مجلس الإدارة'}, 'Waiting for HR':{en:'Waiting for HR',ar:'بانتظار الموارد البشرية'}, Approved:{en:'Approved',ar:'تمت الموافقة'}, Cancelled:{en:'Cancelled',ar:'ملغي'}, New:{en:'New',ar:'جديد'}, 'In review':{en:'In review',ar:'قيد المراجعة'}, Closed:{en:'Closed',ar:'مغلق'}, 'In progress':{en:'In progress',ar:'جارٍ التنفيذ'}, Done:{en:'Done',ar:'تم'}, Rejected:{en:'Rejected',ar:'مرفوض'} }[s] || {en:s,ar:s})[LANG==='ar'?'ar':'en'];
-const stChip = s => `<span class="chip ${({'Waiting for board':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Cancelled:'c-grey',New:'c-orange','In review':'c-blue','In progress':'c-blue',Closed:'c-green',Done:'c-green',Rejected:'c-red'})[s]||'c-grey'}">${esc(stLbl(s))}</span>`;
 // The News list and the red number on its tab are React since 31 Oct 2026 — react/src/phone/news. Kept here: marking read when
 // the tab opens (markNewsRead) and opening an attachment (data-att, page-wide handler).
 function renderNews(){ if (typeof PKM !== 'undefined') PKM.render(); }
@@ -1594,71 +1592,51 @@ async function sendVoice(table, rec){
   else { toast(t('sentHR')); APP.mgrReqs = [{ kind: table==='hiring_requests' ? 'hire' : table==='training_requests' ? 'train' : 'act', r:row }, ...(APP.mgrReqs || [])]; }
   renderVoice();
 }
-function actLine(r){
-  if (r.kind === 'penalty') return t('penLine', { emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) });
-  const el = (APP.varElements || []).find(x => x.code === r.element_code);
-  return t('elLine', { el: (el && (LANG==='ar' ? el.name_ar : el.name_en)) || r.element_name || t('reqIncentive'), emp: r.emp_name || r.emp_id, q: r.quantity, u: t('u_' + r.action_type) });
+// The board member's ✅ / ❌ windows (manager requests, basic-salary changes), a manager's "agree to close" a hiring request and the
+// inbox answer are React since 1 Nov 2026 — react/src/phone/answers. They answer through these (the list row is changed here).
+/** @param {{ p_id: string, p_approve: boolean, p_note: string | null }} args */
+async function boardDecide(args){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('decide_manager_action', args);
+  if (error) return toast(friendly(error.message), true);
+  const a = (APP.boardActions || []).find(x => x.id === args.p_id); if (a) a.status = args.p_approve ? 'Waiting for HR' : 'Rejected';
+  closeSheet(); toast('✓'); renderVoice();
 }
-function boardSheet(id, ok){
-  const a = (APP.boardActions || []).find(x => x.id === id); if (!a) return;
-  sheet(`<h2>${ok ? '✅ ' + esc(t('approve')) : '❌ ' + esc(t('reject'))}</h2><div class="t2" style="margin-bottom:8px">${esc(actLine(a))}</div>
-    <div class="t2" style="margin-bottom:10px">${esc(a.reason)}</div><div class="field"><label>${esc(t('noteOpt'))}</label><textarea id="bd-n" rows="3"></textarea></div>
-    <button class="btn" id="bd-go">${esc(ok ? t('approve') : t('reject'))}</button>`);
-  $('bd-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    const { data, error } = await sb.rpc('decide_manager_action', { p_id:id, p_approve: !!ok, p_note:$('bd-n').value.trim() || null });
-    if (error) return toast(friendly(error.message), true);
-    a.status = ok ? 'Waiting for HR' : 'Rejected'; closeSheet(); toast('✓'); renderVoice();
-  };
+/** @param {{ p_id: string, p_approve: boolean, p_note: string | null }} args */
+async function salaryDecide(args){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('decide_salary_change', args);
+  if (error) return toast(friendly(error.message), true);
+  const r = (APP.salReqs || []).find(x => x.id === args.p_id); if (r) r.status = args.p_approve ? 'Approved' : 'Rejected';
+  closeSheet(); toast('✓'); renderVoice();
 }
-function salarySheet(id, ok){
-  const r = (APP.salReqs || []).find(x => x.id === id); if (!r) return;
-  sheet(`<h2>${ok ? '✅ ' + esc(t('approve')) : '❌ ' + esc(t('reject'))}</h2><div class="t1" style="margin-bottom:6px">${esc(t('salLine', { emp: r.emp_name || r.emp_id }))}</div>
-    <div class="t2" style="direction:ltr;margin-bottom:6px">${esc(t('salFromTo', { cur: r.current_amount == null ? '—' : Number(r.current_amount).toLocaleString(), new: Number(r.new_amount).toLocaleString(), d: dShort(r.effective_from) }))}</div>
-    <div class="t2" style="margin-bottom:10px">${esc(r.reason)}</div><div class="field"><label>${esc(t('noteOpt'))}</label><textarea id="sb-n" rows="3"></textarea></div>
-    <button class="btn" id="sb-go">${esc(ok ? t('approve') : t('reject'))}</button>`);
-  $('sb-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    const { data, error } = await sb.rpc('decide_salary_change', { p_id:id, p_approve: !!ok, p_note:$('sb-n').value.trim() || null });
-    if (error) return toast(friendly(error.message), true);
-    r.status = ok ? 'Approved' : 'Rejected'; closeSheet(); toast('✓'); renderVoice();
-  };
+/** @param {{ p_id: string, p_note: string | null }} args */
+async function closeHire(args){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { data, error } = await sb.rpc('close_hiring_request', args);
+  if (error) return toast(friendly(error.message), true);
+  const x = (APP.mgrReqs || []).find(m => m.kind==='hire' && m.r.id === args.p_id); if (x){ x.r.mgr_closed = true; if (data === 'Closed') x.r.status = 'Closed'; }
+  closeSheet(); toast(data === 'Closed' ? t('closedBoth') : t('waitHrClose')); renderVoice();
 }
-function closeHireSheet(id){
-  sheet(`<h2>${esc(t('agreeClose'))}</h2><div class="field"><label>${esc(t('closeNote'))}</label><textarea id="ch-n" rows="3"></textarea></div><button class="btn" id="ch-go">${esc(t('agreeClose'))}</button>`);
-  $('ch-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    const { data, error } = await sb.rpc('close_hiring_request', { p_id:id, p_note:$('ch-n').value.trim() || null });
-    if (error) return toast(friendly(error.message), true);
-    const x = (APP.mgrReqs || []).find(m => m.kind==='hire' && m.r.id === id); if (x){ x.r.mgr_closed = true; if (data === 'Closed') x.r.status = 'Closed'; }
-    closeSheet(); toast(data === 'Closed' ? t('closedBoth') : t('waitHrClose')); renderVoice();
-  };
+/** @param {{ p_id: string, p_status: string, p_reply: string | null }} args */
+async function answerInbox(args){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('answer_feedback', args);
+  if (error) return toast(friendly(error.message), true);
+  const f = (APP.inbox || []).find(x => x.id === args.p_id); if (f) Object.assign(f, { status:args.p_status, reply:args.p_reply });
+  closeSheet(); toast('✓'); renderVoice();
 }
 document.addEventListener('click', async e => {
-  const b = /** @type {HTMLElement} */ (e.target).closest('[data-board]'); if (b) return boardSheet(b.dataset.board, b.dataset.ok === '1');
-  const sb2 = /** @type {HTMLElement} */ (e.target).closest('[data-salb]'); if (sb2) return salarySheet(sb2.dataset.salb, sb2.dataset.ok === '1');
-  const c = /** @type {HTMLElement} */ (e.target).closest('[data-close-hire]'); if (c) return closeHireSheet(c.dataset.closeHire);
+  const b = /** @type {HTMLElement} */ (e.target).closest('[data-board]'); if (b) return typeof PKM !== 'undefined' && PKM.openWindow('board', { id: /** @type {string} */ (b.dataset.board), ok: b.dataset.ok === '1' });
+  const sb2 = /** @type {HTMLElement} */ (e.target).closest('[data-salb]'); if (sb2) return typeof PKM !== 'undefined' && PKM.openWindow('salary', { id: /** @type {string} */ (sb2.dataset.salb), ok: sb2.dataset.ok === '1' });
+  const c = /** @type {HTMLElement} */ (e.target).closest('[data-close-hire]'); if (c) return typeof PKM !== 'undefined' && PKM.openWindow('closeHire', { id: /** @type {string} */ (c.dataset.closeHire) });
   const x = /** @type {HTMLElement} */ (e.target).closest('[data-cancel-act]'); if (x){
     const { error } = await sb.rpc('cancel_manager_action', { p_id:/** @type {string} */ (x.dataset.cancelAct) }); if (error) return toast(friendly(error.message), true);
     const m = (APP.mgrReqs || []).find(m => m.kind==='act' && m.r.id === x.dataset.cancelAct); if (m) m.r.status = 'Cancelled'; toast(t('cancelled')); renderVoice(); }
 });
-function inboxSheet(id){
-  const f = (APP.inbox || []).find(x => x.id === id); if (!f) return;
-  sheet(`<h2>${f.kind==='complaint'?'⚠️':'💡'} ${esc(f.subject)}</h2><div class="hint">${esc(t('from'))}: ${esc(f.anonymous ? '🕶 ' + t('anonymous') : (f.emp_name ? f.emp_name + ' (' + f.emp_id + ')' : f.emp_id))} · ${esc(dShort(f.created_at))}</div>
-    <div class="t2" style="white-space:pre-wrap;margin:10px 0">${esc(f.body)}</div>
-    <div class="field"><label>${esc(t('status'))}</label><select id="ib-s">${['New','In review','Closed'].map(s => `<option value="${s}" ${s===f.status?'selected':''}>${esc(stLbl(s))}</option>`).join('')}</select></div>
-    <div class="field"><label>${esc(t('reply'))}</label><textarea id="ib-r" rows="4">${esc(f.reply || '')}</textarea></div>
-    <button class="btn" id="ib-go">${esc(t('saveReply'))}</button>`);
-  $('ib-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    const { error } = await sb.rpc('answer_feedback', { p_id:id, p_status:$('ib-s').value, p_reply:$('ib-r').value.trim() || null });
-    if (error) return toast(friendly(error.message), true);
-    Object.assign(f, { status:$('ib-s').value, reply:$('ib-r').value.trim() || null }); closeSheet(); toast('✓'); renderVoice();
-  };
-}
 document.addEventListener('click', e => {
   const a = /** @type {HTMLElement} */ (e.target).closest('[data-att]'); if (a) return openAttachment(a.dataset.att);
-  const ib = /** @type {HTMLElement} */ (e.target).closest('[data-inbox]'); if (ib) return inboxSheet(ib.dataset.inbox);
+  const ib = /** @type {HTMLElement} */ (e.target).closest('[data-inbox]'); if (ib) return typeof PKM !== 'undefined' && PKM.openWindow('inbox', { id: /** @type {string} */ (ib.dataset.inbox) });
 });
 // Android back button (the app calls window.pkBack() first; false = nothing left to go back to → the app goes to the background)
 //   1) an open window (bottom sheet) closes  2) the previous tab opens  3) from another tab with no history → Home
