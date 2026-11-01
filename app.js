@@ -700,18 +700,7 @@ async function loadCoReqs(){
   try { const r = await sb.from('checkout_requests').select('*').eq('emp_id', APP.me.emp_id).order('tried_at', { ascending:false }).limit(5);
         APP.coreqs = r.error ? [] : (r.data || []); } catch(e){ APP.coreqs = []; }
 }
-function renderCoReqs(){
-  const box = $('co-card'); if (!box) return;
-  const L = (APP.coreqs || []).filter(c => c.status === 'Waiting' || (c.status !== 'Checked out' && Date.now() - new Date(c.handled_at || c.tried_at).getTime() < 3 * 864e5));
-  if (!L.length) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="card"><div class="sec">${esc(t('coTitle'))}</div><div class="list">${L.map(c => {
-    const what = t(c.kind === 'left' ? 'coLeftAt' : 'coTriedAt', { t: c.local_time || '', place: c.place || '' });
-    const st = c.status === 'Waiting' ? t('coWaiting') : c.status === 'Recorded' ? t('coRecorded', { t: c.out_time || '' }) : c.status === 'Rejected' ? t('coRejected') : '';
-    return `<div class="it" style="align-items:flex-start"><div class="grow"><div class="t1">${esc(niceDate(c.att_date))} · ${esc(what)}</div>
-      ${c.message ? `<div class="t2">💬 ${esc(c.message)}</div>` : ''}<div class="t2">${esc(st)}</div>
-      ${c.status === 'Rejected' && c.reason ? `<div class="t2" style="color:var(--red,#c0392b)">${esc(c.reason)}</div>` : ''}
-      ${c.status === 'Waiting' ? `<button class="btn small" style="margin-top:8px" data-act="co-msg" data-id="${esc(c.id)}">${esc(t(c.message ? 'coEditMsg' : 'coAddMsg'))}</button>` : ''}</div></div>`; }).join('')}</div></div>`;
-}
+function renderCoReqs(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 🚪 card is React (react/src/phone/homecards)
 function coSheet(head, c){
   sheet(`<h2>${esc(t(c.kind === 'left' ? 'coLeftTitle' : 'coTitleSheet'))}</h2>${head || ''}
     <div class="field"><label>${esc(t('coMsgLabel'))}</label><textarea id="co-msg" maxlength="500" placeholder="${esc(t('coMsgPh', { t: c.local_time || '' }))}">${esc(c.message || '')}</textarea></div>
@@ -787,11 +776,7 @@ async function loadSiteRight(){
   try { const { data, error } = await withTimeout(sb.rpc('can_set_site_points'), 8000); if (!error) APP.canSetSite = data === true; } catch(e) {}
   renderSpCard();
 }
-function renderSpCard(){
-  const b = $('sp-card'); if (!b) return;
-  b.innerHTML = APP.canSetSite ? `<div class="card"><div class="sec">📍 ${esc(t('spTitle'))}</div><div class="hint" style="margin-bottom:10px">${esc(t('spHint'))}</div>
-    <button class="btn" id="sp-open">📍 ${esc(t('spBtn'))}</button></div>` : '';
-}
+function renderSpCard(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 📍 card is React (react/src/phone/homecards)
 let spT;
 function spSheet(){
   sheet(`<h2>📍 ${esc(t('spTitle'))}</h2><div class="hint">${esc(t('spPickHint'))}</div>
@@ -840,15 +825,7 @@ async function afterStatus(){
 // ── iPhone notifications (web app on the Home Screen; 60-push-iphone.sql + edge function send-push) ──
 const webPushOK = () => !NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && isStandalone();
 const b64ToBytes = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
-function renderPushCard(){
-  const box = $('push-card'); if (!box) return;
-  if (!webPushOK() || !APP.ready) { box.innerHTML = ''; return; }
-  const perm = Notification.permission, on = perm === 'granted' && localStorage.getItem('pk_push_web');
-  if (on) { box.innerHTML = ''; return; }
-  box.innerHTML = perm === 'denied'
-    ? `<div class="card"><div class="hint" style="margin:0">🔕 ${esc(t('pushBlocked'))}</div></div>`
-    : `<div class="card"><div class="hint" style="margin:0 0 10px">${esc(t('pushWhy'))}</div><button class="btn" data-act="push-on">${esc(t('pushOnBtn'))}</button></div>`;
-}
+function renderPushCard(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 🔔 card is React (react/src/phone/homecards)
 async function webSubscribe(ask){
   const { data: key } = await sb.rpc('push_web_key');
   if (!key) { if (ask) toast(t('pushNotReady')); return false; }
@@ -1025,7 +1002,6 @@ async function undoCheckout(btn){
   toast(t('undoneOut'));
 }
 function renderHome(){
-  $('bday-box').innerHTML = birthdayCard();
   const st = APP.status || /** @type {ClockStatus} */ ({}), o = st.open;
   $('clk-upd').textContent = APP.updatedAt ? t('updated', { t: new Date(APP.updatedAt).toLocaleTimeString(loc(), { hour:'2-digit', minute:'2-digit' }) }) : '';
   $('clk-date').textContent = st.date ? dObj(st.date).toLocaleDateString(loc(), { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '';
@@ -1441,10 +1417,6 @@ async function openAttachment(path){
   const { data, error } = await sb.storage.from('announcements').createSignedUrl(path, 600);
   if (error || !data) return toast(friendly(error ? error.message : 'Not allowed'), true);
   window.open(data.signedUrl, '_blank');
-}
-function birthdayCard(){
-  return APP.birthday ? `<div class="card" style="background:linear-gradient(135deg,#ee2624,#b4151a);color:#fff;text-align:center;padding:22px 16px">
-      <div style="font-size:44px">🎂</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.5">${esc(t('bday'))}</div><div style="opacity:.9;margin-top:4px">${esc(t('bdaySub'))}</div></div>` : '';
 }
 // The voice cards — my complaints & suggestions, the manager's requests to HR, the board member's approvals and the complaints
 // inbox — are React since 1 Nov 2026 (react/src/phone/voice). Their buttons keep the old data-… names handled below.
