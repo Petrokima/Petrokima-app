@@ -989,52 +989,26 @@ async function undoCheckout(btn){
 // Home is React (react/src/phone: clock = the clock card, homecards = the cards around it, homelists = Today + This payroll month);
 // it reads APP.status, APP.att, the queue and the flags below. Checking in / out, GPS, the queue and reading stay here.
 function renderHome(){ tick(); }
-// site picker
-let pickSel = null, searchT;
+// site picker — the window is React (react/src/phone/sitepick: "Where are you working?"); kept here: which site was chosen (pickSel: its name
+// goes with a check-in saved on the phone), the server search and starting the check-in
+let pickSel = null;
 function openSitePicker(mode){
-  pickSel = null; const fromHome = mode === 'in';
-  const recent = (APP.status && APP.status.recent) || [], openCode = APP.status && APP.status.open && APP.status.open.code;
-  const noProj = APP.status && APP.status.no_project && openCode !== '';
-  const openIsNone = APP.status && APP.status.open && APP.status.open.code === '';
-  sheet(`<h2>${esc(t('whereWork'))}</h2>
-    ${APP.status && APP.status.no_project && !openIsNone && !fromHome ? `<button class="btn green big" id="noproj-go" style="margin-bottom:14px">▶ ${esc(t('inNoProject'))}</button><div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('orSite'))}</div>` : ''}
-    ${(APP.myProjects||[]).length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('myProjects'))}</div>
-      ${(APP.myProjects || []).length > 8 ? `<div class="field"><input id="myp-q" placeholder="${esc(t('filterProj'))}" autocomplete="off"></div>` : ''}
-      <div id="myp-list">${(APP.myProjects || []).filter(p => p.id !== openCode).map(siteBtn).join('')}</div>`
-    : `${recent.length ? `<div class="sec" style="font-size:13px;color:var(--muted)">${esc(t('recent'))}</div>${recent.filter(r=>r.code!==openCode).map(siteBtn).join('')}` : ''}
-    ${navigator.onLine ? '' : `<div class="hint" style="margin-top:10px">📴 ${esc(t('offlineSites'))}</div>`}
-    <div class="field" style="margin-top:12px"><input id="site-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
-    <div id="site-res"><div class="hint">${esc(t('typeMore'))}</div></div>`}
-    <button class="btn green big" id="site-go" disabled data-mode="${mode}">▶ ${esc(t('checkIn'))}</button>`);
-  if ($('site-q')) $('site-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(searchSites, 300); });
-  if ($('myp-q')) $('myp-q').addEventListener('input', () => { const q = $('myp-q').value.trim().toLowerCase();
-    $('myp-list').innerHTML = (APP.myProjects || []).filter(p => p.id !== openCode && (!q || (p.id + ' ' + (p.name||'')).toLowerCase().includes(q))).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`; });
+  pickSel = null; closeSheet();
+  if (typeof PKM !== 'undefined') PKM.openWindow('sitePick', { id: mode });
 }
-function siteBtn(s){ return `<button class="site" data-site="${esc(s.code||s.id)}" data-name="${esc(s.name||'')}"><b>${esc(s.name || s.code || s.id)}</b><span>${esc(s.code||s.id)}${s.location?' · '+esc(s.location):''}</span></button>`; }
-async function searchSites(){
-  const q = $('site-q').value.trim(), box = $('site-res');
-  if (q.length < 2){ box.innerHTML = `<div class="hint">${esc(t('typeMore'))}</div>`; return; }
-  const openCode = APP.status && APP.status.open && APP.status.open.code;
-  const local = () => {                                                // the saved list, for use without internet
-    const c = store.get('pk_sites', null);
-    if (!c || !c.list || c.uid !== (APP.me && APP.me.id)) { box.innerHTML = `<div class="hint neg">📴 ${esc(t('noSiteCache'))}</div>`; return; }
-    const ql = q.toLowerCase();
-    const hits = c.list.filter(([id, nm]) => id.toLowerCase().startsWith(ql) || (nm || '').toLowerCase().includes(ql))
-                       .sort((a, b) => (b[0].toLowerCase().startsWith(ql)) - (a[0].toLowerCase().startsWith(ql))).slice(0, 25);
-    box.innerHTML = `<div class="hint" style="margin-bottom:6px">📴 ${esc(t('offlineList'))}</div>` + (hits.filter(h => h[0] !== openCode).map(([id, nm]) => siteBtn({ id, name: nm })).join('') || `<div class="hint">${esc(t('noSites'))}</div>`);
-  };
-  if (!navigator.onLine) return local();
+/** the site search: results, a refusal in friendly words, or "no internet" (no connection, a network failure, no answer in 8 s — the
+ *  window then searches the list saved on the phone) @param {string} q @returns {Promise<{ data: any[] } | { error: string } | { offline: true }>} */
+async function findSites(q){
+  if (!navigator.onLine) return { offline: true };
   let data, error;
-  try { ({ data, error } = await withTimeout(sb.rpc('search_sites', { p_q:q }), 8000)); } catch(e) { return local(); }
-  if (error && /load failed|failed to fetch|network|timeout|timed out|fetch/i.test(error.message || '')) return local();
-  if (error) { box.innerHTML = `<div class="hint neg">${esc(friendly(error.message))}</div>`; return; }
-  box.innerHTML = (data||[]).filter(s=>s.id!==openCode).map(siteBtn).join('') || `<div class="hint">${esc(t('noSites'))}</div>`;
+  try { ({ data, error } = await withTimeout(sb.rpc('search_sites', { p_q:q }), 8000)); } catch(e) { return { offline: true }; }
+  if (error && /load failed|failed to fetch|network|timeout|timed out|fetch/i.test(error.message || '')) return { offline: true };
+  if (error) return { error: friendly(error.message) };
+  return { data: data || [] };
 }
-function selectSite(btn){
-  document.querySelectorAll('.site').forEach(b=>b.classList.toggle('sel', b===btn));
-  pickSel = { code: btn.dataset.site, name: btn.dataset.name };
-  const go=$('site-go'); go.disabled=false; go.textContent = `▶ ${t('confirmIn')} ${pickSel.name || pickSel.code}`;
-}
+/** check in at the site chosen in the window (its name is kept for a check-in saved on the phone)
+ *  @param {string} code @param {string} name @param {boolean} isSwitch @param {(p: '' | 'loc' | 'send') => void} phase */
+function checkInAt(code, name, isSwitch, phase){ pickSel = { code, name }; return clock('in', code, null, isSwitch, phase); }
 async function nativeLocation(fresh){
   const G = nativePlugin('Geolocation');
   try {
@@ -1060,14 +1034,9 @@ function getLocation(fresh){
       e => res({ err: (e && e.code) || 2 }), { enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge: fresh ? 0 : 60000 });
   });
 }
-function locationHelp(code, retry){
-  const denied = code === 1;
-  sheet(`<h2>📍 ${esc(t('locTitle'))}</h2>
-    <div class="hint" style="color:var(--text)">${esc(denied ? t('locDenied') : t('locTimeout'))}</div>
-    ${denied ? `<div class="hint" style="white-space:pre-line">${esc(NATIVE ? (PLATFORM==='ios' ? t('locAppIos') : t('locAppAndroid')) : (isIOS() ? t('locIos') : t('locAndroid')))}</div>` : ''}
-    <button class="btn" id="loc-retry">${esc(t('tryAgain'))}</button>`);
-  $('loc-retry').onclick = retry;
-}
+// "📍 Location is required" is React (react/src/phone/sitepick); Try again runs the step that asked for the location
+/** @param {number} code — 1 refused, 2 not available, 3 timed out @param {() => void} retry */
+function locationHelp(code, retry){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('locHelp', { id: String(code), retry }); }
 // phase: the React "check in without a project" button shows the progress (getting the location / sending), as an old button did
 /** @param {'in' | 'out'} type @param {string | null} code @param {any} [btn] @param {boolean} [isSwitch] @param {(p: '' | 'loc' | 'send') => void} [phase] */
 async function clock(type, code, btn, isSwitch, phase){
@@ -1471,18 +1440,15 @@ document.addEventListener('click', async ev => {
   if (x === $('sheet')) return closeSheet();
   if (x.closest('#sp-open')) return spSheet();                                       // 91: set a site's location
   const sp = x.closest('.site[data-sp]'); if (sp) return spPick(sp.dataset);
-  const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
   const sl = x.closest('[data-slip]'); if (sl) return typeof PKM !== 'undefined' && PKM.openWindow('slip', { id: /** @type {string} */ (sl.dataset.slip) });
   const cx = x.closest('[data-cancel]'); if (cx) return typeof PKM !== 'undefined' && PKM.openWindow('cancel', { id: /** @type {string} */ (cx.dataset.cancel) });
   const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(/** @type {string} */ (tp.dataset.tproj));
   const rno = x.closest('[data-treq-no]'); if (rno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectRequest', { id: /** @type {string} */ (rno.dataset.treqNo) });
   const hr1 = x.closest('[data-hra]'); if (hr1) return typeof PKM !== 'undefined' && PKM.openWindow('alert', { id: /** @type {string} */ (hr1.dataset.hra) });
   const tno = x.closest('[data-team-no]'); if (tno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectAllowance', { id: /** @type {string} */ (tno.dataset.teamNo) });
-  if (x.id === 'site-go' && pickSel) return clock('in', pickSel.code, x, x.dataset.mode === 'switch');
   if (x.id === 'disc-go') { store.set('pk_queue', queue().filter(ev => ev.client_id !== x.dataset.id)); closeSheet(); try { await loadStatus(); } catch(e){} return renderHome(); }
   const dsc = x.closest('[data-discard]'); if (dsc) return discardSaved(dsc.dataset.discard);
   const rty = x.closest('[data-retry]'); if (rty) { const cur = queue(); cur.forEach(e => { if (e.client_id === rty.dataset.retry) delete e._err; }); store.set('pk_queue', cur); renderHome(); return flushQueue(); }
-  if (x.id === 'noproj-go') return clock('in', null, x, true);   // only offered when switching
   if (x.id === 'out-go') return clock('out', null, x);
   const mno = x.closest('[data-mis-no]'); if (mno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectMission', { id: /** @type {string} */ (mno.dataset.misNo) });
   const a = x.closest('[data-act]'); if (!a) return;
