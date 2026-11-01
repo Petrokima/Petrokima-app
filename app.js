@@ -323,6 +323,8 @@ Object.assign(T.ar, { coTitle:'🚪 طلبات انصراف أُرسلت للم�
   lwTitle:'🚶 غادرت دون تسجيل الانصراف', lwBody:'أنت بعيد عن مكتبك وما زلت مسجّل حضور. تم إبلاغ الموارد البشرية — افتح التطبيق لإرسال رسالة لهم.',
   lwAskTitle:'اسمح بالموقع «طوال الوقت»', lwOpenSettings:'فتح الإعدادات',
   lwAskBody:'أثناء تسجيل حضورك، يتحقق التطبيق من وقت لآخر أنك ما زلت في مكتبك، حتى تعرف الموارد البشرية إذا غادرت دون تسجيل الانصراف.\n\nفي الشاشة التالية اختر: الأذونات ← الموقع ← «السماح طوال الوقت».' });
+Object.assign(T.en, { appLoadFailed:'The app did not load completely. Close it and open it again. If this keeps happening, contact HR.' });
+Object.assign(T.ar, { appLoadFailed:'لم يكتمل تحميل التطبيق. أغلقه وافتحه مرة أخرى، وإذا تكرر ذلك تواصل مع الموارد البشرية.' });
 Object.assign(T.en, { dayEnded:'Day ended at {t}', dayTotal:'Worked today: {h}', cameBack:'I came back — check in again',
   cameBackNote:'Your check-out stays recorded. The time you were away is not counted, and HR can see it.',
   undoOut:'↩ Undo check-out (until {t})', undoneOut:'Check-out undone — you are checked in again ✓', undoLate:'More than 5 minutes have passed — check in again instead',
@@ -346,8 +348,7 @@ function applyLang(){
   document.documentElement.lang = LANG; document.documentElement.dir = LANG==='ar' ? 'rtl' : 'ltr';
   (/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('[data-t]'))).forEach(el => el.textContent = t(el.dataset.t));
   document.querySelectorAll('[data-lang]').forEach(el => el.textContent = t('langBtn'));
-  if ($('ios-steps')) $('ios-steps').textContent = t('iosSteps');
-  if (APP.ready) renderAll();
+  if (APP.ready) renderAll(); else if (typeof PKM !== 'undefined') PKM.render();   // the sign-in screens are React too
 }
 
 // ═════════════════════════════════════════════════════════
@@ -441,7 +442,7 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
  *   watch?: any, canSetSite?: boolean, varElements?: FnResult<'variable_elements'>, salReqs?: Row<'salary_change_requests'>[],
  *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
  *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
- *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, missions?: Mission[],
+ *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, missions?: Mission[],
  *   teamMissions?: Mission[], payUnlocked?: boolean }}
  *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
  *       and every screen that reads it opens only after that.
@@ -572,18 +573,20 @@ async function captchaToken(boxId, lang){
   });
 }
 function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
-async function doLogin(){
-  const code=$('li-code').value.trim(), pass=$('li-pass').value;
-  if (!code || !pass) return errBox('li-err', t('fillLogin'));
-  const b=$('li-go'); b.disabled=true; b.innerHTML='<div class="spin"></div>';
+// The sign-in form is React (react/src/phone/signin); kept here: the security check, signing in and what is remembered.
+/** Sign in: '' when signed in (signedIn() runs first — the form clears itself — then what follows: afterLogin), else the message
+ *  (the code is already trimmed) @param {string} code @param {string} pass @param {() => void} signedIn @returns {Promise<string>} */
+async function signIn(code, pass, signedIn){
   let cap; try { cap = await captchaToken('li-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }   // check unavailable: Supabase decides (works while its CAPTCHA switch is off)
   const { data, error } = await sb.auth.signInWithPassword({ email: loginName(code), password: pass, options: cap ? { captchaToken: cap } : undefined });
-  b.disabled=false; b.textContent=t('signIn');
-  if (error) return errBox('li-err', /invalid/i.test(error.message) ? t('wrongLogin') : friendly(error.message));
-  errBox('li-err'); tempPass = pass; $('li-pass').value=''; localStorage.setItem('pk_code', code);
-  await afterLogin(data.user);
+  if (error) return /invalid/i.test(error.message) ? t('wrongLogin') : friendly(error.message);
+  tempPass = pass; localStorage.setItem('pk_code', code); signedIn();
+  await afterLogin(data.user); return '';
 }
-function message(txt){ $('msg-body').textContent = txt; $('msg-body').style.whiteSpace = 'pre-line'; show('scr-msg'); }
+// the full-screen message is React (react/src/phone/signin) — it may be set before React has loaded (start-up), so it is kept in APP
+// link: for the Android browser, the app's download page (the screen then has no Back)
+/** @param {string} txt @param {string} [link] */
+function message(txt, link){ APP.msg = { text: txt, link: link || null }; show('scr-msg'); if (typeof PKM !== 'undefined') PKM.render(); }
 async function afterLogin(user){
   if (!navigator.onLine){ if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('noCache')); }
   const meRes = await withTimeout(sb.from('app_users').select('*').eq('id', user.id), 15000);
@@ -1410,14 +1413,16 @@ function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.pus
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP
 // ═════════════════════════════════════════════════════════
+// the language button (Arabic ⇄ English; notifications follow the app language) — also the React sign-in screens' button
+function switchLang(){ LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG);
+    const tk = localStorage.getItem('pk_push_token'); if (tk && APP.ready) sb.rpc('save_push_token', { p_token: tk, p_platform: 'android', p_lang: LANG }).then(()=>{}, ()=>{});   // notifications follow the app language
+    const ep = localStorage.getItem('pk_push_web'); if (ep && APP.ready) sb.rpc('set_push_lang', { p_token: ep, p_lang: LANG }).then(()=>{}, ()=>{});
+    applyLang(); renderPushCard(); renderSpCard(); }
 let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (APP.ready) renderProfile(); });
 document.addEventListener('click', async ev => {
   const x = /** @type {HTMLElement} */ (ev.target);
-  if (x.closest('[data-lang]')) { LANG = LANG==='ar' ? 'en' : 'ar'; localStorage.setItem('pk_lang', LANG);
-    const tk = localStorage.getItem('pk_push_token'); if (tk && APP.ready) sb.rpc('save_push_token', { p_token: tk, p_platform: 'android', p_lang: LANG }).then(()=>{}, ()=>{});   // notifications follow the app language
-    const ep = localStorage.getItem('pk_push_web'); if (ep && APP.ready) sb.rpc('set_push_lang', { p_token: ep, p_lang: LANG }).then(()=>{}, ()=>{});
-    applyLang(); renderPushCard(); renderSpCard(); return; }
+  if (x.closest('[data-lang]')) return switchLang();
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
   if (x === $('sheet')) return closeSheet();
   if (x.closest('#sp-open')) return spSheet();                                       // 91: set a site's location
@@ -1452,8 +1457,6 @@ document.addEventListener('click', async ev => {
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
-$('li-go').addEventListener('click', doLogin);
-['li-code','li-pass'].forEach(i => $(i).addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); }));
 $('fl-go').addEventListener('click', firstLogin);
 const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
@@ -1463,20 +1466,20 @@ setInterval(() => { if (APP.ready) checkAppUpdate(); }, 60 * 60 * 1000);
 setInterval(() => { if (APP.ready) tick(); }, 15000);
 setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQueue(); }, 30000);
 
+// Safety net: the screens are drawn by react.js (loaded right after this file). If it did not load (a broken download, an old copy),
+// say so in plain words instead of showing an empty screen.
+window.addEventListener('load', () => { if (typeof PKM === 'undefined') { const b = $('react-msg');
+  if (b) { b.textContent = t('appLoadFailed'); b.style.cssText = 'padding:40px 20px;text-align:center;line-height:1.8'; } show('scr-msg'); } });
 (async function boot(){
   applyLang(); net();
   if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (NATIVE) await restoreDeviceId();
   if (isAndroidWeb()) {                                   // Android phones must use the Petrokima app, not the browser
-    message(t('androidUseApp'));
-    $('msg-body').insertAdjacentHTML('beforeend', `<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:16px" href="${ANDROID_APP_PAGE}">⬇ ${esc(t('androidGetApp'))}</a>`);
-    const back = /** @type {HTMLElement | null} */ (document.querySelector('#scr-msg [data-act="signout"]')); if (back) back.style.display = 'none';
-    return;
+    return message(t('androidUseApp'), ANDROID_APP_PAGE);      // the download button, no Back
   }
   if (!window.supabase || !SUPABASE_KEY || SUPABASE_KEY.startsWith('PASTE')) return message(t('configMissing'));
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: timedFetch } });
-  $('li-code').value = localStorage.getItem('pk_code') || '';
-  if (isIOS() && !isStandalone()) { $('ios-steps').textContent = t('iosSteps'); show('scr-install'); return; }
+  if (isIOS() && !isStandalone()) { show('scr-install'); return; }
   try {
     const { data } = await sb.auth.getSession();
     if (data && data.session) await afterLogin(data.session.user); else show('scr-login');

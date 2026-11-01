@@ -112,19 +112,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="offline" data-t="offline"></div>
 
 <!-- LOGIN -->
-<section class="screen" id="scr-login"><div class="center"><div style="width:100%;max-width:400px">
-  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-t="appName"></h1><div class="sub" data-t="loginSub"></div>
-  <div class="card" style="margin-top:22px">
-    <div class="field"><label data-t="empCode"></label><input id="li-code" inputmode="text" autocomplete="username" autocapitalize="off"></div>
-    <div class="field"><label data-t="password"></label><input id="li-pass" type="password" autocomplete="current-password"></div>
-    <div class="hint" data-t="firstHint" style="margin:-4px 0 10px"></div>
-    <div id="li-cap" style="display:none;margin:0 0 10px;min-height:0"></div>
-    <button class="btn" id="li-go" data-t="signIn"></button>
-    <div class="err" id="li-err"></div>
-  </div>
-  <div class="sub" style="margin-top:6px"><button class="iconbtn" data-lang>English</button></div>
-  <div class="sub" style="margin-top:12px" data-t="forgot"></div>
-</div></div></section>
+<section class="screen" id="scr-login"><div id="react-login"></div></section>
 
 <!-- FIRST SIGN-IN -->
 <section class="screen" id="scr-first"><div class="center"><div style="width:100%;max-width:400px">
@@ -141,17 +129,10 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 </div></div></section>
 
 <!-- INSTALL FIRST (iPhone) -->
-<section class="screen" id="scr-install"><div class="center"><div style="width:100%;max-width:400px;text-align:center">
-  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-t="installTitle"></h1>
-  <div class="card" style="margin-top:18px;text-align:start;line-height:1.9"><div data-t="installText" style="margin-bottom:10px"></div><div id="ios-steps" style="white-space:pre-line;font-weight:700"></div></div>
-  <button class="iconbtn" data-lang>English</button>
-</div></div></section>
+<section class="screen" id="scr-install"><div id="react-install"></div></section>
 
-<!-- MESSAGE (no access etc.) -->
-<section class="screen" id="scr-msg"><div class="center"><div style="width:100%;max-width:400px;text-align:center">
-  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><div class="card" id="msg-body" style="line-height:1.8"></div>
-  <button class="btn ghost" data-act="signout" data-t="back"></button>
-</div></div></section>
+<!-- MESSAGE (no access etc.) — the sign-in screens, the message and the iPhone install screen are React: react/src/phone/signin -->
+<section class="screen" id="scr-msg"><div id="react-msg"></div></section>
 
 <!-- MAIN -->
 <section class="screen" id="scr-main">
@@ -228,8 +209,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v74"></script>
+<script src="app.js?v=pk-mobile-v75"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v74"></script>
+<script src="react.js?v=pk-mobile-v75"></script>
 </body>
 </html>
