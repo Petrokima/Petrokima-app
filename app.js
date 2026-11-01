@@ -1050,23 +1050,8 @@ function renderHome(){
         ${ev._err ? `<div class="neg" style="font-weight:700">✖ ${esc(t('failedItem'))}: ${esc(ev._err)} <button class="btn ghost small" data-retry="${esc(ev.client_id)}" style="margin-inline-start:6px">${esc(t('tryAgain'))}</button><button class="btn ghost small" data-discard="${esc(ev.client_id)}" style="margin-inline-start:6px">${esc(t('discard'))}</button></div>` : ''}</div>`).join('')}
       ${navigator.onLine && !q[0]._err ? `<button class="btn ghost small" data-act="sync" style="margin-top:8px">${esc(t('sendNow'))}</button>` : ''}</div>` : '';
   $('clk-state').insertAdjacentHTML('afterbegin', (APP.offline ? `<div class="state warn" style="margin-top:0">📴 ${esc(t('offlineMode'))}</div>` : '') + saved);
-  const today = st.today || [];
-  const tot = today.reduce((s,x)=>s+num(x.hours),0);
-  $('today-list').innerHTML = today.length ? today.map(x => `<div class="it"><div class="grow"><div class="t1">${esc(x.code ? (x.name || x.code) : t('noProject'))}</div><div class="t2">${esc(x.code || '—')}</div></div>
-      <div class="num" style="font-size:14px">${x.pending?'⏳ ':''}${esc(x.in)} – ${x.out ? esc(x.out) : `<span class="chip c-green">${esc(t('openLine'))}</span>`}</div>
-      <div class="num" style="min-width:52px;text-align:end">${x.out ? fmtH(x.hours) : ''}</div></div>`).join('')
-      + `<div class="it"><div class="grow t1">${esc(t('totalToday'))}</div><div class="num">${fmtH(tot)}</div></div>`
-    : `<div class="empty">${esc(t('noToday'))}</div>`;
-  const cyc = cycleOf(st.date || todayStr());
-  $('month-title').textContent = `${t('thisCycle')} — ${periodLabel(cyc)}`;
-  const days = APP.att.filter(a => a.date !== st.date);
-  // a past day with a check-in but no check-out: hours are not counted until HR settles it
-  const noOutDay = a => (a.projects||[]).some(x => x.forgotten || (x.in && !x.out && a.date < (st.date || todayStr())));
-  $('month-list').innerHTML = days.length ? days.map(a => `<div class="it"><div class="grow"><div class="t1">${esc(niceDate(a.date))}</div>
-      <div class="t2">${(a.projects||[]).map(x=>esc(x.code || t('noProject'))).join(' · ') || esc(tm('st',a.status)||a.status)}</div></div>
-      <div class="num" style="font-size:13.5px">${esc(a.check_in||'')}${noOutDay(a) ? ` – <span class="chip c-red">${esc(t('noOut'))}</span>` : a.check_out?' – '+esc(a.check_out):''}</div>
-      <div class="num" style="min-width:52px;text-align:end">${noOutDay(a) ? '—' : fmtH(a.total_hours)}</div></div>`).join('')
-    : `<div class="empty">${esc(t('noMonth'))}</div>`;
+  // "Today" and "This payroll month" are React (react/src/phone/homelists — it reads APP.status and APP.att)
+  if (typeof PKM !== 'undefined') PKM.render();
   tick();
 }
 // site picker
