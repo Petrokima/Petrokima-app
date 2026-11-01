@@ -1305,50 +1305,15 @@ async function loadMissionsP(){
 }
 // the "your manager assigned you a mission" notice is React since 31 Oct 2026 — react/src/phone/reqcards (✋ calls misAck)
 function renderMisAck(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function missionSheet(assign){
-  const team = APP.myTeam || [], sites = (store.get('pk_sites', null) || {}).list || [];
-  sheet(`<h2>${esc(assign ? '🚗 ' + t('misAssign') : t('misTitle'))}</h2>
-    ${assign ? `<div class="field"><label>${esc(t('misWho'))} · <span id="mis-cnt">${esc(t('misChosen', { n: 0 }))}</span></label><div style="border:1px solid var(--border,#ddd);border-radius:10px;padding:6px 10px">
-      <label style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border,#eee);font-weight:600"><input type="checkbox" id="mis-all" style="width:auto"> ${esc(t('misSelAll', { n: team.length }))}</label>
-      ${team.map(m => `<label style="display:flex;gap:8px;align-items:center;padding:6px 0"><input type="checkbox" class="mis-who" value="${esc(m.id)}" style="width:auto"> <span>${esc((LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || m.id)} <span class="muted" style="font-size:12px">${esc(m.id)}</span>${m.job_name ? `<br><span class="muted" style="font-size:12px">${esc(m.job_name)}</span>` : ''}</span></label>`).join('')}</div>
-      <div class="hint">ℹ ${esc(t('misNoAppNote'))}</div></div>` : ''}
-    <div class="row"><button class="btn small" id="mis-k-full" style="flex:1">${esc(t('misFull'))}</button><button class="btn ghost small" id="mis-k-part" style="flex:1">${esc(t('misPart'))}</button></div>
-    <div id="mis-full" class="row" style="margin-top:10px"><div class="field" style="flex:1"><label>${esc(t('misFrom'))}</label><input type="date" id="mis-f" value="${todayStr()}"></div>
-      <div class="field" style="flex:1"><label>${esc(t('misTo'))}</label><input type="date" id="mis-t" value="${todayStr()}"></div></div>
-    <div id="mis-part" style="display:none;margin-top:10px"><div class="field"><label>${esc(t('misDate'))}</label><input type="date" id="mis-d" value="${todayStr()}"></div>
-      <div class="row"><div class="field" style="flex:1"><label>${esc(t('misTimeFrom'))}</label><input type="time" id="mis-tf" value="10:00"></div>
-        <div class="field" style="flex:1"><label>${esc(t('misTimeTo'))}</label><input type="time" id="mis-tt" value="14:00"></div></div></div>
-    <div class="field"><label>${esc(t('misPlace'))} *</label><input id="mis-pl" maxlength="200"></div>
-    <div class="field"><label>${esc(t('misPurpose'))}</label><textarea id="mis-pu" rows="2" maxlength="500"></textarea></div>
-    <div class="field"><label>${esc(t('misProject'))}</label><input id="mis-pr" list="mis-prl" maxlength="40" autocomplete="off"><datalist id="mis-prl">${sites.slice(0, 3000).map(([id, nm]) => `<option value="${esc(id)}">${esc(nm || '')}</option>`).join('')}</datalist></div>
-    <div class="hint">ℹ ${esc(t('misAckNote'))}</div>
-    <button class="btn" id="mis-go">${esc(t('send'))}</button>`);
-  let part = false;
-  const kind = p => { part = p; $('mis-full').style.display = p ? 'none' : ''; $('mis-part').style.display = p ? '' : 'none';
-    $('mis-k-full').className = 'btn small' + (p ? ' ghost' : ''); $('mis-k-part').className = 'btn small' + (p ? '' : ' ghost'); };
-  $('mis-k-full').onclick = () => kind(false); $('mis-k-part').onclick = () => kind(true);
-  if (assign) {
-    const cnt = () => { const n = document.querySelectorAll('.mis-who:checked').length; $('mis-cnt').textContent = t('misChosen', { n }); $('mis-all').checked = n === team.length && n > 0; };
-    $('mis-all').onchange = () => { (/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who'))).forEach(c => c.checked = $('mis-all').checked); cnt(); };
-    (/** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who'))).forEach(c => c.onchange = cnt);
-  }
-  $('mis-go').onclick = async () => {
-    const f = part ? $('mis-d').value : $('mis-f').value, to = part ? $('mis-d').value : $('mis-t').value;
-    const tf = part ? $('mis-tf').value : null, tt = part ? $('mis-tt').value : null, pl = $('mis-pl').value.trim();
-    if (!f || !to || to < f) return toast(t('misBadDates'), true);
-    if (part && (!tf || !tt || tt <= tf)) return toast(t('misBadTimes'), true);
-    if (!pl) return toast(t('misNeedPlace'), true);
-    const who = assign ? [.../** @type {NodeListOf<HTMLInputElement>} */ (document.querySelectorAll('.mis-who:checked'))].map(c => c.value) : null;
-    if (assign && !(who || []).length) return toast(t('misNoWho'), true);
-    if (!navigator.onLine) return toast(t('offline'), true);
-    $('mis-go').disabled = true;
-    const args = { p_from:f, p_to:to, p_time_from:tf, p_time_to:tt, p_place:pl, p_purpose:$('mis-pu').value.trim() || null, p_project:$('mis-pr').value.trim() || null };
-    const { error } = assign ? await sb.rpc('assign_mission', { p_emps:who, ...args }) : await sb.rpc('request_mission', args);
-    $('mis-go').disabled = false;
-    if (error) return toast(friendly(error.message), true);
-    closeSheet(); toast(assign ? t('misAssigned') : (APP.manager ? t('misSentMgr') : t('misSentHR')));
-    await loadMissionsP(); renderAll();
-  };
+// The outside-mission window (ask for one / assign one to my team) is React since 1 Nov 2026 — react/src/phone/mission. It sends here.
+/** @param {string[] | null} emps — the team members to assign (null = I ask for a mission myself)
+ *  @param {{ p_from: string, p_to: string, p_time_from: string | null, p_time_to: string | null, p_place: string, p_purpose: string | null, p_project: string | null }} args */
+async function sendMission(emps, args){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = emps ? await sb.rpc('assign_mission', { p_emps:emps, ...args }) : await sb.rpc('request_mission', args);
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(emps ? t('misAssigned') : (APP.manager ? t('misSentMgr') : t('misSentHR')));
+  await loadMissionsP(); renderAll();
 }
 async function misAck(id){
   if (!navigator.onLine) return toast(t('offline'), true);
@@ -1619,8 +1584,7 @@ document.addEventListener('click', async ev => {
   const mno = x.closest('[data-mis-no]'); if (mno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectMission', { id: /** @type {string} */ (mno.dataset.misNo) });
   const a = x.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act;
-  if (act==='req-mission') return missionSheet(false);
-  if (act==='mis-assign') return missionSheet(true);
+  if (act==='req-mission' || act==='mis-assign') return typeof PKM !== 'undefined' && PKM.openWindow(act==='req-mission' ? 'missionAsk' : 'missionAssign');
   if (act==='in' || act==='switch') return openSitePicker(act);
   if (act==='out') return confirmOut();
   if (act==='undo-out') return undoCheckout(a);
