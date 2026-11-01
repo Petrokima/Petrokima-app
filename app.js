@@ -1373,39 +1373,24 @@ async function hraRespond(args){
   const r = await sb.rpc('hr_alerts'); if (Array.isArray(r.data)) APP.hra = r.data;
   closeSheet(); toast(t('hraSaved')); renderTeam(); saveCache();
 }
-// the manager manages one team member's projects
+// The team-projects windows (one member's projects + search, "remove — why?") are React since 1 Nov 2026 — react/src/phone/teamproj.
+// Kept here: reading his list (the window opens only once it is read, as before), the project search and the save step.
+/** @param {string} empId */
 async function teamProjSheet(empId){
-  const m = (APP.myTeam||[]).find(x => x.id === empId) || /** @type {FnResult<'my_team'>[number]} */ ({ id:empId }), nm = (LANG==='ar' ? m.name_ar : m.name_en) || m.name_en || empId;
   if (!navigator.onLine) return toast(t('offline'), true);
   const { data, error } = await sb.rpc('team_projects', { p_emp: empId });
   if (error) return toast(friendly(error.message), true);
-  sheet(`<h2>📌 ${esc(nm)}</h2>
-    <div class="list">${(data||[]).map(p => `<div class="it"><div class="grow"><div class="t1">${esc(p.name || p.id)}</div><div class="t2">${esc(p.id)} · ${esc(p.assigned_by || '')}</div></div>
-      <button class="btn ghost small" data-tproj-rm="${esc(empId)}|${esc(p.id)}">✕</button></div>`).join('') || `<div class="empty">${esc(t('noProjAssigned'))}</div>`}</div>
-    <div class="field" style="margin-top:12px"><input id="tproj-q" placeholder="${esc(t('addProject'))}" autocomplete="off"></div><div id="tproj-res"></div>
-    <button class="btn ghost" data-act="close" style="margin-top:8px">${esc(t('cancel'))}</button>`);
-  $('tproj-q').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(async () => {
-    const q = $('tproj-q').value.trim(); if (q.length < 2) { $('tproj-res').innerHTML = ''; return; }
-    const r = await sb.rpc('find_projects', { p_q:q }); const have = new Set((data||[]).map(p => p.id));
-    $('tproj-res').innerHTML = (r.data||[]).filter(p => !have.has(p.id)).map(p => `<button class="site" data-tproj-add="${esc(empId)}|${esc(p.id)}"><b>＋ ${esc(p.name || p.id)}</b><span>${esc(p.id)}${p.location ? ' · ' + esc(p.location) : ''}</span></button>`).join('') || `<div class="hint">${esc(t('noSites'))}</div>`;
-  }, 300); });
+  if (typeof PKM !== 'undefined') PKM.openWindow('teamProjects', { id: empId, list: data || [] });
 }
+/** @param {string} q — at least 2 letters @returns {Promise<any[]>} the projects found (none on an error, as before) */
+async function findProjects(q){ const r = await sb.rpc('find_projects', { p_q:q }); return r.data || []; }
 // 100: nothing is deleted — a removed project is CLOSED with a reason and kept in the register of closed records
-function askProjRemove(key){
-  const code = key.split('|')[1] || '';
-  sheet(`<h2>✕ ${esc(t('removeProj'))}</h2><div class="t2" style="margin-bottom:8px">${esc(code)}</div>
-    <div class="field"><label for="tpr-why">${esc(t('removeWhy'))}</label><textarea id="tpr-why"></textarea></div>
-    <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="tpr-go">${esc(t('removeProj'))}</button></div>`);
-  $('tpr-go').onclick = () => { const why = $('tpr-why').value.trim();
-    if (why.length < 3) return toast(t('needWhy'), true);
-    $('tpr-go').disabled = true; teamProjChange(key, false, why); };
-}
 async function teamProjChange(key, add, why){
   const [empId, code] = key.split('|');
   if (!navigator.onLine) return toast(t('offline'), true);
   const res = add ? await sb.from('employee_projects').insert({ emp_id: empId, project_code: code }).select()
                   : await sb.rpc('close_records', { p_tbl: 'employee_projects', p_keys: [{ emp_id: empId, project_code: code }], p_reason: why || '' });
-  if (res.error) { const b = $('tpr-go'); if (b) b.disabled = false; return toast(friendly(String(res.error.message).replace(/^.*?\b(NO_DELETE|CLOSE_REASON|NOT_CLOSED|CLOSE_KEYS|CLOSE_TABLE): ?/, '')), true); }
+  if (res.error) { return toast(friendly(String(res.error.message).replace(/^.*?\b(NO_DELETE|CLOSE_REASON|NOT_CLOSED|CLOSE_KEYS|CLOSE_TABLE): ?/, '')), true); }
   if (add ? !(Array.isArray(res.data) && res.data.length) : !res.data) return toast(t('notAllowed'), true);
   toast(add ? t('projAdded') : t('projRemoved'));
   const r = await sb.rpc('my_team'); APP.myTeam = r.data || APP.myTeam; saveCache(); renderTeam(); teamProjSheet(empId);
@@ -1568,9 +1553,7 @@ document.addEventListener('click', async ev => {
   const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
   const sl = x.closest('[data-slip]'); if (sl) return typeof PKM !== 'undefined' && PKM.openWindow('slip', { id: /** @type {string} */ (sl.dataset.slip) });
   const cx = x.closest('[data-cancel]'); if (cx) return typeof PKM !== 'undefined' && PKM.openWindow('cancel', { id: /** @type {string} */ (cx.dataset.cancel) });
-  const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(tp.dataset.tproj);
-  const tpa = x.closest('[data-tproj-add]'); if (tpa) return teamProjChange(tpa.dataset.tprojAdd, true);
-  const tpr = x.closest('[data-tproj-rm]'); if (tpr) return askProjRemove(tpr.dataset.tprojRm);
+  const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(/** @type {string} */ (tp.dataset.tproj));
   const rno = x.closest('[data-treq-no]'); if (rno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectRequest', { id: /** @type {string} */ (rno.dataset.treqNo) });
   const hr1 = x.closest('[data-hra]'); if (hr1) return typeof PKM !== 'undefined' && PKM.openWindow('alert', { id: /** @type {string} */ (hr1.dataset.hra) });
   const tno = x.closest('[data-team-no]'); if (tno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectAllowance', { id: /** @type {string} */ (tno.dataset.teamNo) });
