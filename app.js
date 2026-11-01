@@ -442,7 +442,7 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
  *   watch?: any, canSetSite?: boolean, varElements?: FnResult<'variable_elements'>, salReqs?: Row<'salary_change_requests'>[],
  *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
  *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
- *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, firstSeq?: number, refreshing?: boolean, missions?: Mission[],
+ *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, firstSeq?: number, refreshing?: boolean, updateUrl?: string | null, missions?: Mission[],
  *   teamMissions?: Mission[], payUnlocked?: boolean }}
  *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
  *       and every screen that reads it opens only after that.
@@ -1085,18 +1085,9 @@ async function doRefresh(){
   catch(e){ toast(friendly(e.message), true); }
   refreshing = false; APP.refreshing = false; if (typeof PKM !== 'undefined') PKM.render();
 }
-// Pull down on the screen to refresh (the iPhone home-screen app has no built-in pull-to-refresh)
-(function pullToRefresh(){
-  let y0 = null, dy = 0;
-  const ptr = () => $('ptr');
-  document.addEventListener('touchstart', e => { if (!APP.ready || sheetOpen() || window.scrollY > 0 || !$('scr-main').classList.contains('on')) { y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, { passive:true });
-  document.addEventListener('touchmove', e => { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy <= 0) { ptr().style.height='0'; return; }
-    const h = Math.min(70, dy * 0.5); ptr().style.height = h + 'px'; $('ptr-tx').textContent = dy > 110 ? t('release') : t('pull'); $('ptr-ic').style.transform = `rotate(${dy*2}deg)`; }, { passive:true });
-  document.addEventListener('touchend', async () => { if (y0 === null) return; const go = dy > 110; y0 = null;
-    if (!go) { ptr().style.height='0'; return; }
-    $('ptr-tx').textContent = t('refreshing'); $('ptr-ic').classList.add('spinning');
-    await doRefresh(); $('ptr-ic').classList.remove('spinning'); ptr().style.height='0'; });
-})();
+// Pull down on the screen to refresh (the iPhone home-screen app has no built-in one) — the strip is React (react/src/phone/pull);
+// kept here: when a pull may start
+function canPull(){ return !!APP.ready && !sheetOpen() && window.scrollY <= 0 && $('scr-main').classList.contains('on'); }
 let flushing = false;
 async function flushQueue(){
   if (flushing || !navigator.onLine || !sb || !APP.me) return;
@@ -1309,9 +1300,8 @@ async function checkAppUpdate(force){
   updChecked = Date.now();
   try {
     const latest = await latestBuild();
-    if (latest > APP_BUILD && !$('upd-bar')){
-      document.body.insertAdjacentHTML('afterbegin', `<div id="upd-bar" style="background:var(--brand);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center;font-size:14px;font-weight:700;padding-top:calc(10px + env(safe-area-inset-top,0px))">
-        <span style="flex:1">⬆ ${esc(t('updateAvail'))}</span><a href="${APK_DOWNLOAD || `https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk`}" style="background:#fff;color:var(--brand);padding:7px 12px;border-radius:10px;text-decoration:none">${esc(t('updateBtn'))}</a></div>`);
+    if (latest > APP_BUILD && !APP.updateUrl){                     // the banner is React (react/src/phone/pull)
+      APP.updateUrl = APK_DOWNLOAD || `https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk`; if (typeof PKM !== 'undefined') PKM.render();
     }
   } catch(e){}
 }
