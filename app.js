@@ -775,42 +775,29 @@ async function loadSiteRight(){
   renderSpCard();
 }
 function renderSpCard(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 📍 card is React (react/src/phone/homecards)
-let spT;
-function spSheet(){
-  sheet(`<h2>📍 ${esc(t('spTitle'))}</h2><div class="hint">${esc(t('spPickHint'))}</div>
-    <div class="field" style="margin-top:10px"><input id="sp-q" placeholder="${esc(t('searchSite'))}" autocomplete="off"></div>
-    <div id="sp-res"><div class="hint">${esc(t('typeMore'))}</div></div>`);
-  $('sp-q').addEventListener('input', () => { clearTimeout(spT); spT = setTimeout(spSearch, 300); });
-}
-async function spSearch(){
-  const q = $('sp-q').value.trim(), box = $('sp-res');
-  if (q.length < 2) { box.innerHTML = `<div class="hint">${esc(t('typeMore'))}</div>`; return; }
+// The 📍 windows are React (react/src/phone/sitepoint); kept here: opening them, the search and saving where I stand
+function spSheet(){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('spFind'); }
+/** the search: results, or a refusal / no answer in friendly words @param {string} q @returns {Promise<{ data: any[] } | { error: string }>} */
+async function findSitePoints(q){
   let data, error;
   try { ({ data, error } = await withTimeout(sb.rpc('site_point_search', { p_q: q }), 8000)); } catch(e) { error = { message: t('serverDown') }; }
-  if (error) { box.innerHTML = `<div class="hint neg">${esc(friendly(error.message))}</div>`; return; }
-  box.innerHTML = (data || []).map(p => `<button class="site" data-sp="${esc(p.id)}" data-name="${esc(p.name || '')}" data-has="${p.has_point ? 1 : ''}" data-by="${esc(p.set_by || '')}" data-at="${esc(String(p.set_at || '').slice(0, 10))}">
-      <b>${esc(p.name || p.id)}</b><span>${esc(p.id)} · ${p.has_point ? '📍 ' + esc(t('spHas', { by: p.set_by || '—', d: p.set_at ? dShort(String(p.set_at).slice(0, 10)) : '—' })) : esc(t('spNone'))}</span></button>`).join('')
-    || `<div class="hint">${esc(t('noSites'))}</div>`;
+  if (error) return { error: friendly(error.message) };
+  return { data: data || [] };
 }
-function spPick(d){
-  const site = d.name || d.sp;
-  sheet(`<h2>📍 ${esc(site)}</h2><div class="hint">${esc(d.sp)}</div>
-    ${d.has ? `<div class="hint" style="color:var(--warn,#b45309);margin-top:8px">⚠ ${esc(t('spReplace', { by: d.by || '—', d: d.at ? dShort(d.at) : '—' }))}</div>` : ''}
-    <div class="field" style="margin-top:12px"><input id="sp-note" maxlength="300" placeholder="${esc(t('spNote'))}"></div>
-    <button class="btn green big" id="sp-save">${esc(t('spSaveHere'))}</button>`);
-  $('sp-save').onclick = () => spSave(d.sp, site);
-}
-async function spSave(code, site){
-  const btn = $('sp-save'), label = btn.textContent;
-  btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('spGetting'))}`;
+/** one project (also what "Try again" after the location help reopens, with only its code and name)
+ *  @param {{ sp: string, name?: string, has?: string, by?: string, at?: string }} d */
+function spPick(d){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('spPick', { id: d.sp, data: { ...d } }); }
+/** save where I stand: a fresh GPS reading → set_site_point_here (accuracy, fake-location flag, note) → saved / refused
+ *  @param {string} code @param {string} site @param {string} note @param {(p: '' | 'loc' | 'send') => void} phase */
+async function spSave(code, site, note, phase){                    // the React button already shows "getting the location"
   const g = await getLocation(true);
-  if (g.err) { btn.disabled = false; btn.textContent = label; return locationHelp(g.err, () => spPick({ sp: code, name: site })); }
-  btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`;
+  if (g.err) { phase(''); return locationHelp(g.err, () => spPick({ sp: code, name: site })); }
+  phase('send');
   let res;
   try { res = await withTimeout(sb.rpc('set_site_point_here', { p_project: code, p_lat: g.lat, p_lng: g.lng, p_accuracy: g.accuracy,
-          p_mock: typeof g.mock === 'boolean' ? g.mock : null, p_client_kind: clientKind(), p_note: ($('sp-note') && $('sp-note').value.trim()) || null }), 15000); }
+          p_mock: typeof g.mock === 'boolean' ? g.mock : null, p_client_kind: clientKind(), p_note: (note || '').trim() || null }), 15000); }
   catch(e) { res = { error: { message: t('serverDown') } }; }
-  if (res.error) { btn.disabled = false; btn.textContent = label; return toast(friendly(res.error.message), true); }
+  if (res.error) { phase(''); return toast(friendly(res.error.message), true); }
   closeSheet(); toast(t('spSaved', { site, acc: g.accuracy }));
 }
 
@@ -1434,7 +1421,6 @@ document.addEventListener('click', async ev => {
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
   if (x === $('sheet')) return closeSheet();
   if (x.closest('#sp-open')) return spSheet();                                       // 91: set a site's location
-  const sp = x.closest('.site[data-sp]'); if (sp) return spPick(sp.dataset);
   const sl = x.closest('[data-slip]'); if (sl) return typeof PKM !== 'undefined' && PKM.openWindow('slip', { id: /** @type {string} */ (sl.dataset.slip) });
   const cx = x.closest('[data-cancel]'); if (cx) return typeof PKM !== 'undefined' && PKM.openWindow('cancel', { id: /** @type {string} */ (cx.dataset.cancel) });
   const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(/** @type {string} */ (tp.dataset.tproj));
