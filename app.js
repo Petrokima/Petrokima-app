@@ -635,7 +635,7 @@ async function loadDocs(){
   try { const r = await sb.from('doc_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
         APP.docs = r.error ? [] : (r.data || []); } catch(e){ APP.docs = []; }
 }
-// the "📄 Documents HR asked for" card is React since 31 Oct 2026 — react/src/phone/reqcards (📎 keeps data-act="doc-answer" → docSheet)
+// the "📄 Documents HR asked for" card is React since 31 Oct 2026 — react/src/phone/reqcards (📎 keeps data-act="doc-answer" → the React window, submitDocument below)
 function renderDocs(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // phone photos are made smaller (max 1600 px, JPEG) before sending; PDFs are sent as they are
 async function docShrink(file){
@@ -648,30 +648,21 @@ async function docShrink(file){
     return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type:'image/jpeg' }) : file;
   } catch(e){ return file; }
 }
-function docSheet(id){
-  const d = (APP.docs || []).find(x => x.id === id); if (!d) return;
-  sheet(`<h2>📄 ${esc(t('docNid'))}</h2>${d.message ? `<div class="hint">💬 ${esc(d.message)}</div>` : ''}
-    <div class="field"><label>${esc(t('docAttach'))}</label><input type="file" id="doc-f" accept="image/*,application/pdf"></div>
-    <div class="field"><label>${esc(t('docExpiry'))}</label><input type="date" id="doc-x"></div>
-    <button class="btn" id="doc-go">${esc(t('docSend'))}</button>`);
-  $('doc-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    let f = $('doc-f').files && $('doc-f').files[0], x = $('doc-x').value;
-    if (!f) return toast(t('docNeedFile'), true);
-    if (!x) return toast(t('docNeedDate'), true);
-    const btn = $('doc-go'); btn.disabled = true; btn.textContent = t('docUploading');
-    try {
-      f = await docShrink(f);
-      if (f.size > 10 * 1024 * 1024) throw new Error(t('docTooBig'));
-      const ext = (f.name.match(/\.(\w+)$/) || [, f.type === 'application/pdf' ? 'pdf' : 'jpg'])[1].toLowerCase();
-      const path = `${APP.me.emp_id}/${d.id}/${Date.now()}.${ext}`;
-      const up = await sb.storage.from('employee-docs').upload(path, f, { contentType: f.type || undefined, upsert:false });
-      if (up.error) throw up.error;
-      const { error } = await sb.rpc('submit_document', { p_id: d.id, p_path: path, p_name: f.name, p_new_expiry: x });
-      if (error) throw error;
-      closeSheet(); toast(t('docSent')); await loadDocs(); renderDocs();
-    } catch(e){ btn.disabled = false; btn.textContent = t('docSend'); toast(friendly(e.message || String(e)), true); }
-  };
+// The "send HR your renewed card" window is React since 1 Nov 2026 — react/src/phone/slipdoc. It uploads through here.
+/** @param {string} id — the document request @param {File} picked — the photo or PDF chosen @param {string} expiry — the new card's expiry */
+async function submitDocument(id, picked, expiry){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  try {
+    const f = await docShrink(picked);
+    if (f.size > 10 * 1024 * 1024) throw new Error(t('docTooBig'));
+    const ext = (f.name.match(/\.(\w+)$/) || [, f.type === 'application/pdf' ? 'pdf' : 'jpg'])[1].toLowerCase();
+    const path = `${APP.me.emp_id}/${id}/${Date.now()}.${ext}`;
+    const up = await sb.storage.from('employee-docs').upload(path, f, { contentType: f.type || undefined, upsert:false });
+    if (up.error) throw up.error;
+    const { error } = await sb.rpc('submit_document', { p_id: id, p_path: path, p_name: f.name, p_new_expiry: expiry });
+    if (error) throw error;
+    closeSheet(); toast(t('docSent')); await loadDocs(); renderDocs();
+  } catch(e){ toast(friendly(e.message || String(e)), true); }
 }
 
 // ── Data HR asks the employee to update + "My contact details" (77-data-update-requests.sql) ──
@@ -1380,7 +1371,7 @@ renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMi
 // ═════════════════════════════════════════════════════════
 // The Payslips tab (lock screen and list) is React since 31 Oct 2026 — react/src/phone/payslips. Kept here: the password check and
 // the reading of the payslips (payslipUnlock, through the React bridge), locking again (lockPayslips; also when the tab is left
-// or the screen turns off — go() / visibilitychange) and the payslip window (slipSheet, data-slip page-wide handler).
+// or the screen turns off — go() / visibilitychange) and the payslip window (React since 1 Nov, opened by the data-slip page-wide handler).
 function renderPayslips(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function lockPayslips(){ APP.payUnlocked = false; APP.slips = []; renderPayslips(); }
 /** the payslips need the password every time they are opened: '' = opened, otherwise the message to show @param {string} pw */
@@ -1394,31 +1385,16 @@ async function payslipUnlock(pw){
   if (r.error) return friendly(r.error.message);
   APP.slips = r.data || []; APP.payUnlocked = true; renderPayslips(); return '';
 }
-function slipSheet(period){
-  const l = APP.slips.find(x=>x.period===period); if (!l) return;
-  const lines = l.lines || [], row = x => `<div class="kv"><span class="k">${esc(x.name)}${x.note?`<div style="font-size:11.5px">${esc(x.note)}</div>`:''}</span><span class="v num ${x.type==='Deduction'?'neg':''}">${x.type==='Deduction'?'−':''}${fmt(x.amount)}</span></div>`;
-  sheet(`<h2>💰 ${esc(periodLabel(period))}</h2><div class="hint">🔒 ${esc(t('approvedSlip'))}</div>
-    <div class="sec">${esc(t('additions'))}</div>${lines.filter(x=>x.type==='Addition').map(row).join('')}
-    <div class="kv"><span class="k"><b>${esc(t('gross'))}</b></span><span class="v num">${fmt(l.gross)}</span></div>
-    <div class="sec" style="margin-top:12px">${esc(t('deductions'))}</div>${lines.filter(x=>x.type==='Deduction').map(row).join('') || '<div class="hint">—</div>'}
-    <div class="kv"><span class="k"><b>${esc(t('ded'))}</b></span><span class="v num neg">${fmt(l.deductions)}</span></div>
-    <div class="kv" style="font-size:18px"><span class="k"><b>${esc(t('net'))}</b></span><span class="v num pos">${fmt(l.net)}</span></div>`);
-}
+// The payslip window (a payslip row, data-slip) is React since 1 Nov 2026 — react/src/phone/slipdoc.
 // The Profile tab (profile card + "install the app" card) is React since 31 Oct 2026 — react/src/phone/profile. The buttons keep
 // data-act="my-contact" / "install" (handled below, as before).
 function renderProfile(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function passSheet(){
-  sheet(`<h2>🔑 ${esc(t('changePass'))}</h2>
-    <div class="field"><label>${esc(t('newPass'))}</label><input type="password" id="cp1" autocomplete="new-password"></div>
-    <div class="field"><label>${esc(t('repeatPass'))}</label><input type="password" id="cp2" autocomplete="new-password"></div>
-    <button class="btn" id="cp-go">${esc(t('changePass'))}</button>`);
-  $('cp-go').onclick = async () => {
-    const a=$('cp1').value, b=$('cp2').value;
-    if (a.length<8) return toast(t('short'), true); if (a!==b) return toast(t('nomatch'), true);
-    const { error } = await sb.auth.updateUser({ password:a });
-    if (error) return toast(friendly(error.message), true);
-    closeSheet(); toast(t('passChanged'));
-  };
+// The change-password window is React since 1 Nov 2026 — react/src/phone/slipdoc. It changes the password through here.
+/** @param {string} pw — the new password (already checked: 8+ characters, typed twice the same) */
+async function changePassword(pw){
+  const { error } = await sb.auth.updateUser({ password:pw });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(t('passChanged'));
 }
 // The ✅ Approvals tab (its tab button + red number, HR alerts, team requests, missions, projects, allowances) is React since
 // 1 Nov 2026 — react/src/phone/approvals. Kept here: the decisions (teamReqDecide, teamDecide, misDecide), the project window (teamProjSheet)
@@ -1625,7 +1601,7 @@ document.addEventListener('click', async ev => {
   if (x.closest('#sp-open')) return spSheet();                                       // 91: set a site's location
   const sp = x.closest('.site[data-sp]'); if (sp) return spPick(sp.dataset);
   const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
-  const sl = x.closest('[data-slip]'); if (sl) return slipSheet(sl.dataset.slip);
+  const sl = x.closest('[data-slip]'); if (sl) return typeof PKM !== 'undefined' && PKM.openWindow('slip', { id: /** @type {string} */ (sl.dataset.slip) });
   const cx = x.closest('[data-cancel]'); if (cx) return typeof PKM !== 'undefined' && PKM.openWindow('cancel', { id: /** @type {string} */ (cx.dataset.cancel) });
   const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(tp.dataset.tproj);
   const tpa = x.closest('[data-tproj-add]'); if (tpa) return teamProjChange(tpa.dataset.tprojAdd, true);
@@ -1656,9 +1632,9 @@ document.addEventListener('click', async ev => {
   if (act==='fb-complaint' || act==='fb-suggestion' || act==='req-hire' || act==='req-train' || act==='req-penalty' || act==='req-incentive' || act==='req-element')
     return typeof PKM !== 'undefined' && PKM.openWindow(act==='fb-complaint' ? 'complaint' : act==='fb-suggestion' ? 'suggestion' : act==='req-hire' ? 'hire'
       : act==='req-train' ? 'train' : act==='req-penalty' ? 'penalty' : 'element');
-  if (act==='chpass') return passSheet();
+  if (act==='chpass') return typeof PKM !== 'undefined' && PKM.openWindow('password');
   if (act==='signout') return signOut();
-  if (act==='doc-answer') return docSheet(a.dataset.id);
+  if (act==='doc-answer') return typeof PKM !== 'undefined' && PKM.openWindow('document', { id: /** @type {string} */ (a.dataset.id) });
   if (act==='dreq-answer') return typeof PKM !== 'undefined' && PKM.openWindow('dataAnswer', { id: /** @type {string} */ (a.dataset.id) });
   if (act==='my-contact') return typeof PKM !== 'undefined' && PKM.openWindow('contact');
   if (act==='co-msg') { const c = (APP.coreqs || []).find(x => x.id === a.dataset.id); return c && coSheet('', c); }
