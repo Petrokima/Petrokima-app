@@ -1304,7 +1304,7 @@ const sentAt = ts => ts ? new Date(ts).toLocaleString(LANG==='ar' ? 'ar-EG' : 'e
 function lateDeadline(){ const [h,m] = String(S.shiftStart || '08:00').split(':').map(Number); const tot = h*60 + m + (Number(S.permDeadlineMin) || 30);
   return `${String(Math.floor(tot/60)%24).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`; }
 // The figures at the top of the Requests tab and "My requests" are React since 31 Oct 2026 — react/src/phone/requests. Kept here:
-// the leave arithmetic above (also used by the request windows), the windows, Cancel (data-cancel → askCancel) and the mission
+// the leave arithmetic above (also used by the request windows), the windows, Cancel (data-cancel → the React window, cancelRequest below) and the mission
 // notice (renderMisAck, added by the wrapper below).
 function renderRequests(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // The vacation, permission and HR request windows are React since 1 Nov 2026 — react/src/phone/reqwin. They send through here.
@@ -1315,15 +1315,14 @@ async function sendRequest(table, rec){
   if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
   closeSheet(); toast((table==='employee_leaves' || table==='attendance_permissions') && /** @type {{ manager_status?: string }} — only leaves and permissions have a manager step */ (data[0]).manager_status==='Pending' ? t('sentMgr') : t('sent')); await loadAll(); renderAll();
 }
-function askCancel(key){
-  sheet(`<h2>${esc(t('cancelQ'))}</h2><div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="cx-go">${esc(t('yes'))}</button></div>`);
-  $('cx-go').onclick = async () => {
-    const [k,id]=key.split(':'), table=/** @type {Record<string, 'employee_leaves' | 'attendance_permissions' | 'hr_requests'>} */ ({ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' })[k];
-    if (k === 'mis') { const { error } = await sb.rpc('cancel_mission', { p_id:id }); if (error) return toast(friendly(error.message), true); closeSheet(); toast(t('cancelled')); await loadAll(); renderAll(); return; }
-    const { data, error } = await sb.from(table).update({ status:'Cancelled' }).eq('id', id).select();
-    if (error || !(data && data.length)) return toast(t('cantCancel'), true);
-    closeSheet(); toast(t('cancelled')); await loadAll(); renderAll();
-  };
+// The "Cancel this request?", reject and HR-alert windows are React since 1 Nov 2026 — react/src/phone/decide. They act through here.
+/** @param {string} key — leave:<id> / perm:<id> / req:<id> / mis:<id> */
+async function cancelRequest(key){
+  const [k,id]=key.split(':'), table=/** @type {Record<string, 'employee_leaves' | 'attendance_permissions' | 'hr_requests'>} */ ({ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' })[k];
+  if (k === 'mis') { const { error } = await sb.rpc('cancel_mission', { p_id:id }); if (error) return toast(friendly(error.message), true); closeSheet(); toast(t('cancelled')); await loadAll(); renderAll(); return; }
+  const { data, error } = await sb.from(table).update({ status:'Cancelled' }).eq('id', id).select();
+  if (error || !(data && data.length)) return toast(t('cantCancel'), true);
+  closeSheet(); toast(t('cancelled')); await loadAll(); renderAll();
 }
 
 // ═════════════════════════════════════════════════════════
@@ -1455,23 +1454,16 @@ function passSheet(){
   };
 }
 // The ✅ Approvals tab (its tab button + red number, HR alerts, team requests, missions, projects, allowances) is React since
-// 1 Nov 2026 — react/src/phone/approvals. Kept here: the decisions (teamReqDecide, teamDecide, misDecide), the windows (hraSheet,
-// teamProjSheet, the reject windows below) and the data loading.
+// 1 Nov 2026 — react/src/phone/approvals. Kept here: the decisions (teamReqDecide, teamDecide, misDecide), the project window (teamProjSheet)
+// and the data loading. The reject and HR-alert windows are React too (react/src/phone/decide).
 function renderTeam(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function hraSheet(key){
-  const [kind, emp, ref, due, dec] = key.split('|'), a = (APP.hra || []).find(x => x.kind === kind && x.emp_id === emp && (x.ref_id || '') === ref && x.due === due); if (!a) return;
-  const nm = (LANG==='ar' ? a.name_ar : a.name_en) || a.name_en || emp;
-  sheet(`<h2>🔔 ${esc(t('dec_' + dec))}</h2><div class="hint">${esc(nm)} (${esc(emp)}) · ${esc(t('hk_' + kind))} · ${esc(niceDate(due))}</div>
-    <div class="field"><label>${esc(t('hraNoteL'))}</label><textarea id="hra-n" rows="3"></textarea></div>
-    <button class="btn" id="hra-go">${esc(t('dec_' + dec))}</button>`);
-  $('hra-go').onclick = async () => {
-    if (!navigator.onLine) return toast(t('offline'), true);
-    $('hra-go').disabled = true;
-    const { error } = await sb.rpc('hr_alert_respond', { p_kind:kind, p_emp:emp, p_ref:ref, p_due:due, p_decision:dec, p_note:$('hra-n').value.trim() || null });
-    if (error) { $('hra-go').disabled = false; return toast(friendly(error.message), true); }
-    const r = await sb.rpc('hr_alerts'); if (Array.isArray(r.data)) APP.hra = r.data;
-    closeSheet(); toast(t('hraSaved')); renderTeam(); saveCache();
-  };
+/** @param {{ p_kind: string, p_emp: string, p_ref: string, p_due: string, p_decision: string, p_note: string | null }} args */
+async function hraRespond(args){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('hr_alert_respond', args);
+  if (error) return toast(friendly(error.message), true);
+  const r = await sb.rpc('hr_alerts'); if (Array.isArray(r.data)) APP.hra = r.data;
+  closeSheet(); toast(t('hraSaved')); renderTeam(); saveCache();
 }
 // the manager manages one team member's projects
 async function teamProjSheet(empId){
@@ -1667,19 +1659,13 @@ document.addEventListener('click', async ev => {
   const sp = x.closest('.site[data-sp]'); if (sp) return spPick(sp.dataset);
   const s = x.closest('.site[data-site]'); if (s) return selectSite(s);   // only project choices for check-in (not the manager's add buttons)
   const sl = x.closest('[data-slip]'); if (sl) return slipSheet(sl.dataset.slip);
-  const cx = x.closest('[data-cancel]'); if (cx) return askCancel(cx.dataset.cancel);
+  const cx = x.closest('[data-cancel]'); if (cx) return typeof PKM !== 'undefined' && PKM.openWindow('cancel', { id: /** @type {string} */ (cx.dataset.cancel) });
   const tp = x.closest('[data-tproj]'); if (tp) return teamProjSheet(tp.dataset.tproj);
   const tpa = x.closest('[data-tproj-add]'); if (tpa) return teamProjChange(tpa.dataset.tprojAdd, true);
   const tpr = x.closest('[data-tproj-rm]'); if (tpr) return askProjRemove(tpr.dataset.tprojRm);
-  const rno = x.closest('[data-treq-no]'); if (rno) { const key = rno.dataset.treqNo;
-    sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="rno-note"></textarea></div>
-      <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="rno-go">${esc(t('reject'))}</button></div>`);
-    $('rno-go').onclick = () => teamReqDecide(key, false, $('rno-note').value.trim()); return; }
-  const hr1 = x.closest('[data-hra]'); if (hr1) return hraSheet(hr1.dataset.hra);
-  const tno = x.closest('[data-team-no]'); if (tno) { const id = tno.dataset.teamNo;
-    sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="tno-note"></textarea></div>
-      <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="tno-go">${esc(t('reject'))}</button></div>`);
-    $('tno-go').onclick = () => teamDecide(id, false, $('tno-note').value.trim()); return; }
+  const rno = x.closest('[data-treq-no]'); if (rno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectRequest', { id: /** @type {string} */ (rno.dataset.treqNo) });
+  const hr1 = x.closest('[data-hra]'); if (hr1) return typeof PKM !== 'undefined' && PKM.openWindow('alert', { id: /** @type {string} */ (hr1.dataset.hra) });
+  const tno = x.closest('[data-team-no]'); if (tno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectAllowance', { id: /** @type {string} */ (tno.dataset.teamNo) });
   if (x.id === 'site-go' && pickSel) return clock('in', pickSel.code, x, x.dataset.mode === 'switch');
   if (x.id === 'disc-go') { store.set('pk_queue', queue().filter(ev => ev.client_id !== x.dataset.id)); closeSheet(); try { await loadStatus(); } catch(e){} return renderHome(); }
   const dsc = x.closest('[data-discard]'); if (dsc) return discardSaved(dsc.dataset.discard);
@@ -1687,10 +1673,7 @@ document.addEventListener('click', async ev => {
   if (x.id === 'noproj-go') return clock('in', null, x, true);   // only offered when switching
   const nph = x.closest('#noproj-home'); if (nph) return clock('in', null, nph);
   if (x.id === 'out-go') return clock('out', null, x);
-  const mno = x.closest('[data-mis-no]'); if (mno) { const id = mno.dataset.misNo;
-    sheet(`<h2>✕ ${esc(t('reject'))}</h2><div class="field"><label>${esc(t('rejectWhy'))}</label><textarea id="mno-note"></textarea></div>
-      <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="mno-go">${esc(t('reject'))}</button></div>`);
-    $('mno-go').onclick = () => { const n = $('mno-note').value.trim(); if (!n) return toast(t('rejectWhy'), true); misDecide(id, false, n); }; return; }
+  const mno = x.closest('[data-mis-no]'); if (mno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectMission', { id: /** @type {string} */ (mno.dataset.misNo) });
   const a = x.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act;
   if (act==='req-mission') return missionSheet(false);
