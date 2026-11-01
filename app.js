@@ -442,7 +442,7 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
  *   watch?: any, canSetSite?: boolean, varElements?: FnResult<'variable_elements'>, salReqs?: Row<'salary_change_requests'>[],
  *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
  *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
- *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, firstSeq?: number, missions?: Mission[],
+ *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, firstSeq?: number, refreshing?: boolean, missions?: Mission[],
  *   teamMissions?: Mission[], payUnlocked?: boolean }}
  *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
  *       and every screen that reads it opens only after that.
@@ -1080,10 +1080,10 @@ let refreshing = false;
 async function doRefresh(){
   if (refreshing || !APP.ready) return;
   if (!navigator.onLine) return toast(t('offline'), true);
-  refreshing = true; $('rf-ic').classList.add('spinning');
+  refreshing = true; APP.refreshing = true; if (typeof PKM !== 'undefined') PKM.render();   // the ⟳ in the React top bar spins
   try { await flushQueue(); await loadAll(); renderAll(); toast(t('refreshed')); }
   catch(e){ toast(friendly(e.message), true); }
-  refreshing = false; $('rf-ic').classList.remove('spinning');
+  refreshing = false; APP.refreshing = false; if (typeof PKM !== 'undefined') PKM.render();
 }
 // Pull down on the screen to refresh (the iPhone home-screen app has no built-in pull-to-refresh)
 (function pullToRefresh(){
@@ -1315,9 +1315,8 @@ async function checkAppUpdate(force){
     }
   } catch(e){}
 }
-function renderAll(){ if(!APP.ready) return; const e=APP.emp||/** @type {Employee} */ ({});
-  $('me-name').textContent = LANG==='ar' ? (e.name_ar||e.name_en||APP.me.full_name||'') : (e.name_en||e.name_ar||APP.me.full_name||'');
-  $('me-meta').textContent = `${APP.me.emp_id}${e.job_name?' · '+e.job_name:''}`;
+function renderAll(){ if(!APP.ready) return;
+  // who I am (the top bar) is React: react/src/phone/frame
   renderHome(); renderCoReqs(); renderRequests(); renderDocs(); renderDreqs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
 // ═════════════════════════════════════════════════════════
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
@@ -1409,7 +1408,7 @@ window.pkBack = function(){
   if (APP.view !== 'home') { go('home', true); return true; }
   return false;
 };
-function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (typeof PKM !== 'undefined') PKM.tabShown(view); if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); (/** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.tab'))).forEach(b=>b.classList.toggle('on', b.dataset.view===view)); window.scrollTo(0,0); }
+function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (typeof PKM !== 'undefined') PKM.tabShown(view); if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP

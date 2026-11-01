@@ -125,11 +125,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 
 <!-- MAIN -->
 <section class="screen" id="scr-main">
-  <div class="top">
-    <div class="who"><div class="name" id="me-name"></div><div class="meta" id="me-meta"></div></div>
-    <button class="iconbtn" data-act="refresh" id="btn-refresh" style="display:flex;align-items:center;gap:5px;background:#eef3ff;color:var(--brand)"><span id="rf-ic" style="display:inline-block;font-size:16px">⟳</span><span data-t="refresh"></span></button>
-    <button class="iconbtn" data-lang>English</button>
-  </div>
+  <div class="top"><div id="react-top" style="display:contents"></div></div>   <!-- the top bar and the tab bar are React: react/src/phone/frame -->
   <div id="ptr" style="height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;color:var(--brand);transition:height .15s"><span id="ptr-ic">⟳</span><span id="ptr-tx"></span></div>
   <main>
     <!-- HOME -->
@@ -183,14 +179,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       </div>
     </div>
   </main>
-  <nav class="tabbar">
-    <button class="tab on" data-view="home"><span class="ic">⏱</span><span data-t="home"></span></button>
-    <button class="tab" data-view="req"><span class="ic">📋</span><span data-t="requests"></span></button>
-    <button class="tab" data-view="news" style="position:relative"><span class="ic">📢</span><span data-t="news"></span><span id="react-news-badge"></span></button>
-    <div id="react-tab-team" style="display:contents"></div>
-    <button class="tab" data-view="pay"><span class="ic">💰</span><span data-t="payslips"></span></button>
-    <button class="tab" data-view="prof"><span class="ic">👤</span><span data-t="profile"></span></button>
-  </nav>
+  <nav class="tabbar"><div id="react-tabs" style="display:contents"></div></nav>
 </section>
 
 <div class="sheet" id="sheet"><div class="sheet-box"><div class="grab"></div><div id="sheet-body"></div></div></div>
@@ -198,8 +187,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v76"></script>
+<script src="app.js?v=pk-mobile-v77"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v76"></script>
+<script src="react.js?v=pk-mobile-v77"></script>
 </body>
 </html>
