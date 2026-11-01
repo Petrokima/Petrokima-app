@@ -442,7 +442,7 @@ function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?
  *   watch?: any, canSetSite?: boolean, varElements?: FnResult<'variable_elements'>, salReqs?: Row<'salary_change_requests'>[],
  *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
  *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
- *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, missions?: Mission[],
+ *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, firstSeq?: number, missions?: Mission[],
  *   teamMissions?: Mission[], payUnlocked?: boolean }}
  *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
  *       and every screen that reads it opens only after that.
@@ -597,7 +597,7 @@ async function afterLogin(user){
   if (!me.active) return message(t('inactive'));
   if (!me.emp_id) return message(t('notLinked'));
   APP.me = me; PK_ERR.user(me);
-  if (me.must_change_password){ ['fl-year','fl-p1','fl-p2'].forEach(i=>$(i).value=''); errBox('fl-err'); show('scr-first'); return; }
+  if (me.must_change_password){ APP.firstSeq = (APP.firstSeq || 0) + 1; show('scr-first'); if (typeof PKM !== 'undefined') PKM.render(); return; }   // React: a new, empty form
   const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
   if (regErr || !['ok','registered'].includes(reg)){
     const txt = reg==='other_device' ? t('otherDevice') + '\n\n' + t('attemptLogged') : reg==='device_taken' ? t('deviceTaken') + '\n\n' + t('attemptLogged') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
@@ -609,20 +609,21 @@ async function afterLogin(user){
   APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000); loadSiteRight();
   setupPush(); setupWebPush(); openViewFromLink();
 }
-async function firstLogin(){
-  const yr=$('fl-year').value.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)), a=$('fl-p1').value, b=$('fl-p2').value;
-  if (!/^\d{4}$/.test(yr)) return errBox('fl-err', t('needYear'));
-  if (a.length < 8) return errBox('fl-err', t('short'));
-  if (a !== b) return errBox('fl-err', t('nomatch'));
-  if (a === tempPass) return errBox('fl-err', t('sameTemp'));
-  const btn=$('fl-go'); btn.disabled=true;
+// The first-password screen is React (react/src/phone/firstpw); ALL its checks stay here (the temporary password never leaves app.js).
+/** '' when saved (then signed in as usual), else the message @param {string} yearTyped @param {string} a @param {string} b @returns {Promise<string>} */
+async function firstPassword(yearTyped, a, b){
+  const yr = yearTyped.trim().replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));   // Arabic figures → 0-9
+  if (!/^\d{4}$/.test(yr)) return t('needYear');
+  if (a.length < 8) return t('short');
+  if (a !== b) return t('nomatch');
+  if (a === tempPass) return t('sameTemp');
   const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:null, p_new_password:a, p_birth_year:yr });
-  btn.disabled=false;
-  if (error) return errBox('fl-err', friendly(error.message));
-  if (data !== 'ok' && /year of birth|wrong answers|year you were born/i.test(data)) return errBox('fl-err', friendly(data).replace(/^Enter the year.*$/, t('needYear')));
-  if (data !== 'ok') return errBox('fl-err', /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data);
+  if (error) return friendly(error.message);
+  if (data !== 'ok' && /year of birth|wrong answers|year you were born/i.test(data)) return friendly(data).replace(/^Enter the year.*$/, t('needYear'));
+  if (data !== 'ok') return /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data;
   tempPass=''; toast(t('passSet'));
   const { data: s } = await sb.auth.getSession(); await afterLogin(/** @type {NonNullable<typeof s.session>} — signed in a moment ago */ (s.session).user);
+  return '';
 }
 async function signOut(){
   try { const tk = localStorage.getItem('pk_push_token'); if (tk) { await sb.rpc('remove_push_token', { p_token: tk }); localStorage.removeItem('pk_push_token'); } } catch(e){}
@@ -1457,7 +1458,6 @@ document.addEventListener('click', async ev => {
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
-$('fl-go').addEventListener('click', firstLogin);
 const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; if (APP.ready) renderPayslips(); } });

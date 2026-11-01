@@ -114,19 +114,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <!-- LOGIN -->
 <section class="screen" id="scr-login"><div id="react-login"></div></section>
 
-<!-- FIRST SIGN-IN -->
-<section class="screen" id="scr-first"><div class="center"><div style="width:100%;max-width:400px">
-  <img class="logo" src="icon-192.png?v=39" alt="Petrokima HR"><h1 data-t="firstTitle"></h1><div class="sub" data-t="firstSub"></div>
-  <div class="card" style="margin-top:22px">
-    <div class="hint" data-t="firstMustChange" style="margin-bottom:10px"></div>
-    <div class="field"><label data-t="birthYear"></label><input id="fl-year" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="1988" style="direction:ltr;text-align:center;letter-spacing:6px;font-size:20px"></div>
-    <div class="field"><label data-t="newPass"></label><input id="fl-p1" type="password" autocomplete="new-password"></div>
-    <div class="field"><label data-t="repeatPass"></label><input id="fl-p2" type="password" autocomplete="new-password"></div>
-    <button class="btn" id="fl-go" data-t="savePass"></button>
-    <div class="err" id="fl-err"></div>
-  </div>
-  <button class="btn ghost" data-act="signout" data-t="signOut"></button>
-</div></div></section>
+<!-- FIRST SIGN-IN — React: react/src/phone/firstpw (the checks stay in app.js firstPassword) -->
+<section class="screen" id="scr-first"><div id="react-first"></div></section>
 
 <!-- INSTALL FIRST (iPhone) -->
 <section class="screen" id="scr-install"><div id="react-install"></div></section>
@@ -209,8 +198,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="toast"></div>
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v75"></script>
+<script src="app.js?v=pk-mobile-v76"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v75"></script>
+<script src="react.js?v=pk-mobile-v76"></script>
 </body>
 </html>
