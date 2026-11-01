@@ -372,8 +372,10 @@ function toMin(x){ const [h,m]=String(x||'0:0').split(':').map(Number); return h
 let toastT;
 function toast(msg, bad){ const el=$('toast'); el.textContent=msg; el.className = 'on' + (bad?' bad':''); clearTimeout(toastT); toastT=setTimeout(()=>el.className='',3200); }
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); $('boot').style.display='none'; }
-function sheet(html){ $('sheet-body').innerHTML = html; $('sheet').classList.add('on'); }
-function closeSheet(){ $('sheet').classList.remove('on'); }
+// one bottom window at a time: the old one (#sheet) or a React one (react/src/phone/reqwin — vacation, permission, HR request)
+function sheet(html){ if (typeof PKM !== 'undefined') PKM.closeWindow(); $('sheet-body').innerHTML = html; $('sheet').classList.add('on'); }
+function closeSheet(){ $('sheet').classList.remove('on'); if (typeof PKM !== 'undefined') PKM.closeWindow(); }
+function sheetOpen(){ return $('sheet').classList.contains('on') || (typeof PKM !== 'undefined' && PKM.windowOpen()); }
 function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for employee':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
 function friendly(msg){
   msg = String(msg||'');
@@ -789,7 +791,7 @@ async function armWatch(){
     await P.start({ token: r.data.token, url: SUPABASE_URL, key: SUPABASE_KEY, offices: JSON.stringify(r.data.offices || []),
                     fromMs: Number(r.data.from_ms), untilMs: Number(r.data.until_ms), title: t('lwTitle'), body: t('lwBody') });
     const s = await P.status();
-    if (s && !s.background && !$('sheet').classList.contains('on') && Date.now() - store.get('pk_bgask', 0) > 3 * 864e5) {
+    if (s && !s.background && !sheetOpen() && Date.now() - store.get('pk_bgask', 0) > 3 * 864e5) {
       store.set('pk_bgask', Date.now());
       sheet(`<h2>📍 ${esc(t('lwAskTitle'))}</h2><div class="hint" style="color:var(--text);white-space:pre-line">${esc(t('lwAskBody'))}</div>
         <div class="row"><button class="btn ghost" data-act="close">${esc(t('coLater'))}</button><button class="btn" id="lw-set">${esc(t('lwOpenSettings'))}</button></div>`);
@@ -817,7 +819,7 @@ async function leftCheck(){
   let r; try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'left' }); } catch(e){ return; }
   if (!r || r.error || !r.data) return;
   await loadCoReqs(); renderCoReqs();
-  if ($('sheet').classList.contains('on')) return;
+  if (sheetOpen()) return;
   const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: 'left', local_time: r.data.time, place: r.data.place };
   coSheet(`<div class="state warn" style="text-align:start;margin-bottom:12px">🚶 ${esc(t('coLeftNow', { place: r.data.place || '', t: r.data.time || '' }))}</div>`, c);
 }
@@ -1245,7 +1247,7 @@ async function doRefresh(){
 // Pull down on the screen to refresh (the iPhone home-screen app has no built-in pull-to-refresh)
 (function pullToRefresh(){
   let y0 = null, dy = 0;
-  const ptr = () => $('ptr'), sheetOpen = () => $('sheet').classList.contains('on');
+  const ptr = () => $('ptr');
   document.addEventListener('touchstart', e => { if (!APP.ready || sheetOpen() || window.scrollY > 0 || !$('scr-main').classList.contains('on')) { y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, { passive:true });
   document.addEventListener('touchmove', e => { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy <= 0) { ptr().style.height='0'; return; }
     const h = Math.min(70, dy * 0.5); ptr().style.height = h + 'px'; $('ptr-tx').textContent = dy > 110 ? t('release') : t('pull'); $('ptr-ic').style.transform = `rotate(${dy*2}deg)`; }, { passive:true });
@@ -1305,81 +1307,11 @@ function lateDeadline(){ const [h,m] = String(S.shiftStart || '08:00').split(':'
 // the leave arithmetic above (also used by the request windows), the windows, Cancel (data-cancel → askCancel) and the mission
 // notice (renderMisAck, added by the wrapper below).
 function renderRequests(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function opt(list, group){ return list.map(v=>`<option value="${esc(v)}">${esc(tm(group,v))}</option>`).join(''); }
-function leaveSheet(){
-  sheet(`<h2>🌴 ${esc(t('reqLeave'))}</h2>
-    <div class="field"><label>${esc(t('type'))}</label><select id="lv-t">${opt(['Annual','Casual','Sick','Unpaid','Other paid'],'lt')}</select></div>
-    <div class="row"><div class="field" style="flex:1"><label>${esc(t('from'))}</label><input type="date" id="lv-f" value="${todayStr()}"></div>
-      <div class="field" style="flex:1"><label>${esc(t('to'))}</label><input type="date" id="lv-to" value="${todayStr()}"></div></div>
-    <div class="hint">ℹ ${esc(t('leaveRules', { n: Number(S.annualNoticeDays) || 1 }))}</div>
-    <div class="field"><label>${esc(t('days'))}</label><input type="number" step="0.5" min="0.5" id="lv-d"></div>
-    <div class="field"><label>${esc(t('reason'))}</label><input id="lv-r"></div>
-    <div class="hint" id="lv-h"></div>
-    <button class="btn" id="lv-go">${esc(t('send'))}</button>`);
-  const re = () => { const f=$('lv-f').value, to=$('lv-to').value; if (f&&to&&to>=f) $('lv-d').value = workdays(f,to)||''; hint(); };
-  const hint = () => {
-    const f=$('lv-f').value, to=$('lv-to').value, ty=$('lv-t').value, d=num($('lv-d').value), out=[];
-    if (f&&to&&to<f) out.push(`<span class="neg">${esc(t('toBefore'))}</span>`);
-    if (f&&to&&to>=f) out.push(esc(t('wd',{ c: Math.round((dObj(to).getTime()-dObj(f).getTime())/86400000)+1, w: workdays(f,to) })));
-    if (f && f < todayStr()) out.push(esc(t('past')));
-    const lb = APP.lbal;
-    if (annualTypes().includes(ty)){ const left = lb ? num(lb.remaining)-num(lb.pending)-d : entitlement()-yearDays(annualTypes(),'Approved')-yearDays(annualTypes(),'Pending')-d;
-      out.push(`${esc(t('balAfter'))}: <b class="num ${left<0?'neg':'pos'}">${fmt(left)}</b>${left<0?` — <span class="neg">${esc(t('over'))}</span>`:''}`); }
-    if (lb && ty==='Casual'){ const el = num(lb.emergency_cap)-num(lb.emergency_taken)-num(lb.emergency_pending)-d;
-      out.push(`${esc(t('emergLeft'))}: <b class="num ${el<0?'neg':'pos'}">${fmt(el)}</b>${el<0?` — <span class="neg">${esc(t('emergLimitErr', { cap: fmt(lb.emergency_cap), used: fmt(num(lb.emergency_taken)+num(lb.emergency_pending)) }))}</span>`:''}`); }
-    if (lb && (ty==='Annual'||ty==='Casual') && f && lb.eligible_from && f < lb.eligible_from && !lb.early_ok)
-      out.push(`<span class="neg">${esc(t('tooEarlyErr', { d: dShort(lb.eligible_from), m: 6 }))}</span>`);
-    if (ty==='Unpaid') out.push(esc(t('unpaidNote'))); if (ty==='Sick') out.push(esc(t('sickNote')));
-    if (f&&to && APP.leaves.some(l=>(l.status==='Approved'||l.status==='Pending')&&l.date_from<=to&&l.date_to>=f)) out.push(`<span class="neg">${esc(t('overlap'))}</span>`);
-    $('lv-h').innerHTML = out.join('<br>');
-  };
-  ['lv-f','lv-to'].forEach(i=>$(i).addEventListener('change', re)); ['lv-t','lv-d'].forEach(i=>$(i).addEventListener('input', hint)); re();
-  $('lv-go').onclick = () => {
-    const f=$('lv-f').value, to=$('lv-to').value, d=num($('lv-d').value);
-    if (!f||!to||to<f) return toast(t('toBefore'), true);
-    if (d<=0) return toast(t('noDays'), true);
-    if (APP.leaves.some(l=>(l.status==='Approved'||l.status==='Pending')&&l.date_from<=to&&l.date_to>=f)) return toast(t('overlap'), true);
-    send('employee_leaves', { emp_id:APP.me.emp_id, leave_type:$('lv-t').value, date_from:f, date_to:to, days:d, status:'Pending', source:'Self-service',
-                              reason:$('lv-r').value.trim()||null, entered_by:APP.me.full_name||APP.me.emp_id }, $('lv-go'));
-  };
-}
-function permSheet(){
-  const max = num(S.permissionMaxHours)||2;
-  sheet(`<h2>✋ ${esc(t('reqPerm'))}</h2>
-    <div class="field"><label>${esc(t('type'))}</label><select id="pm-t">${opt(['Late arrival','Early leave'],'pt')}</select></div>
-    <div class="row"><div class="field" style="flex:1"><label>${esc(t('date'))}</label><input type="date" id="pm-d" value="${todayStr()}"></div>
-      <div class="field" style="flex:1"><label>${esc(t('hoursL'))}</label><input type="number" step="0.25" min="0.25" max="${max}" id="pm-h" value="${max}"></div></div>
-    <div class="field"><label>${esc(t('reason'))}</label><input id="pm-r"></div>
-    <div class="hint">ℹ ${esc(t('lateRule', { time: lateDeadline() }))}</div>
-    <div class="hint" id="pm-hint"></div>
-    <button class="btn" id="pm-go">${esc(t('send'))}</button>`);
-  const hint = () => { const d=$('pm-d').value; if(!d) return; const cyc=cycleOf(d), lim=num(S.permissionsPerMonth)||2, u=APP.perms.filter(p=>p.status==='Approved'&&cycleOf(p.date)===cyc).length;
-    $('pm-hint').innerHTML = esc(t('permCycle',{ p:periodLabel(cyc), u, l:lim })) + (u>=lim ? `<br><span class="neg">${esc(t('permFull'))}</span>` : ''); };
-  $('pm-d').addEventListener('change', hint); hint();
-  $('pm-go').onclick = () => {
-    const d=$('pm-d').value, h=num($('pm-h').value), ty=$('pm-t').value;
-    if (h<=0 || h>max) return toast(t('hoursRange',{ m:max }), true);
-    if (APP.perms.some(p=>p.date===d && p.type===ty && (p.status==='Pending'||p.status==='Approved'))) return toast(t('dupPerm'), true);
-    send('attendance_permissions', { emp_id:APP.me.emp_id, date:d, type:ty, hours:h, reason:$('pm-r').value.trim()||null, status:'Pending', source:'Self-service' }, $('pm-go'));
-  };
-}
-function hrSheet(){
-  sheet(`<h2>📨 ${esc(t('reqOther'))}</h2>
-    <div class="field"><label>${esc(t('type'))}</label><select id="hq-t">${opt(['HR letter','Salary certificate','Experience certificate','Update my personal data','Payslip copy','Loan request','Other'],'ht')}</select></div>
-    <div class="field"><label>${esc(t('details'))}</label><textarea id="hq-d"></textarea></div>
-    <button class="btn" id="hq-go">${esc(t('send'))}</button>`);
-  $('hq-go').onclick = () => {
-    const ty=$('hq-t').value, d=$('hq-d').value.trim();
-    if (!d && ['Update my personal data','Loan request','Other','HR letter'].includes(ty)) return toast(t('needDetails'), true);
-    send('hr_requests', { emp_id:APP.me.emp_id, request_type:ty, details:d||null, status:'Pending' }, $('hq-go'));
-  };
-}
-/** @param {'attendance_permissions' | 'employee_leaves' | 'hr_requests'} table — where the request is saved */
-async function send(table, rec, btn){
+// The vacation, permission and HR request windows are React since 1 Nov 2026 — react/src/phone/reqwin. They send through here.
+/** @param {'attendance_permissions' | 'employee_leaves' | 'hr_requests'} table — where the request is saved @param {any} rec */
+async function sendRequest(table, rec){
   if (!navigator.onLine) return toast(t('offline'), true);
-  btn.disabled = true;
   const { data, error } = await sb.from(table).insert(rec).select();
-  btn.disabled = false;
   if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
   closeSheet(); toast((table==='employee_leaves' || table==='attendance_permissions') && /** @type {{ manager_status?: string }} — only leaves and permissions have a manager step */ (data[0]).manager_status==='Pending' ? t('sentMgr') : t('sent')); await loadAll(); renderAll();
 }
@@ -1796,7 +1728,7 @@ document.addEventListener('click', e => {
 //   1) an open window (bottom sheet) closes  2) the previous tab opens  3) from another tab with no history → Home
 const VSTACK = [];
 window.pkBack = function(){
-  if ($('sheet').classList.contains('on')) { closeSheet(); return true; }
+  if (sheetOpen()) { closeSheet(); return true; }
   if (!APP.ready || !$('scr-main').classList.contains('on')) return false;
   while (VSTACK.length){ const v = VSTACK.pop(); if (v !== APP.view && document.getElementById('v-' + v)) { go(v, true); return true; } }
   if (APP.view !== 'home') { go('home', true); return true; }
@@ -1856,9 +1788,7 @@ document.addEventListener('click', async ev => {
   if (act==='close') return closeSheet();
   if (act==='sync') return flushQueue();
   if (act==='refresh') return doRefresh();
-  if (act==='req-leave') return leaveSheet();
-  if (act==='req-perm') return permSheet();
-  if (act==='req-hr') return hrSheet();
+  if (act==='req-leave' || act==='req-perm' || act==='req-hr') return typeof PKM !== 'undefined' && PKM.openWindow(act === 'req-leave' ? 'leave' : act === 'req-perm' ? 'perm' : 'hr');
   if (act==='fb-complaint') return feedbackSheet('complaint');
   if (act==='fb-suggestion') return feedbackSheet('suggestion');
   if (act==='req-hire') return hireSheet();
