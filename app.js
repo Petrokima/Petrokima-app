@@ -1134,14 +1134,11 @@ async function flushQueue(){
     toast(failed ? t('notRecorded') : t('sentNow', { n: sent }), failed);
   }
 }
-function discardSaved(id){
-  sheet(`<h2>${esc(t('discardQ'))}</h2><div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="disc-go" data-id="${esc(id)}">${esc(t('discard'))}</button></div>`);
-}
-function confirmOut(){
-  const o = APP.status && APP.status.open;
-  sheet(`<h2>${esc(t('confirmOut'))}</h2><div class="hint">${esc(t('checkedIn'))} <b>${esc(o ? (o.code ? (o.name||o.code) : t('noProject')) : '')}</b> ${esc(t('since'))} <b class="num">${esc(o ? o.in : '')}</b></div>
-    <div class="row"><button class="btn ghost" data-act="close">${esc(t('cancel'))}</button><button class="btn red" id="out-go">⏹ ${esc(t('checkOut'))}</button></div>`);
-}
+// "Discard this saved check-in?" and "Check out now?" are React (react/src/phone/clockwin); kept here: removing a saved check-in
+function discardSaved(id){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('discard', { id }); }
+function confirmOut(){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('confirmOut'); }
+/** Discard: only that check-in leaves the phone (HR records it by hand); the status is read again @param {string} id */
+async function dropSaved(id){ store.set('pk_queue', queue().filter(ev => ev.client_id !== id)); closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); }
 
 // ═════════════════════════════════════════════════════════
 //  REQUESTS
@@ -1446,10 +1443,8 @@ document.addEventListener('click', async ev => {
   const rno = x.closest('[data-treq-no]'); if (rno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectRequest', { id: /** @type {string} */ (rno.dataset.treqNo) });
   const hr1 = x.closest('[data-hra]'); if (hr1) return typeof PKM !== 'undefined' && PKM.openWindow('alert', { id: /** @type {string} */ (hr1.dataset.hra) });
   const tno = x.closest('[data-team-no]'); if (tno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectAllowance', { id: /** @type {string} */ (tno.dataset.teamNo) });
-  if (x.id === 'disc-go') { store.set('pk_queue', queue().filter(ev => ev.client_id !== x.dataset.id)); closeSheet(); try { await loadStatus(); } catch(e){} return renderHome(); }
   const dsc = x.closest('[data-discard]'); if (dsc) return discardSaved(dsc.dataset.discard);
   const rty = x.closest('[data-retry]'); if (rty) { const cur = queue(); cur.forEach(e => { if (e.client_id === rty.dataset.retry) delete e._err; }); store.set('pk_queue', cur); renderHome(); return flushQueue(); }
-  if (x.id === 'out-go') return clock('out', null, x);
   const mno = x.closest('[data-mis-no]'); if (mno) return typeof PKM !== 'undefined' && PKM.openWindow('rejectMission', { id: /** @type {string} */ (mno.dataset.misNo) });
   const a = x.closest('[data-act]'); if (!a) return;
   const act = a.dataset.act;
