@@ -701,18 +701,16 @@ async function loadCoReqs(){
         APP.coreqs = r.error ? [] : (r.data || []); } catch(e){ APP.coreqs = []; }
 }
 function renderCoReqs(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 🚪 card is React (react/src/phone/homecards)
-function coSheet(head, c){
-  sheet(`<h2>${esc(t(c.kind === 'left' ? 'coLeftTitle' : 'coTitleSheet'))}</h2>${head || ''}
-    <div class="field"><label>${esc(t('coMsgLabel'))}</label><textarea id="co-msg" maxlength="500" placeholder="${esc(t('coMsgPh', { t: c.local_time || '' }))}">${esc(c.message || '')}</textarea></div>
-    <div class="row"><button class="btn ghost" data-act="close">${esc(t('coLater'))}</button><button class="btn" id="co-go">${esc(t('coSendMsg'))}</button></div>`);
-  $('co-go').onclick = async () => {
-    const m = $('co-msg').value.trim(); if (!m) return toast(t('coNeedMsg'), true);
-    if (!navigator.onLine) return toast(t('offline'), true);
-    const b = $('co-go'); b.disabled = true;
-    const { error } = await sb.rpc('checkout_request_message', { p_id: c.id, p_message: m });
-    b.disabled = false; if (error) return toast(friendly(error.message), true);
-    closeSheet(); toast(t('coMsgSent')); await loadCoReqs(); renderCoReqs();
-  };
+// The message to HR ("🚪 HR has been told" / "🚶 You are still checked in") is React (react/src/phone/comsg). head: null (from the card),
+// { refusal, time, place } after a check-out refused away from the site, { left: true, time, place } after "left without checking out"
+/** @param {any} head @param {any} c — the check-out sent to HR (or what the server answered about it) */
+function coSheet(head, c){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('coMsg', { id: c.id, data: { c, head } }); }
+/** Send: no internet → message; refused → message; sent → closed, the list read again @param {string} id @param {string} m */
+async function sendCoMessage(id, m){
+  if (!navigator.onLine) return toast(t('offline'), true);
+  const { error } = await sb.rpc('checkout_request_message', { p_id: id, p_message: m });
+  if (error) return toast(friendly(error.message), true);
+  closeSheet(); toast(t('coMsgSent')); await loadCoReqs(); renderCoReqs();
 }
 async function reportAwayCheckout(g, refusal){
   let r;
@@ -721,7 +719,7 @@ async function reportAwayCheckout(g, refusal){
   await loadCoReqs(); renderCoReqs();
   const rd = /** @type {CheckoutReport} — checked two lines above */ (r.data);
   const c = (APP.coreqs || []).find(x => x.id === rd.id) || { id: rd.id, kind: rd.kind || 'tried', local_time: rd.time, place: rd.place };
-  coSheet(`<div class="hint" style="color:var(--text)">${esc(refusal)}</div><div class="state on" style="text-align:start;margin-bottom:12px">✅ ${esc(t('coToldHR', { t: r.data.time || '', place: r.data.place || '' }))}</div>`, c);
+  coSheet({ refusal, time: r.data.time, place: r.data.place }, c);
 }
 const LW = () => PLATFORM === 'android' ? nativePlugin('LeaveWatch') : null;
 function distM(a, b, c, d){ const r = x => x * Math.PI / 180, h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2; return 2 * 6371000 * Math.asin(Math.sqrt(h)); }
@@ -740,12 +738,12 @@ async function armWatch(){
     const s = await P.status();
     if (s && !s.background && !sheetOpen() && Date.now() - store.get('pk_bgask', 0) > 3 * 864e5) {
       store.set('pk_bgask', Date.now());
-      sheet(`<h2>📍 ${esc(t('lwAskTitle'))}</h2><div class="hint" style="color:var(--text);white-space:pre-line">${esc(t('lwAskBody'))}</div>
-        <div class="row"><button class="btn ghost" data-act="close">${esc(t('coLater'))}</button><button class="btn" id="lw-set">${esc(t('lwOpenSettings'))}</button></div>`);
-      $('lw-set').onclick = async () => { closeSheet(); try { await P.openSettings(); } catch(e){} };
+      if (typeof PKM !== 'undefined') PKM.openWindow('lwAsk');                     // React (react/src/phone/comsg)
     }
   } catch(e){}
 }
+// "Open settings" on the Android ask: the phone's settings for the app (to choose "Allow all the time")
+async function openLeaveSettings(){ closeSheet(); const P = LW(); try { if (P) await P.openSettings(); } catch(e){} }
 async function locationAllowed(){
   try {
     if (NATIVE) { const G = nativePlugin('Geolocation'); const p = G && await G.checkPermissions(); return !!p && p.location === 'granted'; }
@@ -768,7 +766,7 @@ async function leftCheck(){
   await loadCoReqs(); renderCoReqs();
   if (sheetOpen()) return;
   const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: 'left', local_time: r.data.time, place: r.data.place };
-  coSheet(`<div class="state warn" style="text-align:start;margin-bottom:12px">🚶 ${esc(t('coLeftNow', { place: r.data.place || '', t: r.data.time || '' }))}</div>`, c);
+  coSheet({ left: true, time: r.data.time, place: r.data.place }, c);
 }
 // ── 91: trusted employees (chosen by HR) save a project's map point where they stand ──
 async function loadSiteRight(){
@@ -1464,7 +1462,7 @@ document.addEventListener('click', async ev => {
   if (act==='doc-answer') return typeof PKM !== 'undefined' && PKM.openWindow('document', { id: /** @type {string} */ (a.dataset.id) });
   if (act==='dreq-answer') return typeof PKM !== 'undefined' && PKM.openWindow('dataAnswer', { id: /** @type {string} */ (a.dataset.id) });
   if (act==='my-contact') return typeof PKM !== 'undefined' && PKM.openWindow('contact');
-  if (act==='co-msg') { const c = (APP.coreqs || []).find(x => x.id === a.dataset.id); return c && coSheet('', c); }
+  if (act==='co-msg') { const c = (APP.coreqs || []).find(x => x.id === a.dataset.id); return c && coSheet(null, c); }
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
