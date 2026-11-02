@@ -132,6 +132,7 @@ const T = {
   locTimeout:'Your location could not be found. Move near a window or outside, wait a few seconds and try again.',tryAgain:'Try again',
   queued:'Saved on your phone ✓ — it will be sent automatically as soon as the connection works',sending:'Sending…',
   serverDown:'The server cannot be reached right now. Please try again in a few minutes.',
+  signedOutHere:'You were signed out on this phone. Please sign in again.',
   waiting:'{n} check-in(s) saved on this phone, waiting for internet',waitingOne:'waiting to send',
   sentNow:'{n} saved check-in(s) sent ✓',notRecorded:'A saved check-in could not be recorded — see the details on the home screen',
   failedItem:'Not recorded',discard:'Discard',discardQ:'Discard this saved check-in? HR will need to record it manually.',sendNow:'Send now',
@@ -233,6 +234,7 @@ const T = {
   locTimeout:'تعذّر تحديد موقعك. اقترب من نافذة أو اخرج إلى مكان مفتوح، انتظر قليلاً ثم حاول مرة أخرى.',tryAgain:'حاول مرة أخرى',
   queued:'تم الحفظ على هاتفك ✓ — سيتم الإرسال تلقائياً فور عودة الاتصال',sending:'جارٍ الإرسال…',
   serverDown:'لا يمكن الوصول إلى الخادم الآن. يرجى المحاولة بعد دقائق.',
+  signedOutHere:'تم تسجيل خروجك على هذا الهاتف. يرجى تسجيل الدخول مرة أخرى.',
   waiting:'{n} تسجيل محفوظ على هذا الهاتف في انتظار الإنترنت',waitingOne:'في انتظار الإرسال',
   sentNow:'تم إرسال {n} تسجيل محفوظ ✓',notRecorded:'تعذّر تسجيل أحد التسجيلات المحفوظة — راجع التفاصيل في الشاشة الرئيسية',
   failedItem:'لم يُسجَّل',discard:'حذف',discardQ:'حذف هذا التسجيل المحفوظ؟ ستحتاج الموارد البشرية إلى تسجيله يدوياً.',sendNow:'إرسال الآن',
@@ -472,10 +474,22 @@ async function insertClock(rec){
 const alreadyHave = e => !!e && (e.code === '23505' || /duplicate key/i.test(String(e.message||''))) && /client_id/i.test(String((e.message||'') + ' ' + (e.details||'')));
 // every request from the app gives up after 20 seconds instead of hanging
 const timedFetch = (input, init = {}) => {
-  if (init.signal) return fetch(input, init);
+  if (init.signal) return fetch(input, init).then(lostCheck);
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
-  return fetch(input, { ...init, signal: ac.signal }).finally(() => clearTimeout(t));
+  return fetch(input, { ...init, signal: ac.signal }).then(lostCheck).finally(() => clearTimeout(t));
 };
+// A sign-in that ended (2 Nov 2026): signed out elsewhere, password reset, expired. The database then answers as to a visitor
+// ("permission denied …", HTTP 401) — instead of showing that, the app goes back to the sign-in screen and says why.
+const lostCheck = r => { if (r && r.status === 401 && /\/rest\/v1\//.test(String(r.url || ''))) void checkSession(); return r; };
+let lostOnce = false;
+function sessionLost(){
+  if (lostOnce || !APP.ready) return; lostOnce = true; APP.ready = false;
+  try { stopWatch(); } catch(e){}
+  ['pk_cache','pk_watch','pk_leftchk','pk_bgask','pk_sites','pk_offset'].forEach(k => { try { localStorage.removeItem(k); } catch(e){} });   // the offline queue stays: sent after the next sign-in
+  try { sessionStorage.setItem('pk_lost', '1'); } catch(e){}
+  Promise.resolve().then(() => sb.auth.signOut({ scope:'local' })).catch(() => {}).finally(() => location.reload());
+}
+async function checkSession(){ try { const { data } = await sb.auth.getSession(); if (!data || !data.session) sessionLost(); } catch(e){} }
 // review fix: no payslips and no ID / bank / pay figures are kept on the phone
 const cacheEmp = e => { if (!e) return e; const { national_id, bank_account, bank_branch, salary, housing, transport, daily_pay, hour_pay, delay_hour_pay, insurance_amount, insurance_number, ...rest } = e; return rest; };
 function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, myProjects:APP.myProjects, myTeam:APP.myTeam, me:APP.me, emp:cacheEmp(APP.emp), status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, att:APP.att, manager:APP.manager, hra:APP.hra, lbal:APP.lbal }); }
@@ -592,6 +606,7 @@ async function afterLogin(user){
   const meRes = await withTimeout(sb.from('app_users').select('*').eq('id', user.id), 15000);
   const { data, error: meErr } = meRes;
   if (serverDown(meRes)) { if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('serverDown')); }
+  if (meRes.status === 401) { try { await sb.auth.signOut({ scope:'local' }); } catch(e){} show('scr-login'); toast(t('signedOutHere'), true); return; }   // the sign-in had ended
   const me = data && data[0];
   if (!me || !me.role) return message(t('noRole'));
   if (!me.active) return message(t('inactive'));
@@ -601,7 +616,7 @@ async function afterLogin(user){
   const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
   if (regErr || !['ok','registered'].includes(reg)){
     const txt = reg==='other_device' ? t('otherDevice') + '\n\n' + t('attemptLogged') : reg==='device_taken' ? t('deviceTaken') + '\n\n' + t('attemptLogged') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
-    try { await sb.auth.signOut(); } catch(e){}
+    try { await sb.auth.signOut({ scope:'local' }); } catch(e){}   // this phone only — never the employee's own phone
     return message(txt);
   }
   show('scr-main');
@@ -632,7 +647,7 @@ async function signOut(){
   try { if (navigator.onLine) await flushQueue(); } catch(e){}
   try { stopWatch(); } catch(e){}                                           // review fix: background watch ends with the sign-out
   ['pk_cache','pk_watch','pk_leftchk','pk_bgask','pk_sites','pk_offset'].forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
-  try { await sb.auth.signOut(); } catch(e){} APP.ready=false; APP.slips = []; location.reload(); }
+  APP.ready=false; try { await sb.auth.signOut({ scope:'local' }); } catch(e){} APP.slips = []; location.reload(); }   // this phone only (2 Nov 2026: was every device)
 
 // ── Documents HR asked for (61-document-requests.sql): the employee answers with a photo of the new card ──
 async function loadDocs(){
@@ -1468,9 +1483,11 @@ window.addEventListener('load', () => { if (typeof PKM === 'undefined') { const 
   }
   if (!window.supabase || !SUPABASE_KEY || SUPABASE_KEY.startsWith('PASTE')) return message(t('configMissing'));
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { global: { fetch: timedFetch } });
+  try { sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') sessionLost(); }); } catch(e){}   // e.g. the renewal was refused
   if (isIOS() && !isStandalone()) { show('scr-install'); return; }
   try {
     const { data } = await sb.auth.getSession();
-    if (data && data.session) await afterLogin(data.session.user); else show('scr-login');
+    if (data && data.session) await afterLogin(data.session.user);
+    else { show('scr-login'); let lost = null; try { lost = sessionStorage.getItem('pk_lost'); sessionStorage.removeItem('pk_lost'); } catch(e){} if (lost) toast(t('signedOutHere'), true); }
   } catch(e){ console.warn('Petrokima start-up:', e && e.message); const c = store.get('pk_cache', null); if (c && useCache(c.uid)) { show('scr-main'); APP.ready=true; renderAll(); } else show('scr-login'); }
 })();
