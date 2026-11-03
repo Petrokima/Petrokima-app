@@ -362,7 +362,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // num / pad / loc / fmt / fmtH (hours as "9 h 50 m") / todayStr (the PHONE's own date) / dObj / dStr / niceDate / toMin — and chip, friendly, the payroll
 // calendar and the leave arithmetic below — moved to React on 3 Nov 2026 (react/src/phone/core/helpers.ts — proven to give the same answers by helpers.golden.json); the old names forward to it.
 // react.js runs right after this file and the start-up (boot, below) waits for it, so it is there before any of them is asked.
-function pkm(){ if (typeof PKM === 'undefined') throw new Error(t('appLoadFailed')); return PKM; }
+// app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
+// another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
+// Always the same as VERSION in sw.js (checked by tests/check-files.js).
+const PKM_BUILD = 'pk-mobile-v82';
+const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
+function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
 const pad = n => pkm().pad(n);
 const loc = () => pkm().loc();
@@ -462,15 +467,11 @@ function sessionLost(){
   Promise.resolve().then(() => sb.auth.signOut({ scope:'local' })).catch(() => {}).finally(() => location.reload());
 }
 async function checkSession(){ try { const { data } = await sb.auth.getSession(); if (!data || !data.session) sessionLost(); } catch(e){} }
-// review fix: no payslips and no ID / bank / pay figures are kept on the phone
-const cacheEmp = e => { if (!e) return e; const { national_id, bank_account, bank_branch, salary, housing, transport, daily_pay, hour_pay, delay_hour_pay, insurance_amount, insurance_number, ...rest } = e; return rest; };
-function saveCache(){ store.set('pk_cache', { uid:APP.me && APP.me.id, updatedAt:APP.updatedAt, team:APP.team, teamReq:APP.teamReq, myProjects:APP.myProjects, myTeam:APP.myTeam, me:APP.me, emp:cacheEmp(APP.emp), status:APP.status, statusAt:APP.statusAt, S, hol:[...HOL], leaves:APP.leaves, perms:APP.perms, reqs:APP.reqs, att:APP.att, manager:APP.manager, hra:APP.hra, lbal:APP.lbal }); }
-function useCache(uid){
-  const c = store.get('pk_cache', null); if (!c || (uid && c.uid !== uid)) return false;
-  APP.me=c.me; APP.emp=c.emp; APP.status=c.status; APP.statusAt=c.statusAt||Date.now(); S={...S,...(c.S||{})}; HOL=new Set(c.hol||[]);
-  APP.leaves=c.leaves||[]; APP.perms=c.perms||[]; APP.reqs=c.reqs||[]; APP.slips=[]; APP.att=c.att||[]; APP.manager=c.manager; APP.offline=true; APP.updatedAt=c.updatedAt; APP.team=c.team||[]; APP.teamReq=c.teamReq||[]; APP.myProjects=c.myProjects||[]; APP.myTeam=c.myTeam||[]; APP.hra=c.hra||[]; APP.lbal=c.lbal||null;
-  return true;
-}
+// the phone's own copy of the data — NO ID, bank or pay figures and no payslips (review fix) — cacheEmp / saveCache / useCache moved to React on 3 Nov 2026 (react/src/phone/data/load.ts — proven to ask the same questions and keep the same data by load.golden.json); the old names forward to it
+const cacheEmp = e => pkm().cacheEmp(e);
+function saveCache(){ return pkm().saveCache(); }
+/** @param {string} [uid] */
+function useCache(uid){ return pkm().useCache(uid); }
 // Server time minus phone time, measured each time we are online
 function clockOffset(){ return store.get('pk_offset', { off:0 }).off || 0; }
 function serverNowMs(){ return Date.now() + clockOffset(); }
@@ -622,87 +623,37 @@ async function signOut(){
   APP.ready=false; try { await sb.auth.signOut({ scope:'local' }); } catch(e){} APP.slips = []; location.reload(); }   // this phone only (2 Nov 2026: was every device)
 
 // ── Documents HR asked for (61-document-requests.sql): the employee answers with a photo of the new card ──
-async function loadDocs(){
-  try { const r = await sb.from('doc_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
-        APP.docs = r.error ? [] : (r.data || []); } catch(e){ APP.docs = []; }
-}
+function loadDocs(){ return pkm().loadDocs(); }   // moved to React on 3 Nov 2026 (react/src/phone/data/load.ts — proven to ask the same questions and keep the same data by load.golden.json); the old names forward to it
 // the "📄 Documents HR asked for" card is React since 31 Oct 2026 — react/src/phone/reqcards (📎 keeps data-act="doc-answer" → the React window, submitDocument below)
 function renderDocs(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // phone photos are made smaller (max 1600 px, JPEG) before sending; PDFs are sent as they are
-async function docShrink(file){
-  if (!/^image\/(jpeg|png|webp)$/i.test(file.type) || file.size < 900000) return file;
-  try {
-    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(file); });
-    const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
-    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); /** @type {CanvasRenderingContext2D} — always available for a new canvas */ (c.getContext('2d')).drawImage(img, 0, 0, c.width, c.height);
-    const blob = await new Promise(ok => c.toBlob(ok, 'image/jpeg', 0.85));
-    return blob ? new File([blob], file.name.replace(/\.\w+$/, '') + '.jpg', { type:'image/jpeg' }) : file;
-  } catch(e){ return file; }
-}
+function docShrink(file){ return pkm().docShrink(file); }   // (React — react/src/phone/send/send.ts)
 // The "send HR your renewed card" window is React since 1 Nov 2026 — react/src/phone/slipdoc. It uploads through here.
 /** @param {string} id — the document request @param {File} picked — the photo or PDF chosen @param {string} expiry — the new card's expiry */
-async function submitDocument(id, picked, expiry){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  try {
-    const f = await docShrink(picked);
-    if (f.size > 10 * 1024 * 1024) throw new Error(t('docTooBig'));
-    const ext = (f.name.match(/\.(\w+)$/) || [, f.type === 'application/pdf' ? 'pdf' : 'jpg'])[1].toLowerCase();
-    const path = `${APP.me.emp_id}/${id}/${Date.now()}.${ext}`;
-    const up = await sb.storage.from('employee-docs').upload(path, f, { contentType: f.type || undefined, upsert:false });
-    if (up.error) throw up.error;
-    const { error } = await sb.rpc('submit_document', { p_id: id, p_path: path, p_name: f.name, p_new_expiry: expiry });
-    if (error) throw error;
-    closeSheet(); toast(t('docSent')); await loadDocs(); renderDocs();
-  } catch(e){ toast(friendly(e.message || String(e)), true); }
-}
+function submitDocument(id, picked, expiry){ return pkm().submitDocument(id, picked, expiry); }   // (React — react/src/phone/send/send.ts)
 
 // ── Data HR asks the employee to update + "My contact details" (77-data-update-requests.sql) ──
-async function loadDreqs(){
-  try { const r = await sb.from('data_requests').select('*').eq('emp_id', APP.me.emp_id).neq('status', 'Cancelled').order('requested_at', { ascending:false }).limit(10);
-        APP.dreqs = r.error ? [] : (r.data || []); } catch(e){ APP.dreqs = []; }
-  if (!APP.dfields) { try { const f = await sb.rpc('data_fields'); APP.dfields = f.error ? null : /** @type {any[]} — the list of fields employees may update */ (f.data); } catch(e){} }
-}
+function loadDreqs(){ return pkm().loadDreqs(); }   // (moved to React — react/src/phone/data/load.ts)
 // the "📝 HR asks you to update your data" card is React since 31 Oct 2026 — react/src/phone/reqcards (✏️ keeps data-act="dreq-answer" → the React answer window)
 function renderDreqs(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // The answer window and "✏️ Update my contact details" are React since 1 Nov 2026 — react/src/phone/mydata. They save through here.
 /** @param {string} id @param {Record<string, string>} vals — every field asked, filled in */
-async function answerDataRequest(id, vals){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { data, error } = await sb.rpc('answer_data_request', { p_id: id, p_vals: vals });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(data === 'saved' ? t('dreqSaved') : t('dreqSentHR'));
-  try { await loadAll(); renderAll(); } catch(e){ await loadDreqs(); renderDreqs(); }
-}
+function answerDataRequest(id, vals){ return pkm().answerDataRequest(id, vals); }   // (React — react/src/phone/send/send.ts)
 /** @param {Record<string, string>} vals — only the changed contact details */
-async function saveContact(vals){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('update_my_contact', { p_vals: vals });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(t('contactSaved'));
-  try { const r = await sb.from('employees').select('*').eq('id', APP.me.emp_id); if (r.data && r.data[0]) { APP.emp = r.data[0]; saveCache && saveCache(); } } catch(x){}
-  renderProfile();
-}
+function saveContact(vals){ return pkm().saveContact(vals); }   // (React — react/src/phone/send/send.ts)
 
 // ── Check-outs HR must record (80-checkout-requests.sql) ──
 //  · a check-out refused away from the office/site → the try is sent to HR at once; he can add a message
 //  · still checked in but away from his office (from 10 min after the check-in): Android background watch (LeaveWatch) +
 //    a check each time the app is opened → "left without checking out" sent to HR
-async function loadCoReqs(){
-  try { const r = await sb.from('checkout_requests').select('*').eq('emp_id', APP.me.emp_id).order('tried_at', { ascending:false }).limit(5);
-        APP.coreqs = r.error ? [] : (r.data || []); } catch(e){ APP.coreqs = []; }
-}
+function loadCoReqs(){ return pkm().loadCoReqs(); }   // (moved to React — react/src/phone/data/load.ts)
 function renderCoReqs(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 🚪 card is React (react/src/phone/homecards)
 // The message to HR ("🚪 HR has been told" / "🚶 You are still checked in") is React (react/src/phone/comsg). head: null (from the card),
 // { refusal, time, place } after a check-out refused away from the site, { left: true, time, place } after "left without checking out"
 /** @param {any} head @param {any} c — the check-out sent to HR (or what the server answered about it) */
 function coSheet(head, c){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('coMsg', { id: c.id, data: { c, head } }); }
 /** Send: no internet → message; refused → message; sent → closed, the list read again @param {string} id @param {string} m */
-async function sendCoMessage(id, m){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('checkout_request_message', { p_id: id, p_message: m });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(t('coMsgSent')); await loadCoReqs(); renderCoReqs();
-}
+function sendCoMessage(id, m){ return pkm().sendCoMessage(id, m); }   // (React — react/src/phone/send/send.ts)
 async function reportAwayCheckout(g, refusal){
   let r;
   try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'tried' }); } catch(e){ r = { error: e }; }
@@ -873,76 +824,11 @@ async function setupPush(){
 // ═════════════════════════════════════════════════════════
 //  DATA
 // ═════════════════════════════════════════════════════════
-async function refreshSiteCache(force){
-  try {
-    const c = store.get('pk_sites', null), uid = APP.me && APP.me.id;
-    if (!force && c && c.uid === uid && Date.now() - (c.at || 0) < 24 * 3600 * 1000) return;
-    const list = [];
-    for (let from = 0; from < 50000; from += 1000){
-      const { data, error } = await sb.rpc('sites_for_offline').range(from, from + 999);
-      if (error) return; (data || []).forEach(p => list.push([p.id, p.name || '']));
-      if (!data || data.length < 1000) break;
-    }
-    store.set('pk_sites', { uid, at: Date.now(), list });
-  } catch(e) { /* keep the previous list */ }
-}
-async function loadAll(){
-  const id = APP.me.emp_id;
-  const all = async (q) => { const r = await q; return r.data || []; };
-  const [set, hol, emp, lv, pm, rq, sl, mg, tm, tlv, tpm, myp, myt, ann, rd, fb, hire, train, bday, inbox, acts, vels, sal, hra, lbal] = await Promise.all([
-    all(sb.from('settings').select('*').eq('key','payroll')),
-    all(sb.from('public_holidays').select('date')),
-    all(sb.from('employees').select('*').eq('id', id)),
-    all(sb.from('employee_leaves').select('*').eq('emp_id', id).order('date_from', { ascending:false })),
-    all(sb.from('attendance_permissions').select('*').eq('emp_id', id).order('date', { ascending:false })),
-    all(sb.from('hr_requests').select('*').eq('emp_id', id).order('created_at', { ascending:false })),
-    Promise.resolve([]),                                   // payslips are loaded only after the password (payslipUnlock)
-    sb.rpc('my_manager').then(r => r.data || [], () => []),
-    all(sb.from('allowance_approvals').select('*').eq('manager_id', id).order('submitted_at', { ascending:false })),
-    all(sb.from('employee_leaves').select('*').eq('manager_id', id).order('date_from', { ascending:false }).limit(60)),
-    all(sb.from('attendance_permissions').select('*').eq('manager_id', id).order('date', { ascending:false }).limit(60)),
-    sb.rpc('my_projects').then(r => r.data || [], () => []),
-    sb.rpc('my_team').then(r => r.data || [], () => []),
-    all(sb.from('announcements').select('*').order('created_at', { ascending:false }).limit(60)),
-    all(sb.from('announcement_reads').select('ann_id').eq('emp_id', id)),
-    all(sb.from('feedback').select('*').eq('emp_id', id).order('created_at', { ascending:false }).limit(100)),
-    all(sb.from('hiring_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
-    all(sb.from('training_requests').select('*').eq('manager_emp', id).order('created_at', { ascending:false })),
-    sb.rpc('my_birthday_today').then(r => !!r.data, () => false),
-    APP.me.receives_feedback ? sb.rpc('feedback_inbox').then(r => r.data || [], () => []) : Promise.resolve([]),
-    all(sb.from('manager_actions').select('*').order('created_at', { ascending:false }).limit(100)),
-    sb.rpc('variable_elements').then(r => r.data || [], () => []),
-    APP.me.board_approver ? all(sb.from('salary_change_requests').select('*').order('created_at', { ascending:false }).limit(50)) : Promise.resolve([]),
-    sb.rpc('hr_alerts').then(r => Array.isArray(r.data) ? r.data : [], () => []),
-    sb.rpc('leave_balance').then(r => r.error ? null : r.data, () => null) ]);
-  if (set[0] && set[0].value) S = { ...S, ...set[0].value };
-  HOL = new Set(hol.map(h => h.date));
-  APP.emp = emp[0] || null; APP.leaves = lv; APP.perms = pm; APP.reqs = rq; if (!APP.payUnlocked) APP.slips = []; APP.manager = mg[0] || null; APP.team = tm || []; APP.myProjects = myp || []; APP.myTeam = myt || [];
-  APP.varElements = vels || []; APP.salReqs = (sal || []).filter(r => r.emp_id !== id);
-  APP.hra = hra || []; APP.lbal = lbal || null;
-  APP.news = ann || []; APP.newsRead = new Set((rd || []).map(x => x.ann_id)); APP.birthday = !!bday;
-  APP.myFeedback = fb || []; APP.inbox = inbox || [];
-  APP.myActions = (acts || []).filter(a => a.manager_emp === id); APP.boardActions = APP.me.board_approver ? (acts || []).filter(a => a.manager_emp !== id && a.emp_id !== id) : [];
-  APP.mgrReqs = [...(hire || []).map(r => ({ kind:'hire', r })), ...(train || []).map(r => ({ kind:'train', r })), ...(APP.myActions || []).map(r => ({ kind:'act', r }))].sort((a,b) => String(b.r.created_at).localeCompare(String(a.r.created_at)));
-  APP.teamReq = [...(tlv||[]).filter(l => l.emp_id !== id).map(r => ({ kind:'leave', r })), ...(tpm||[]).filter(p => p.emp_id !== id).map(r => ({ kind:'perm', r }))];
-  await loadDocs();
-  await loadDreqs();
-  await loadCoReqs();
-  await loadMissionsP();
-  await loadStatus();
-  afterStatus().catch(() => {});
-}
-async function loadStatus(){
-  const { data, error } = await sb.rpc('my_clock_status');
-  if (error) throw error;
-  APP.status = data; APP.statusAt = Date.now(); APP.offline = false; APP.updatedAt = Date.now();
-  if (data && data.server_ts) store.set('pk_offset', { off: Number(data.server_ts) - Date.now(), at: Date.now() });
-  applyQueueToStatus();
-  const cyc = cycleOf(APP.status ? APP.status.date : todayStr());
-  const r = await sb.from('attendance').select('*').eq('emp_id', APP.me.emp_id).gte('date', periodStart(cyc)).lte('date', periodEnd(cyc)).order('date', { ascending:false });
-  APP.att = r.data || [];
-  saveCache();
-}
+// refreshSiteCache (the site list kept for offline check-ins), loadAll and loadStatus moved to React on 3 Nov 2026 (react/src/phone/data/load.ts — proven to ask the same questions and keep the same data by load.golden.json); the old names forward to it
+/** @param {boolean} [force] */
+function refreshSiteCache(force){ return pkm().refreshSiteCache(force); }
+function loadAll(){ return pkm().loadAll(); }
+function loadStatus(){ return pkm().loadStatus(); }
 
 // ═════════════════════════════════════════════════════════
 //  HOME — check in / out
@@ -1124,21 +1010,10 @@ function lateDeadline(){ return pkm().lateDeadline(); }
 function renderRequests(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // The vacation, permission and HR request windows are React since 1 Nov 2026 — react/src/phone/reqwin. They send through here.
 /** @param {'attendance_permissions' | 'employee_leaves' | 'hr_requests'} table — where the request is saved @param {any} rec */
-async function sendRequest(table, rec){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { data, error } = await sb.from(table).insert(rec).select();
-  if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-  closeSheet(); toast((table==='employee_leaves' || table==='attendance_permissions') && /** @type {{ manager_status?: string }} — only leaves and permissions have a manager step */ (data[0]).manager_status==='Pending' ? t('sentMgr') : t('sent')); await loadAll(); renderAll();
-}
+function sendRequest(table, rec){ return pkm().sendRequest(table, rec); }   // moved to React on 3 Nov 2026 (react/src/phone/send/send.ts — proven to do the same by send.golden.json); the old name forwards to it
 // The "Cancel this request?", reject and HR-alert windows are React since 1 Nov 2026 — react/src/phone/decide. They act through here.
 /** @param {string} key — leave:<id> / perm:<id> / req:<id> / mis:<id> */
-async function cancelRequest(key){
-  const [k,id]=key.split(':'), table=/** @type {Record<string, 'employee_leaves' | 'attendance_permissions' | 'hr_requests'>} */ ({ leave:'employee_leaves', perm:'attendance_permissions', req:'hr_requests' })[k];
-  if (k === 'mis') { const { error } = await sb.rpc('cancel_mission', { p_id:id }); if (error) return toast(friendly(error.message), true); closeSheet(); toast(t('cancelled')); await loadAll(); renderAll(); return; }
-  const { data, error } = await sb.from(table).update({ status:'Cancelled' }).eq('id', id).select();
-  if (error || !(data && data.length)) return toast(t('cantCancel'), true);
-  closeSheet(); toast(t('cancelled')); await loadAll(); renderAll();
-}
+function cancelRequest(key){ return pkm().cancelRequest(key); }   // (React — react/src/phone/send/send.ts)
 
 // ═════════════════════════════════════════════════════════
 //  OUTSIDE MISSIONS (66) — employee → manager → HR · manager assigns → employee acknowledges → HR
@@ -1151,39 +1026,15 @@ function misChip(m, asManager){
 const misName = m => (LANG === 'ar' ? (m.emp_name_ar || m.emp_name) : (m.emp_name || m.emp_name_ar))
   || (((APP.myTeam || []).find(x => String(x.id) === String(m.emp_id)) || {})[LANG === 'ar' ? 'name_ar' : 'name_en']) || '';
 const misWhen = m => `${niceDate(m.date_from)}${m.date_to !== m.date_from ? ' → ' + niceDate(m.date_to) : ''}${m.time_from ? ' · ' + String(m.time_from).slice(0,5) + '–' + String(m.time_to).slice(0,5) : ''}`;
-async function loadMissionsP(){
-  const id = APP.me && APP.me.emp_id; if (!id) return;
-  try {
-    const [mine, team] = await Promise.all([
-      sb.from('employee_missions').select('*').eq('emp_id', id).order('created_at', { ascending:false }).limit(60),
-      sb.from('employee_missions').select('*').eq('manager_id', id).neq('emp_id', id).order('created_at', { ascending:false }).limit(80)]);
-    APP.missions = mine.data || []; APP.teamMissions = team.data || [];
-  } catch(e) { APP.missions = APP.missions || []; APP.teamMissions = APP.teamMissions || []; }
-}
+function loadMissionsP(){ return pkm().loadMissionsP(); }   // (moved to React — react/src/phone/data/load.ts)
 // the "your manager assigned you a mission" notice is React since 31 Oct 2026 — react/src/phone/reqcards (✋ calls misAck)
 function renderMisAck(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // The outside-mission window (ask for one / assign one to my team) is React since 1 Nov 2026 — react/src/phone/mission. It sends here.
 /** @param {string[] | null} emps — the team members to assign (null = I ask for a mission myself)
  *  @param {{ p_from: string, p_to: string, p_time_from: string | null, p_time_to: string | null, p_place: string, p_purpose: string | null, p_project: string | null }} args */
-async function sendMission(emps, args){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = emps ? await sb.rpc('assign_mission', { p_emps:emps, ...args }) : await sb.rpc('request_mission', args);
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(emps ? t('misAssigned') : (APP.manager ? t('misSentMgr') : t('misSentHR')));
-  await loadMissionsP(); renderAll();
-}
-async function misAck(id){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('acknowledge_mission', { p_id:id });
-  if (error) return toast(friendly(error.message), true);
-  toast(t('misAcked')); await loadMissionsP(); renderAll();
-}
-async function misDecide(id, ok, note){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('manager_decide_mission', { p_id:id, p_approve:ok, p_note: note || null });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(ok ? t('approvedMsg') : t('rejectedMsg')); await loadMissionsP(); renderAll();
-}
+function sendMission(emps, args){ return pkm().sendMission(emps, args); }   // (React — react/src/phone/send/send.ts)
+function misAck(id){ return pkm().misAck(id); }   // (React — react/src/phone/send/send.ts)
+function misDecide(id, ok, note){ return pkm().misDecide(id, ok, note); }   // (React — react/src/phone/send/send.ts)
 const _renderRequestsMis = renderRequests;
 // @ts-expect-error — renderRequests is deliberately extended here (mission notices)
 renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMisAck(); };
@@ -1213,61 +1064,23 @@ async function payslipUnlock(pw){
 function renderProfile(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // The change-password window is React since 1 Nov 2026 — react/src/phone/slipdoc. It changes the password through here.
 /** @param {string} pw — the new password (already checked: 8+ characters, typed twice the same) */
-async function changePassword(pw){
-  const { error } = await sb.auth.updateUser({ password:pw });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(t('passChanged'));
-}
+function changePassword(pw){ return pkm().changePassword(pw); }   // (React — react/src/phone/send/send.ts)
 // The ✅ Approvals tab (its tab button + red number, HR alerts, team requests, missions, projects, allowances) is React since
 // 1 Nov 2026 — react/src/phone/approvals. Kept here: the decisions (teamReqDecide, teamDecide, misDecide), the project window (teamProjSheet)
 // and the data loading. The reject and HR-alert windows are React too (react/src/phone/decide).
 function renderTeam(){ if (typeof PKM !== 'undefined') PKM.render(); }
 /** @param {{ p_kind: string, p_emp: string, p_ref: string, p_due: string, p_decision: string, p_note: string | null }} args */
-async function hraRespond(args){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('hr_alert_respond', args);
-  if (error) return toast(friendly(error.message), true);
-  const r = await sb.rpc('hr_alerts'); if (Array.isArray(r.data)) APP.hra = r.data;
-  closeSheet(); toast(t('hraSaved')); renderTeam(); saveCache();
-}
+function hraRespond(args){ return pkm().hraRespond(args); }   // (React — react/src/phone/send/send.ts)
 // The team-projects windows (one member's projects + search, "remove — why?") are React since 1 Nov 2026 — react/src/phone/teamproj.
 // Kept here: reading his list (the window opens only once it is read, as before), the project search and the save step.
 /** @param {string} empId */
-async function teamProjSheet(empId){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { data, error } = await sb.rpc('team_projects', { p_emp: empId });
-  if (error) return toast(friendly(error.message), true);
-  if (typeof PKM !== 'undefined') PKM.openWindow('teamProjects', { id: empId, list: data || [] });
-}
+function teamProjSheet(empId){ return pkm().teamProjSheet(empId); }   // (React — react/src/phone/send/send.ts)
 /** @param {string} q — at least 2 letters @returns {Promise<any[]>} the projects found (none on an error, as before) */
-async function findProjects(q){ const r = await sb.rpc('find_projects', { p_q:q }); return r.data || []; }
+function findProjects(q){ return pkm().findProjects(q); }   // (React — react/src/phone/send/send.ts)
 // 100: nothing is deleted — a removed project is CLOSED with a reason and kept in the register of closed records
-async function teamProjChange(key, add, why){
-  const [empId, code] = key.split('|');
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const res = add ? await sb.from('employee_projects').insert({ emp_id: empId, project_code: code }).select()
-                  : await sb.rpc('close_records', { p_tbl: 'employee_projects', p_keys: [{ emp_id: empId, project_code: code }], p_reason: why || '' });
-  if (res.error) { return toast(friendly(String(res.error.message).replace(/^.*?\b(NO_DELETE|CLOSE_REASON|NOT_CLOSED|CLOSE_KEYS|CLOSE_TABLE): ?/, '')), true); }
-  if (add ? !(Array.isArray(res.data) && res.data.length) : !res.data) return toast(t('notAllowed'), true);
-  toast(add ? t('projAdded') : t('projRemoved'));
-  const r = await sb.rpc('my_team'); APP.myTeam = r.data || APP.myTeam; saveCache(); renderTeam(); teamProjSheet(empId);
-}
-async function teamReqDecide(key, approve, note){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const [kind, id] = key.split(':');
-  const { data, error } = await sb.rpc('manager_decide_request', { p_kind:kind, p_id:id, p_approve:approve, p_note: note || null });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(!approve ? t('rejectedMsg') : /final/.test(data||'') ? t('approvedFinal') : t('approvedMsg'));
-  await loadAll(); renderAll();
-}
-async function teamDecide(id, approve, note){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('manager_decide_allowance', { p_id:id, p_approve:approve, p_note: note || null });
-  if (error) return toast(friendly(error.message), true);
-  closeSheet(); toast(approve ? t('approvedMsg') : t('rejectedMsg'));
-  const r = await sb.from('allowance_approvals').select('*').eq('manager_id', APP.me.emp_id).order('submitted_at', { ascending:false });
-  APP.team = r.data || APP.team; saveCache(); renderTeam();
-}
+function teamProjChange(key, add, why){ return pkm().teamProjChange(key, add, why); }   // (React — react/src/phone/send/send.ts)
+function teamReqDecide(key, approve, note){ return pkm().teamReqDecide(key, approve, note); }   // (React — react/src/phone/send/send.ts)
+function teamDecide(id, approve, note){ return pkm().teamDecide(id, approve, note); }   // (React — react/src/phone/send/send.ts)
 // newest Android build: read from our own download page (no limits), GitHub as a fallback
 async function latestBuild(){
   if (APK_DOWNLOAD) {
@@ -1301,67 +1114,25 @@ const dShort = ts => pkm().dShort(ts);
 // The News list and the red number on its tab are React since 31 Oct 2026 — react/src/phone/news. Kept here: marking read when
 // the tab opens (markNewsRead) and opening an attachment (data-att, page-wide handler).
 function renderNews(){ if (typeof PKM !== 'undefined') PKM.render(); }
-async function markNewsRead(){
-  const unread = (APP.news || []).filter(a => !APP.newsRead?.has(a.id)); if (!unread.length || !navigator.onLine) return;
-  unread.forEach(a => APP.newsRead?.add(a.id)); renderNews();
-  await sb.from('announcement_reads').insert(unread.map(a => ({ ann_id:a.id, emp_id:APP.me.emp_id }))).then(() => {}, () => {});
-}
-async function openAttachment(path){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { data, error } = await sb.storage.from('announcements').createSignedUrl(path, 600);
-  if (error || !data) return toast(friendly(error ? error.message : 'Not allowed'), true);
-  window.open(data.signedUrl, '_blank');
-}
+function markNewsRead(){ return pkm().markNewsRead(); }   // (React — react/src/phone/send/send.ts)
+function openAttachment(path){ return pkm().openAttachment(path); }   // (React — react/src/phone/send/send.ts)
 // The voice cards — my complaints & suggestions, the manager's requests to HR, the board member's approvals and the complaints
 // inbox — are React since 1 Nov 2026 (react/src/phone/voice). Their buttons keep the old data-… names handled below.
 function renderVoice(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // The complaint / suggestion, new employees, training and penalty / element windows are React since 1 Nov 2026 —
 // react/src/phone/voicewin. They send through here (the item goes to the top of my complaints / my requests to HR).
 /** @param {'feedback' | 'hiring_requests' | 'training_requests' | 'manager_actions'} table — where the request is saved @param {any} rec */
-async function sendVoice(table, rec){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { data, error } = await sb.from(table).insert(rec).select();
-  if (error || !(data && data.length)) return toast(friendly(error ? error.message : 'Not allowed'), true);
-  const row = /** @type {any} — the saved row of whichever table */ (data[0]);
-  closeSheet();
-  if (table === 'feedback') { toast(t('fbSent')); APP.myFeedback = [row, ...(APP.myFeedback || [])]; }
-  else { toast(t('sentHR')); APP.mgrReqs = [{ kind: table==='hiring_requests' ? 'hire' : table==='training_requests' ? 'train' : 'act', r:row }, ...(APP.mgrReqs || [])]; }
-  renderVoice();
-}
+function sendVoice(table, rec){ return pkm().sendVoice(table, rec); }   // (React — react/src/phone/send/send.ts)
 // The board member's ✅ / ❌ windows (manager requests, basic-salary changes), a manager's "agree to close" a hiring request and the
 // inbox answer are React since 1 Nov 2026 — react/src/phone/answers. They answer through these (the list row is changed here).
 /** @param {{ p_id: string, p_approve: boolean, p_note: string | null }} args */
-async function boardDecide(args){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('decide_manager_action', args);
-  if (error) return toast(friendly(error.message), true);
-  const a = (APP.boardActions || []).find(x => x.id === args.p_id); if (a) a.status = args.p_approve ? 'Waiting for HR' : 'Rejected';
-  closeSheet(); toast('✓'); renderVoice();
-}
+function boardDecide(args){ return pkm().boardDecide(args); }   // (React — react/src/phone/send/send.ts)
 /** @param {{ p_id: string, p_approve: boolean, p_note: string | null }} args */
-async function salaryDecide(args){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('decide_salary_change', args);
-  if (error) return toast(friendly(error.message), true);
-  const r = (APP.salReqs || []).find(x => x.id === args.p_id); if (r) r.status = args.p_approve ? 'Approved' : 'Rejected';
-  closeSheet(); toast('✓'); renderVoice();
-}
+function salaryDecide(args){ return pkm().salaryDecide(args); }   // (React — react/src/phone/send/send.ts)
 /** @param {{ p_id: string, p_note: string | null }} args */
-async function closeHire(args){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { data, error } = await sb.rpc('close_hiring_request', args);
-  if (error) return toast(friendly(error.message), true);
-  const x = (APP.mgrReqs || []).find(m => m.kind==='hire' && m.r.id === args.p_id); if (x){ x.r.mgr_closed = true; if (data === 'Closed') x.r.status = 'Closed'; }
-  closeSheet(); toast(data === 'Closed' ? t('closedBoth') : t('waitHrClose')); renderVoice();
-}
+function closeHire(args){ return pkm().closeHire(args); }   // (React — react/src/phone/send/send.ts)
 /** @param {{ p_id: string, p_status: string, p_reply: string | null }} args */
-async function answerInbox(args){
-  if (!navigator.onLine) return toast(t('offline'), true);
-  const { error } = await sb.rpc('answer_feedback', args);
-  if (error) return toast(friendly(error.message), true);
-  const f = (APP.inbox || []).find(x => x.id === args.p_id); if (f) Object.assign(f, { status:args.p_status, reply:args.p_reply });
-  closeSheet(); toast('✓'); renderVoice();
-}
+function answerInbox(args){ return pkm().answerInbox(args); }   // (React — react/src/phone/send/send.ts)
 document.addEventListener('click', async e => {
   const b = /** @type {HTMLElement} */ (e.target).closest('[data-board]'); if (b) return typeof PKM !== 'undefined' && PKM.openWindow('board', { id: /** @type {string} */ (b.dataset.board), ok: b.dataset.ok === '1' });
   const sb2 = /** @type {HTMLElement} */ (e.target).closest('[data-salb]'); if (sb2) return typeof PKM !== 'undefined' && PKM.openWindow('salary', { id: /** @type {string} */ (sb2.dataset.salb), ok: sb2.dataset.ok === '1' });
@@ -1443,13 +1214,13 @@ setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQu
 
 // Safety net: the screens are drawn by react.js (loaded right after this file). If it did not load (a broken download, an old copy),
 // say so in plain words instead of showing an empty screen.
-window.addEventListener('load', () => { if (typeof PKM === 'undefined') { const b = $('react-msg');
+window.addEventListener('load', () => { if (!pkmReady()) { const b = $('react-msg');
   if (b) { b.textContent = t('appLoadFailed'); b.style.cssText = 'padding:40px 20px;text-align:center;line-height:1.8'; } show('scr-msg'); } });
 (async function boot(){
   // the screens and the helpers are react.js (loaded right after this file): wait until it has run; if it did not load, the safety net above
   // shows the plain message and the app does not start
   if (typeof PKM === 'undefined' && document.readyState === 'loading') await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
-  if (typeof PKM === 'undefined') return;
+  if (!pkmReady()) return;
   applyLang(); net();
   if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (NATIVE) await restoreDeviceId();
