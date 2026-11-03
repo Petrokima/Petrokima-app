@@ -365,7 +365,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v82';
+const PKM_BUILD = 'pk-mobile-v83';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
@@ -432,195 +432,74 @@ let sb = /** @type {any} — set at start-up, before anything reads from the dat
 let tempPass = '';
 // ── things kept on the phone so the app works without internet ──
 const store = { get:(k,d)=>{ try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch(e){ return d; } }, set:(k,v)=>{ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
-const queue = () => store.get('pk_queue', []);
-const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'c-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
-const isNetErr = e => !navigator.onLine || /Failed to fetch|NetworkError|network|Load failed|fetch|abort|timeout|timed out|upstream|bad gateway|gateway time|service unavailable|<!doctype|<html/i.test(String((e && (e.message || e.details)) || e || ''));
+const queue = () => pkm().queue();   // the check-in core moved to React on 3 Nov 2026 (react/src/phone/checkin/checkin.ts — proven to do the same by checkin.golden.json); the old names forward to it
+const uid = () => pkm().uid();
+const isNetErr = e => pkm().isNetErr(e);
 // A server outage: no connection, no answer in time, or the server answers with an error page (5xx) — not a business rule refusing the check-in
-const serverDown = r => !!r && (isNetErr(r.error) || r.status === 0 || r.status === 408 || r.status === 429 || r.status >= 500);
+const serverDown = r => pkm().serverDown(r);
 // Never wait for ever: give up after `ms` and treat it as an outage (the request may still arrive — the check-in's unique id prevents doubles)
-const withTimeout = (p, ms) => Promise.race([ Promise.resolve(p), new Promise(res => setTimeout(() => res({ data:null, status:0, error:{ message:'timeout: no answer from the server' } }), ms)) ]);
-// The server already has this check-in (it arrived earlier but the answer was lost)
+const withTimeout = (p, ms) => pkm().withTimeout(p, ms);
 // send a check-in; if the database does not know the newer location fields yet, send it without them
-async function insertClock(rec){
-  const r = await sb.from('clock_events').insert(rec);
-  if (r.error && /mock_location|client_kind|is_switch|mono_|boot_/.test(String(r.error.message || '')) && /column|schema/i.test(String(r.error.message || ''))) {
-    const { mock_location, client_kind, is_switch, mono_tap_ms, mono_send_ms, boot_tap, boot_send, ...old } = rec; return sb.from('clock_events').insert(old);
-  }
-  return r;
-}
-const alreadyHave = e => !!e && (e.code === '23505' || /duplicate key/i.test(String(e.message||''))) && /client_id/i.test(String((e.message||'') + ' ' + (e.details||'')));
+function insertClock(rec){ return pkm().insertClock(rec); }   // (React — react/src/phone/checkin/checkin.ts)
+// The server already has this check-in (it arrived earlier but the answer was lost)
+const alreadyHave = e => pkm().alreadyHave(e);
 // every request from the app gives up after 20 seconds instead of hanging
-const timedFetch = (input, init = {}) => {
-  if (init.signal) return fetch(input, init).then(lostCheck);
-  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
-  return fetch(input, { ...init, signal: ac.signal }).then(lostCheck).finally(() => clearTimeout(t));
-};
+/** @param {any} input @param {any} [init] */
+const timedFetch = (input, init) => pkm().timedFetch(input, init);
 // A sign-in that ended (2 Nov 2026): signed out elsewhere, password reset, expired. The database then answers as to a visitor
 // ("permission denied …", HTTP 401) — instead of showing that, the app goes back to the sign-in screen and says why.
-const lostCheck = r => { if (r && r.status === 401 && /\/rest\/v1\//.test(String(r.url || ''))) void checkSession(); return r; };
+const lostCheck = r => pkm().lostCheck(r);
 let lostOnce = false;
-function sessionLost(){
-  if (lostOnce || !APP.ready) return; lostOnce = true; APP.ready = false;
-  try { stopWatch(); } catch(e){}
-  ['pk_cache','pk_watch','pk_leftchk','pk_bgask','pk_sites','pk_offset'].forEach(k => { try { localStorage.removeItem(k); } catch(e){} });   // the offline queue stays: sent after the next sign-in
-  try { sessionStorage.setItem('pk_lost', '1'); } catch(e){}
-  Promise.resolve().then(() => sb.auth.signOut({ scope:'local' })).catch(() => {}).finally(() => location.reload());
-}
-async function checkSession(){ try { const { data } = await sb.auth.getSession(); if (!data || !data.session) sessionLost(); } catch(e){} }
+function sessionLost(){ return pkm().sessionLost(); }   // moved to React on 3 Nov 2026 (react/src/phone/session/session.ts — proven to do the same by session.golden.json); the old names forward to it
+function checkSession(){ return pkm().checkSession(); }
 // the phone's own copy of the data — NO ID, bank or pay figures and no payslips (review fix) — cacheEmp / saveCache / useCache moved to React on 3 Nov 2026 (react/src/phone/data/load.ts — proven to ask the same questions and keep the same data by load.golden.json); the old names forward to it
 const cacheEmp = e => pkm().cacheEmp(e);
 function saveCache(){ return pkm().saveCache(); }
 /** @param {string} [uid] */
 function useCache(uid){ return pkm().useCache(uid); }
 // Server time minus phone time, measured each time we are online
-function clockOffset(){ return store.get('pk_offset', { off:0 }).off || 0; }
-function serverNowMs(){ return Date.now() + clockOffset(); }
-function localParts(ms){
-  const tz = (APP.status && APP.status.tz) || 'Africa/Cairo';
-  const f = new Intl.DateTimeFormat('en-GB', { timeZone:tz, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false }).formatToParts(new Date(ms));
-  const g = k => (f.find(p=>p.type===k)||{}).value;
-  return { date:`${g('year')}-${g('month')}-${g('day')}`, time:`${g('hour')==='24'?'00':g('hour')}:${g('minute')}` };
-}
+function clockOffset(){ return pkm().clockOffset(); }   // (React — react/src/phone/checkin/checkin.ts)
+function serverNowMs(){ return pkm().serverNowMs(); }
+/** @param {number} ms */
+function localParts(ms){ return pkm().localParts(ms); }
 // A random identity created once on this phone and kept in the app's storage
-function deviceId(){
-  let id = localStorage.getItem('pk_device');
-  if (!id || id.length < 16){
-    id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'd-' + Date.now().toString(36) + '-' + Array.from({length:4},()=>Math.random().toString(36).slice(2,10)).join('');
-    localStorage.setItem('pk_device', id);
-    const P = nativePlugin('Preferences'); if (P) P.set({ key:'pk_device', value:id }).catch(()=>{});
-  }
-  return id;
-}
-async function restoreDeviceId(){
-  const P = nativePlugin('Preferences'); if (!P) return;
-  try {
-    const { value } = await P.get({ key:'pk_device' });
-    const local = localStorage.getItem('pk_device');
-    if (value && value !== local) localStorage.setItem('pk_device', value);
-    else if (!value && local) await P.set({ key:'pk_device', value:local });
-  } catch(e){}
-}
-function deviceLabel(){
-  const u = navigator.userAgent || '';
-  if (/iPhone/.test(u)) return 'iPhone'; if (/iPad/.test(u)) return 'iPad';
-  const m = u.match(/Android [\d.]+;\s*([^;)]+)/); if (m) return 'Android · ' + m[1].trim();
-  if (/Android/.test(u)) return 'Android'; if (/Windows/.test(u)) return 'Windows PC'; if (/Macintosh/.test(u)) return 'Mac';
-  return 'Browser';
-}
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function deviceId(){ return pkm().deviceId(); }
+function restoreDeviceId(){ return pkm().restoreDeviceId(); }
+function deviceLabel(){ return pkm().deviceLabel(); }
+const isIOS = () => pkm().isIOS();
 // an Android phone using a browser (also when Chrome shows the "desktop site", which hides the word Android)
 const ANDROID_APP_PAGE = 'https://download.petrokima-hr.com/';
-const isAndroidWeb = () => !NATIVE && !isIOS() && (/android/i.test(navigator.userAgent || '')
-  || /android/i.test(((navigator.userAgentData || {}).platform) || '')
-  || ((navigator.maxTouchPoints || 0) > 0 && /linux/i.test(navigator.userAgent || '')));
+const isAndroidWeb = () => pkm().isAndroidWeb();
 // 92: the Android app's "time since switched on" counter + start count (the user cannot change them; the server uses them
 // to find the real time of a check-in sent later). null on iPhone / web / older Android apps.
-async function upTime(){
-  if (!NATIVE || PLATFORM !== 'android') return null;
-  const LG = nativePlugin('LocationGuard'); if (!LG || typeof LG.uptime !== 'function') return null;
-  try { const r = await Promise.race([ LG.uptime(), new Promise(res => setTimeout(() => res(null), 1500)) ]);
-        return r && typeof r.ms === 'number' ? { ms: Math.round(r.ms), boot: typeof r.boot === 'number' ? r.boot : -1 } : null; } catch(e) { return null; }
-}
-const clientKind = () => NATIVE ? PLATFORM + '-app' + (APP_BUILD ? ':' + APP_BUILD : '') : 'web-' + (isIOS() ? 'ios' : isAndroidWeb() ? 'android' : 'other');
-const isStandalone = () => NATIVE || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-function loginName(v){ v=String(v||'').trim(); return v.includes('@') ? v.toLowerCase() : v.toLowerCase().replace(/[^a-z0-9._-]/g,'') + '@' + LOGIN_DOMAIN; }
+function upTime(){ return pkm().upTime(); }
+const clientKind = () => pkm().clientKind();
+const isStandalone = () => pkm().isStandalone();
+function loginName(v){ return pkm().loginName(v); }
 // ── CAPTCHA on every password sign-in (Cloudflare Turnstile, 25 Oct 2026) ──
 //  TURNSTILE_SITE_KEY = the PUBLIC site key of the widget "Petrokima HR sign-in". Empty = no CAPTCHA (nothing is shown, nothing sent).
 //  Supabase checks the token only once "CAPTCHA protection" is switched on (Authentication → Attack Protection); before that it is ignored.
 //  Each token is good for one sign-in: a fresh one is taken for every attempt. Usually nothing is shown; Cloudflare shows a small box
 //  to tick only when it is not sure the person is human.
 const TURNSTILE_SITE_KEY = '0x4AAAAAAFkp9jltaXJo9weC';   // widget "Petrokima HR sign-in" (public key)
-let tsLoad = null;
-function loadTurnstile(){
-  if (window.turnstile) return Promise.resolve(window.turnstile);
-  if (tsLoad) return tsLoad;
-  tsLoad = new Promise((res, rej) => {
-    const s = document.createElement('script'); s.async = true;
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    s.onload = () => window.turnstile ? res(window.turnstile) : rej(new Error('captcha-load'));
-    s.onerror = () => { tsLoad = null; rej(new Error('captcha-load')); };
-    document.head.appendChild(s);
-    setTimeout(() => { if (!window.turnstile) { tsLoad = null; rej(new Error('captcha-load-timeout')); } }, 15000);   // never wait for ever
-  });
-  return tsLoad;
-}
-async function captchaToken(boxId, lang){
-  if (!TURNSTILE_SITE_KEY) return undefined;
-  const box = document.getElementById(boxId); if (!box) return undefined;
-  const ts = await loadTurnstile();
-  return new Promise((resolve, reject) => {
-    let id = null, done = false;
-    const finish = (fn, v) => { if (done) return; done = true; clearTimeout(timer); setTimeout(() => { try { ts.remove(id); } catch(e){} box.style.display = 'none'; }, 0); fn(v); };
-    const timer = setTimeout(() => finish(reject, new Error('captcha-timeout')), 90000);
-    box.innerHTML = ''; box.style.display = 'block';
-    id = ts.render(box, { sitekey: TURNSTILE_SITE_KEY, action: 'signin', appearance: 'interaction-only', language: lang || 'auto',
-      callback: tok => finish(resolve, tok),
-      'error-callback': code => { finish(reject, new Error('captcha-failed ' + code)); return true; },
-      'timeout-callback': () => finish(reject, new Error('captcha-timeout')) });
-  });
-}
+// loadTurnstile / captchaToken (a fresh Cloudflare token for every sign-in) — moved to React on 3 Nov 2026 (react/src/phone/session/session.ts — proven to do the same by session.golden.json); the old names forward to it
+function loadTurnstile(){ return pkm().loadTurnstile(); }
+/** @param {string} boxId @param {string} [lang] */
+function captchaToken(boxId, lang){ return pkm().captchaToken(boxId, lang); }
 function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
-// The sign-in form is React (react/src/phone/signin); kept here: the security check, signing in and what is remembered.
+// The sign-in form is React (react/src/phone/signin); signing in and the security check are React too (react/src/phone/session/session.ts).
 /** Sign in: '' when signed in (signedIn() runs first — the form clears itself — then what follows: afterLogin), else the message
  *  (the code is already trimmed) @param {string} code @param {string} pass @param {() => void} signedIn @returns {Promise<string>} */
-async function signIn(code, pass, signedIn){
-  let cap; try { cap = await captchaToken('li-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }   // check unavailable: Supabase decides (works while its CAPTCHA switch is off)
-  const { data, error } = await sb.auth.signInWithPassword({ email: loginName(code), password: pass, options: cap ? { captchaToken: cap } : undefined });
-  if (error) return /invalid/i.test(error.message) ? t('wrongLogin') : friendly(error.message);
-  tempPass = pass; localStorage.setItem('pk_code', code); signedIn();
-  await afterLogin(data.user); return '';
-}
+function signIn(code, pass, signedIn){ return pkm().signIn(code, pass, signedIn); }   // (React — react/src/phone/session/session.ts; tempPass stays here)
 // the full-screen message is React (react/src/phone/signin) — it may be set before React has loaded (start-up), so it is kept in APP
 // link: for the Android browser, the app's download page (the screen then has no Back)
 /** @param {string} txt @param {string} [link] */
 function message(txt, link){ APP.msg = { text: txt, link: link || null }; show('scr-msg'); if (typeof PKM !== 'undefined') PKM.render(); }
-async function afterLogin(user){
-  if (!navigator.onLine){ if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('noCache')); }
-  const meRes = await withTimeout(sb.from('app_users').select('*').eq('id', user.id), 15000);
-  const { data, error: meErr } = meRes;
-  if (serverDown(meRes)) { if (useCache(user.id)) { show('scr-main'); APP.ready=true; renderAll(); return; } return message(t('serverDown')); }
-  if (meRes.status === 401) { try { await sb.auth.signOut({ scope:'local' }); } catch(e){} show('scr-login'); toast(t('signedOutHere'), true); return; }   // the sign-in had ended
-  const me = data && data[0];
-  if (!me || !me.role) return message(t('noRole'));
-  if (!me.active) return message(t('inactive'));
-  if (!me.emp_id) return message(t('notLinked'));
-  APP.me = me; PK_ERR.user(me);
-  if (me.must_change_password){ APP.firstSeq = (APP.firstSeq || 0) + 1; show('scr-first'); if (typeof PKM !== 'undefined') PKM.render(); return; }   // React: a new, empty form
-  const { data: reg, error: regErr } = await sb.rpc('register_device', { p_device: deviceId(), p_label: deviceLabel() });
-  if (regErr || !['ok','registered'].includes(reg)){
-    const txt = reg==='other_device' ? t('otherDevice') + '\n\n' + t('attemptLogged') : reg==='device_taken' ? t('deviceTaken') + '\n\n' + t('attemptLogged') : reg==='bad_device' ? t('badDevice') : friendly(regErr ? regErr.message : reg);
-    try { await sb.auth.signOut({ scope:'local' }); } catch(e){}   // this phone only — never the employee's own phone
-    return message(txt);
-  }
-  show('scr-main');
-  try { await loadAll(); } catch(e){ if (!useCache(user.id)) throw e; }
-  APP.ready = true; renderAll(); flushQueue(); checkAppUpdate(); setTimeout(() => refreshSiteCache(false), 3000); loadSiteRight();
-  setupPush(); setupWebPush(); openViewFromLink();
-}
-// The first-password screen is React (react/src/phone/firstpw); ALL its checks stay here (the temporary password never leaves app.js).
+function afterLogin(user){ return pkm().afterLogin(user); }   // (React — react/src/phone/session/session.ts)
+// The first-password screen is React (react/src/phone/firstpw), its checks too (react/src/phone/session/session.ts); the temporary password itself stays here (tempPass).
 /** '' when saved (then signed in as usual), else the message @param {string} yearTyped @param {string} a @param {string} b @returns {Promise<string>} */
-async function firstPassword(yearTyped, a, b){
-  const yr = yearTyped.trim().replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));   // Arabic figures → 0-9
-  if (!/^\d{4}$/.test(yr)) return t('needYear');
-  if (a.length < 8) return t('short');
-  if (a !== b) return t('nomatch');
-  if (a === tempPass) return t('sameTemp');
-  const { data, error } = await sb.rpc('complete_first_login', { p_nid_last4:null, p_new_password:a, p_birth_year:yr });
-  if (error) return friendly(error.message);
-  if (data !== 'ok' && /year of birth|wrong answers|year you were born/i.test(data)) return friendly(data).replace(/^Enter the year.*$/, t('needYear'));
-  if (data !== 'ok') return /do not match/.test(data) ? `${t('nidWrong')} ${t('attempts',{ n: (data.match(/(\d+) attempt/)||[])[1] || '' })}` : /locked/i.test(data) ? t('locked') : /different/.test(data) ? t('sameTemp') : data;
-  tempPass=''; toast(t('passSet'));
-  const { data: s } = await sb.auth.getSession(); await afterLogin(/** @type {NonNullable<typeof s.session>} — signed in a moment ago */ (s.session).user);
-  return '';
-}
-async function signOut(){
-  try { const tk = localStorage.getItem('pk_push_token'); if (tk) { await sb.rpc('remove_push_token', { p_token: tk }); localStorage.removeItem('pk_push_token'); } } catch(e){}
-  try { const ep = localStorage.getItem('pk_push_web'); if (ep) { await sb.rpc('remove_push_token', { p_token: ep }); localStorage.removeItem('pk_push_web');
-        const reg = await navigator.serviceWorker.getRegistration(); const sub = reg && await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } } catch(e){}
-  try { if (navigator.onLine) await flushQueue(); } catch(e){}
-  try { stopWatch(); } catch(e){}                                           // review fix: background watch ends with the sign-out
-  ['pk_cache','pk_watch','pk_leftchk','pk_bgask','pk_sites','pk_offset'].forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
-  APP.ready=false; try { await sb.auth.signOut({ scope:'local' }); } catch(e){} APP.slips = []; location.reload(); }   // this phone only (2 Nov 2026: was every device)
+function firstPassword(yearTyped, a, b){ return pkm().firstPassword(yearTyped, a, b); }   // (React — react/src/phone/session/session.ts)
+function signOut(){ return pkm().signOut(); }   // (React — react/src/phone/session/session.ts; this phone only)
 
 // ── Documents HR asked for (61-document-requests.sql): the employee answers with a photo of the new card ──
 function loadDocs(){ return pkm().loadDocs(); }   // moved to React on 3 Nov 2026 (react/src/phone/data/load.ts — proven to ask the same questions and keep the same data by load.golden.json); the old names forward to it
@@ -654,137 +533,43 @@ function renderCoReqs(){ if (typeof PKM !== 'undefined') PKM.render(); }   // th
 function coSheet(head, c){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('coMsg', { id: c.id, data: { c, head } }); }
 /** Send: no internet → message; refused → message; sent → closed, the list read again @param {string} id @param {string} m */
 function sendCoMessage(id, m){ return pkm().sendCoMessage(id, m); }   // (React — react/src/phone/send/send.ts)
-async function reportAwayCheckout(g, refusal){
-  let r;
-  try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'tried' }); } catch(e){ r = { error: e }; }
-  if (!r || r.error || !r.data) return toast(refusal + (r && r.error && /TOO_SOON/.test(String(r.error.message || '')) ? ' ' + t('coTooSoon') : ''), true);
-  await loadCoReqs(); renderCoReqs();
-  const rd = /** @type {CheckoutReport} — checked two lines above */ (r.data);
-  const c = (APP.coreqs || []).find(x => x.id === rd.id) || { id: rd.id, kind: rd.kind || 'tried', local_time: rd.time, place: rd.place };
-  coSheet({ refusal, time: r.data.time, place: r.data.place }, c);
-}
-const LW = () => PLATFORM === 'android' ? nativePlugin('LeaveWatch') : null;
-function distM(a, b, c, d){ const r = x => x * Math.PI / 180, h = Math.sin(r(c - a) / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(r(d - b) / 2) ** 2; return 2 * 6371000 * Math.asin(Math.sqrt(h)); }
-function stopWatch(){ APP.watch = null; store.set('pk_watch', null); const P = LW(); if (P) { try { P.stop(); } catch(e){} } }
-async function armWatch(){
-  const o = APP.status && APP.status.open; if (!o || !navigator.onLine || !sb || !APP.me) return;
-  const key = `${o.date} ${o.in}`, w = store.get('pk_watch', null);
-  if (APP.watch && w && w.period === key && w.uid === APP.me.id && Date.now() - w.at < 6 * 3600e3) return;
-  let r; try { r = await sb.rpc('checkout_watch'); } catch(e){ return; }
-  if (!r || r.error || !r.data) { APP.watch = null; return; }
-  APP.watch = r.data; store.set('pk_watch', { period: key, uid: APP.me.id, at: Date.now() });
-  const P = LW(); if (!P) return;
-  try {
-    await P.start({ token: r.data.token, url: SUPABASE_URL, key: SUPABASE_KEY, offices: JSON.stringify(r.data.offices || []),
-                    fromMs: Number(r.data.from_ms), untilMs: Number(r.data.until_ms), title: t('lwTitle'), body: t('lwBody') });
-    const s = await P.status();
-    if (s && !s.background && !sheetOpen() && Date.now() - store.get('pk_bgask', 0) > 3 * 864e5) {
-      store.set('pk_bgask', Date.now());
-      if (typeof PKM !== 'undefined') PKM.openWindow('lwAsk');                     // React (react/src/phone/comsg)
-    }
-  } catch(e){}
-}
+function reportAwayCheckout(g, refusal){ return pkm().reportAwayCheckout(g, refusal); }   // (React — react/src/phone/checkin/checkin.ts)
+const LW = () => pkm().LW();   // the background steps moved to React on 3 Nov 2026 (react/src/phone/watch/watch.ts — proven to do the same by watch.golden.json); the old names forward to it
+/** @param {number} a @param {number} b @param {number} c @param {number} d */
+function distM(a, b, c, d){ return pkm().distM(a, b, c, d); }
+function stopWatch(){ return pkm().stopWatch(); }
+function armWatch(){ return pkm().armWatch(); }
 // "Open settings" on the Android ask: the phone's settings for the app (to choose "Allow all the time")
-async function openLeaveSettings(){ closeSheet(); const P = LW(); try { if (P) await P.openSettings(); } catch(e){} }
-async function locationAllowed(){
-  try {
-    if (NATIVE) { const G = nativePlugin('Geolocation'); const p = G && await G.checkPermissions(); return !!p && p.location === 'granted'; }
-    if (navigator.permissions && navigator.permissions.query) { const p = await navigator.permissions.query({ name: 'geolocation' }); return p.state === 'granted'; }
-  } catch(e){}
-  return false;
-}
-async function leftCheck(){
-  const o = APP.status && APP.status.open, w = APP.watch;
-  if (!o || !w || !navigator.onLine || Date.now() < Number(w.from_ms) || Date.now() > Number(w.until_ms)) return;
-  if ((APP.coreqs || []).some(c => c.status === 'Waiting' && c.att_date === o.date && c.seg_in === o.in)) return;
-  if (Date.now() - store.get('pk_leftchk', 0) < 20 * 60e3) return;
-  if (!(await locationAllowed())) return;                    // never ask for the location just for this
-  store.set('pk_leftchk', Date.now());
-  const g = await getLocation(); if (g.err || g.lat == null) return;
-  const near = Math.min(...(w.offices || []).map(f => distM(g.lat, g.lng, f.lat, f.lng) - f.radius - Math.min(g.accuracy || 0, 150)));
-  if (!(near > 0)) return;
-  let r; try { r = await sb.rpc('report_away_checkout', { p_lat: g.lat, p_lng: g.lng, p_acc: g.accuracy, p_kind: 'left' }); } catch(e){ return; }
-  if (!r || r.error || !r.data) return;
-  await loadCoReqs(); renderCoReqs();
-  if (sheetOpen()) return;
-  const c = (APP.coreqs || []).find(x => x.id === r.data.id) || { id: r.data.id, kind: 'left', local_time: r.data.time, place: r.data.place };
-  coSheet({ left: true, time: r.data.time, place: r.data.place }, c);
-}
+function openLeaveSettings(){ return pkm().openLeaveSettings(); }   // (React — react/src/phone/watch/watch.ts)
+function locationAllowed(){ return pkm().locationAllowed(); }
+function leftCheck(){ return pkm().leftCheck(); }
 // ── 91: trusted employees (chosen by HR) save a project's map point where they stand ──
-async function loadSiteRight(){
-  if (!navigator.onLine || !APP.ready) return;
-  try { const { data, error } = await withTimeout(sb.rpc('can_set_site_points'), 8000); if (!error) APP.canSetSite = data === true; } catch(e) {}
-  renderSpCard();
-}
+function loadSiteRight(){ return pkm().loadSiteRight(); }   // (React — react/src/phone/watch/watch.ts)
 function renderSpCard(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 📍 card is React (react/src/phone/homecards)
 // The 📍 windows are React (react/src/phone/sitepoint); kept here: opening them, the search and saving where I stand
 function spSheet(){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('spFind'); }
-/** the search: results, or a refusal / no answer in friendly words @param {string} q @returns {Promise<{ data: any[] } | { error: string }>} */
-async function findSitePoints(q){
-  let data, error;
-  try { ({ data, error } = await withTimeout(sb.rpc('site_point_search', { p_q: q }), 8000)); } catch(e) { error = { message: t('serverDown') }; }
-  if (error) return { error: friendly(error.message) };
-  return { data: data || [] };
-}
+/** the search: results, or a refusal / no answer in friendly words @param {string} q */
+function findSitePoints(q){ return pkm().findSitePoints(q); }   // (React — react/src/phone/watch/watch.ts)
 /** one project (also what "Try again" after the location help reopens, with only its code and name)
  *  @param {{ sp: string, name?: string, has?: string, by?: string, at?: string }} d */
 function spPick(d){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('spPick', { id: d.sp, data: { ...d } }); }
 /** save where I stand: a fresh GPS reading → set_site_point_here (accuracy, fake-location flag, note) → saved / refused
  *  @param {string} code @param {string} site @param {string} note @param {(p: '' | 'loc' | 'send') => void} phase */
-async function spSave(code, site, note, phase){                    // the React button already shows "getting the location"
-  const g = await getLocation(true);
-  if (g.err) { phase(''); return locationHelp(g.err, () => spPick({ sp: code, name: site })); }
-  phase('send');
-  let res;
-  try { res = await withTimeout(sb.rpc('set_site_point_here', { p_project: code, p_lat: g.lat, p_lng: g.lng, p_accuracy: g.accuracy,
-          p_mock: typeof g.mock === 'boolean' ? g.mock : null, p_client_kind: clientKind(), p_note: (note || '').trim() || null }), 15000); }
-  catch(e) { res = { error: { message: t('serverDown') } }; }
-  if (res.error) { phase(''); return toast(friendly(res.error.message), true); }
-  closeSheet(); toast(t('spSaved', { site, acc: g.accuracy }));
-}
+function spSave(code, site, note, phase){ return pkm().spSave(code, site, note, phase); }   // (React — react/src/phone/watch/watch.ts)
 
-async function afterStatus(){
-  const o = APP.status && APP.status.open;
-  if (!o) { if (APP.watch || store.get('pk_watch', null)) stopWatch(); return; }
-  await armWatch(); await leftCheck();
-}
+function afterStatus(){ return pkm().afterStatus(); }   // (React — react/src/phone/watch/watch.ts)
 
 // ── iPhone notifications (web app on the Home Screen; 60-push-iphone.sql + edge function send-push) ──
-const webPushOK = () => !NATIVE && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && isStandalone();
-const b64ToBytes = s => { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+const webPushOK = () => pkm().webPushOK();   // (React — react/src/phone/watch/watch.ts)
+/** @param {string} s */
+const b64ToBytes = s => pkm().b64ToBytes(s);
 function renderPushCard(){ if (typeof PKM !== 'undefined') PKM.render(); }   // the 🔔 card is React (react/src/phone/homecards)
-async function webSubscribe(ask){
-  const { data: key } = await sb.rpc('push_web_key');
-  if (!key) { if (ask) toast(t('pushNotReady')); return false; }
-  if (ask && Notification.permission === 'default') await Notification.requestPermission();
-  if (Notification.permission !== 'granted') return false;
-  const reg = await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  const want = b64ToBytes(key), have = sub && sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
-  if (sub && have && (have.length !== want.length || have.some((b, i) => b !== want[i]))) { await sub.unsubscribe(); sub = null; }   // key changed
-  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
-  const { error } = await sb.rpc('save_push_web', { p_sub: /** @type {Json} */ (sub.toJSON()), p_lang: LANG });
-  if (error) throw error;
-  localStorage.setItem('pk_push_web', sub.endpoint);
-  return true;
-}
-async function enableWebPush(btn){
-  if (btn) btn.disabled = true;
-  try { if (await webSubscribe(true)) toast(t('pushDone')); } catch(e){ toast(friendly(e.message || String(e))); }
-  if (btn) btn.disabled = false;
-  renderPushCard();
-}
-async function setupWebPush(){
-  if (!webPushOK()) return;
-  try { if (Notification.permission === 'granted') await webSubscribe(false); } catch(e){ console.warn('web push', e); }
-  renderPushCard();
-}
+/** @param {boolean} [ask] */
+function webSubscribe(ask){ return pkm().webSubscribe(ask); }   // (React — react/src/phone/watch/watch.ts)
+function enableWebPush(btn){ return pkm().enableWebPush(btn); }
+function setupWebPush(){ return pkm().setupWebPush(); }
 // a tapped notification opens the right tab (from the service worker, or a new window opened at #view=…)
-function openViewFromLink(){
-  const m = /#view=(\w+)/.exec(location.hash || ''); if (!m) return;
-  history.replaceState(null, '', location.pathname + location.search);
-  if (document.getElementById('v-' + m[1])) go(m[1]);
-}
+function openViewFromLink(){ return pkm().openViewFromLink(); }   // (React — react/src/phone/watch/watch.ts)
 if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => {
   if (!e.data || e.data.type !== 'open-view' || !APP.ready) return;
   if (document.getElementById('v-' + e.data.view)) go(e.data.view);
@@ -795,31 +580,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('mess
 // Asks once for permission, registers the phone with Firebase, saves its token for the signed-in user (with the app
 // language), and opens the right tab when a notification is tapped. The web/iPhone version is not affected.
 let pushReady = false;
-async function setupPush(){
-  if (pushReady || !NATIVE || PLATFORM !== 'android') return;
-  const P = nativePlugin('PushNotifications'); if (!P) return;
-  pushReady = true;
-  try {
-    try { await P.createChannel({ id:'petrokima', name:'Petrokima HR', description:'Requests, approvals and announcements', importance:5, visibility:1, sound:'default', vibration:true }); } catch(e){}
-    await P.addListener('registration', async t => {
-      try { const r = await sb.rpc('save_push_token', { p_token: t.value, p_platform: 'android', p_lang: LANG }); if (!r.error) localStorage.setItem('pk_push_token', t.value); } catch(e){}
-    });
-    await P.addListener('registrationError', e => console.warn('push registration', e && e.error));
-    await P.addListener('pushNotificationReceived', n => {                           // app open: show it inside the app
-      toast(((n && n.title) || '') + (n && n.body ? ' — ' + n.body : ''));
-      if (APP.ready) loadAll().then(renderAll).catch(()=>{});
-    });
-    await P.addListener('pushNotificationActionPerformed', a => {                    // notification tapped
-      const v = a && a.notification && a.notification.data && a.notification.data.view;
-      const open = () => { if (v && document.getElementById('v-' + v)) go(v); loadAll().then(renderAll).catch(()=>{}); };
-      if (APP.ready) open(); else setTimeout(() => { if (APP.ready) open(); }, 2500);
-    });
-    let perm = await P.checkPermissions();
-    if (perm.receive === 'prompt' || perm.receive === 'prompt-with-rationale') perm = await P.requestPermissions();
-    if (perm.receive !== 'granted') return;
-    await P.register();
-  } catch(e){ console.warn('push setup', e); }
-}
+function setupPush(){ return pkm().setupPush(); }   // (React — react/src/phone/watch/watch.ts)   (pushReady stays here)
 
 // ═════════════════════════════════════════════════════════
 //  DATA
@@ -833,26 +594,18 @@ function loadStatus(){ return pkm().loadStatus(); }
 // ═════════════════════════════════════════════════════════
 //  HOME — check in / out
 // ═════════════════════════════════════════════════════════
-function serverNowMin(){ const st=APP.status; if(!st) return null; if (APP.offline) { const p=localParts(serverNowMs()); return toMin(p.time) + new Date().getSeconds()/60; } return toMin(st.now) + (Date.now()-APP.statusAt)/60000; }
+function serverNowMin(){ return pkm().serverNowMin(); }   // (React — react/src/phone/checkin/checkin.ts)
 // every 15 s (and after each redraw): the React clock card reads the time again — the big time, how long I have been in, and
 // "undo check-out" disappearing when its 5 minutes are over (react/src/phone/clock)
 function tick(){ if (typeof PKM !== 'undefined') PKM.render(); }
 // until when the last check-out may still be undone (0 = not any more) — the React clock card shows ↩ while it is set
-function undoUntil(st){ return st && st.undo && Number(st.undo.until_ms) > serverNowMs() ? Number(st.undo.until_ms) : 0; }
-async function undoCheckout(btn){
-  const st = APP.status || /** @type {ClockStatus} */ ({}); if (!st.undo) return;
-  if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div>`; }
-  const { error } = await sb.rpc('undo_checkout', { p_event: st.undo.id });
-  try { await loadStatus(); } catch(e){}
-  renderHome();
-  if (error) return toast(friendly(error.message), true);
-  toast(t('undoneOut'));
-}
+function undoUntil(st){ return pkm().undoUntil(st); }   // (React — react/src/phone/checkin/checkin.ts)
+function undoCheckout(btn){ return pkm().undoCheckout(btn); }
 // Home is React (react/src/phone: clock = the clock card, homecards = the cards around it, homelists = Today + This payroll month);
-// it reads APP.status, APP.att, the queue and the flags below. Checking in / out, GPS, the queue and reading stay here.
+// it reads APP.status, APP.att, the queue and the flags below. Checking in / out, GPS and the queue are React too (react/src/phone/checkin/checkin.ts); the state stays here.
 function renderHome(){ tick(); }
 // site picker — the window is React (react/src/phone/sitepick: "Where are you working?"); kept here: which site was chosen (pickSel: its name
-// goes with a check-in saved on the phone), the server search and starting the check-in
+// goes with a check-in saved on the phone) and opening the window; the search and the check-in itself are in react/src/phone/checkin/checkin.ts
 let pickSel = null;
 function openSitePicker(mode){
   pickSel = null; closeSheet();
@@ -860,138 +613,37 @@ function openSitePicker(mode){
 }
 /** the site search: results, a refusal in friendly words, or "no internet" (no connection, a network failure, no answer in 8 s — the
  *  window then searches the list saved on the phone) @param {string} q @returns {Promise<{ data: any[] } | { error: string } | { offline: true }>} */
-async function findSites(q){
-  if (!navigator.onLine) return { offline: true };
-  let data, error;
-  try { ({ data, error } = await withTimeout(sb.rpc('search_sites', { p_q:q }), 8000)); } catch(e) { return { offline: true }; }
-  if (error && /load failed|failed to fetch|network|timeout|timed out|fetch/i.test(error.message || '')) return { offline: true };
-  if (error) return { error: friendly(error.message) };
-  return { data: data || [] };
-}
+function findSites(q){ return pkm().findSites(q); }   // (React — react/src/phone/checkin/checkin.ts)
 /** check in at the site chosen in the window (its name is kept for a check-in saved on the phone)
  *  @param {string} code @param {string} name @param {boolean} isSwitch @param {(p: '' | 'loc' | 'send') => void} phase */
-function checkInAt(code, name, isSwitch, phase){ pickSel = { code, name }; return clock('in', code, null, isSwitch, phase); }
-async function nativeLocation(fresh){
-  const G = nativePlugin('Geolocation');
-  try {
-    let perm = await G.checkPermissions();
-    if (perm.location !== 'granted') perm = await G.requestPermissions({ permissions:['location'] });
-    if (perm.location === 'denied') return { err:1 };
-    const p = await G.getCurrentPosition({ enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge: fresh ? 0 : 60000 });
-    const out = { lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy), mock:null };
-    // Android app: ask the phone whether this location came from a fake-location app
-    const LG = PLATFORM === 'android' ? nativePlugin('LocationGuard') : null;
-    if (LG) { try { const r = await Promise.race([ LG.inspect(), new Promise(res => setTimeout(() => res(null), 3000)) ]); if (r && typeof r.mock === 'boolean' && r.checked !== 0) out.mock = r.mock; /* nothing inspected = unknown */ } catch(e) {} }
-    return out;
-  } catch(e){
-    const m = String((e && (e.message || e.code)) || e);
-    return { err: /denied|permission/i.test(m) ? 1 : /disabled|services|not enabled/i.test(m) ? 1 : /time/i.test(m) ? 3 : 2 };
-  }
-}
-function getLocation(fresh){
-  if (NATIVE && nativePlugin('Geolocation')) return nativeLocation(fresh);
-  return new Promise(res => {
-    if (!navigator.geolocation) return res({ err:1 });
-    navigator.geolocation.getCurrentPosition(p => res({ lat:p.coords.latitude, lng:p.coords.longitude, accuracy:Math.round(p.coords.accuracy) }),
-      e => res({ err: (e && e.code) || 2 }), { enableHighAccuracy:true, timeout: navigator.onLine ? 15000 : 30000, maximumAge: fresh ? 0 : 60000 });
-  });
-}
+function checkInAt(code, name, isSwitch, phase){ return pkm().checkInAt(code, name, isSwitch, phase); }   // (React — react/src/phone/checkin/checkin.ts)
+/** @param {boolean} [fresh] */
+function nativeLocation(fresh){ return pkm().nativeLocation(fresh); }
+/** @param {boolean} [fresh] */
+function getLocation(fresh){ return pkm().getLocation(fresh); }
 // "📍 Location is required" is React (react/src/phone/sitepick); Try again runs the step that asked for the location
 /** @param {number} code — 1 refused, 2 not available, 3 timed out @param {() => void} retry */
 function locationHelp(code, retry){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('locHelp', { id: String(code), retry }); }
 // phase: the React "check in without a project" button shows the progress (getting the location / sending), as an old button did
 /** @param {'in' | 'out'} type @param {string | null} code @param {any} [btn] @param {boolean} [isSwitch] @param {(p: '' | 'loc' | 'send') => void} [phase] */
-async function clock(type, code, btn, isSwitch, phase){
-  const wasOpen = !!(APP.status && APP.status.open), label = btn ? btn.textContent : '';
-  if (btn){ btn.disabled=true; btn.innerHTML = `<div class="spin"></div> ${esc(t('gettingLoc'))}`; }
-  const g = await getLocation();
-  if (btn){ btn.disabled=false; btn.textContent = label; }
-  if (phase) phase('');
-  if (g.err && !(APP.status && APP.status.no_location_ok)) return locationHelp(g.err, () => { closeSheet(); clock(type, code, null, isSwitch); });
-  if (g.err) { g.lat = null; g.lng = null; g.accuracy = null; }       // allowed by an exception the admin set — the server marks it
-  const tapAt = new Date().toISOString();          // the moment the employee checked in (not when the server answered)
-  const upTap = await upTime();                     // 92: the phone's counter at the same moment
-  const rec = { client_id: uid(), emp_id: APP.me.emp_id, event_type:type, project_code: code || null, device_id: deviceId(), lat:g.lat, lng:g.lng, accuracy:g.accuracy,
-                device: (navigator.userAgent || '').slice(0, 150), mock_location: typeof g.mock === 'boolean' ? g.mock : null, client_kind: clientKind(), ...(isSwitch ? { is_switch:true } : {}) };   // review: switch flag (night shift)
-  const pendingBefore = queue().length;
-  if (navigator.onLine && !pendingBefore){
-    if (btn){ btn.disabled = true; btn.innerHTML = `<div class="spin"></div> ${esc(t('sending'))}`; }
-    if (phase) phase('send');
-    const res = await withTimeout(insertClock(rec), 15000);
-    if (btn){ btn.disabled = false; btn.textContent = label; }
-    if (phase) phase('');
-    if (!res.error){ closeSheet(); if (type === 'in') APP.cameBack = false; try { await loadStatus(); } catch(e){} renderHome(); afterStatus().catch(() => {}); return toast(type==='out' ? t('doneOut') : wasOpen ? t('doneSwitch') : t('doneIn')); }
-    if (!serverDown(res)) {                                                         // a real refusal (wrong site, no location…) — tell the employee
-      const msg = friendly(res.error.message);
-      if (type === 'out' && /OUTSIDE_SITE/.test(String(res.error.message || '')) && g.lat != null) { closeSheet(); return reportAwayCheckout(g, msg); }   // 80: HR is told at once
-      return toast(msg, true);
-    }
-  }
-  // no internet, server not reachable, or older check-ins still waiting: keep it on the phone, in order
-  const q = queue();
-  q.push({ ...rec, offline:true, client_at: tapAt, ...(upTap ? { mono_tap_ms: upTap.ms, boot_tap: upTap.boot } : {}), _name: code ? ((pickSel && pickSel.name) || code) : '' });
-  store.set('pk_queue', q);
-  if (type === 'in') APP.cameBack = false;
-  applyEvent(APP.status, q[q.length-1]); saveCache(); closeSheet(); renderHome();
-  if (type === 'out') stopWatch();
-  toast(t('queued'));
-  if (navigator.onLine) flushQueue();
-}
+function clock(type, code, btn, isSwitch, phase){ return pkm().clock(type, code, btn, isSwitch, phase); }   // (React — react/src/phone/checkin/checkin.ts)
 // Show saved-but-unsent check-ins on the home screen as if they were already recorded
 // Apply ONE saved check-in to what the home screen shows
-function applyEvent(st, ev){
-  if (!st) return; st.today = st.today || [];
-  const p = localParts(new Date(ev.client_at).getTime() + clockOffset());
-  const close = () => { if (st.open){ const seg = st.today.find(x => x.in === st.open.in && (x.code||'') === (st.open.code||'') && !x.out); if (seg){ seg.out = p.time; seg.hours = Math.max(0, (toMin(p.time)-toMin(seg.in))/60); } st.open = null; } };
-  if (ev.event_type === 'in'){ close(); const seg = { code: ev.project_code || '', name: ev._name || null, in: p.time, out: null, hours: 0, pending: true };
-    st.today.push(seg); st.open = { ...seg, date: p.date }; }
-  else close();
-}
+function applyEvent(st, ev){ return pkm().applyEvent(st, ev); }   // (React — react/src/phone/checkin/checkin.ts)
 // After fresh data arrives from the server, re-apply everything still waiting to be sent
-function applyQueueToStatus(){ queue().forEach(ev => applyEvent(APP.status, ev)); }
+function applyQueueToStatus(){ return pkm().applyQueueToStatus(); }
 let refreshing = false;
-async function doRefresh(){
-  if (refreshing || !APP.ready) return;
-  if (!navigator.onLine) return toast(t('offline'), true);
-  refreshing = true; APP.refreshing = true; if (typeof PKM !== 'undefined') PKM.render();   // the ⟳ in the React top bar spins
-  try { await flushQueue(); await loadAll(); renderAll(); toast(t('refreshed')); }
-  catch(e){ toast(friendly(e.message), true); }
-  refreshing = false; APP.refreshing = false; if (typeof PKM !== 'undefined') PKM.render();
-}
+function doRefresh(){ return pkm().doRefresh(); }   // (React — react/src/phone/checkin/checkin.ts)
 // Pull down on the screen to refresh (the iPhone home-screen app has no built-in one) — the strip is React (react/src/phone/pull);
 // kept here: when a pull may start
-function canPull(){ return !!APP.ready && !sheetOpen() && window.scrollY <= 0 && $('scr-main').classList.contains('on'); }
+function canPull(){ return pkm().canPull(); }   // (React — react/src/phone/checkin/checkin.ts)
 let flushing = false;
-async function flushQueue(){
-  if (flushing || !navigator.onLine || !sb || !APP.me) return;
-  let q = queue(); if (!q.length || q[0]._err) return;
-  flushing = true; let sent = 0, failed = false;
-  try {
-    while (q.length && !q[0]._err){
-      const { _name, _err, _off, _applied, ...rec } = q[0];
-      const upSend = rec.mono_tap_ms != null ? await upTime() : null;          // 92: counter again at sending → real tap time
-      const res = await withTimeout(insertClock({ ...rec, device_now: new Date().toISOString(), ...(upSend ? { mono_send_ms: upSend.ms, boot_send: upSend.boot } : {}) }), 15000);   // the server compares the clocks
-      const error = res.error;
-      // review fix: always work on the CURRENT saved queue (a tap made while sending must not be lost)
-      const dropQ = id => { const cur = queue().filter(e => e.client_id !== id); store.set('pk_queue', cur); return cur; };
-      if (error && alreadyHave(error)) { q = dropQ(rec.client_id); sent++; continue; }   // it arrived earlier — the answer was lost
-      if (error && serverDown(res)) break;                                  // still no connection / server still down: try later
-      if (error){ const cur = queue(), it = cur.find(e => e.client_id === rec.client_id); if (it) it._err = friendly(error.message); store.set('pk_queue', cur); q = cur; failed = true; break; }   // keep it visible, stop here
-      q = dropQ(rec.client_id); sent++;
-    }
-  } catch(e){ /* offline again — everything stays saved */ }
-  flushing = false;
-  if (sent || failed){
-    try { await loadStatus(); } catch(e){}
-    renderHome();
-    toast(failed ? t('notRecorded') : t('sentNow', { n: sent }), failed);
-  }
-}
+function flushQueue(){ return pkm().flushQueue(); }   // (React — react/src/phone/checkin/checkin.ts)
 // "Discard this saved check-in?" and "Check out now?" are React (react/src/phone/clockwin); kept here: removing a saved check-in
 function discardSaved(id){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('discard', { id }); }
 function confirmOut(){ closeSheet(); if (typeof PKM !== 'undefined') PKM.openWindow('confirmOut'); }
 /** Discard: only that check-in leaves the phone (HR records it by hand); the status is read again @param {string} id */
-async function dropSaved(id){ store.set('pk_queue', queue().filter(ev => ev.client_id !== id)); closeSheet(); try { await loadStatus(); } catch(e){} renderHome(); }
+function dropSaved(id){ return pkm().dropSaved(id); }   // (React — react/src/phone/checkin/checkin.ts)
 
 // ═════════════════════════════════════════════════════════
 //  REQUESTS
@@ -1048,16 +700,8 @@ renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMi
 function renderPayslips(){ if (typeof PKM !== 'undefined') PKM.render(); }
 function lockPayslips(){ APP.payUnlocked = false; APP.slips = []; renderPayslips(); }
 /** the payslips need the password every time they are opened: '' = opened, otherwise the message to show @param {string} pw */
-async function payslipUnlock(pw){
-  if (!navigator.onLine) return t('payNeedNet');
-  const email = ((((await sb.auth.getSession()).data || {}).session || {}).user || {}).email || (APP.me && APP.me.email);   // the account signed in right now
-  let cap; try { cap = await captchaToken('pay-cap', LANG === 'ar' ? 'ar' : 'en'); } catch(e){ cap = undefined; }
-  const { error } = await withTimeout(sb.auth.signInWithPassword({ email: /** @type {string} — if missing, the sign-in simply fails with a message */ (email), password: pw, options: cap ? { captchaToken: cap } : undefined }), 15000);
-  if (error) return /invalid|credentials/i.test(error.message) ? t('payWrongPass') : friendly(error.message);
-  const r = await withTimeout(sb.from('payroll_run_lines').select('*').eq('emp_id', APP.me.emp_id).order('period', { ascending:false }), 15000);
-  if (r.error) return friendly(r.error.message);
-  APP.slips = r.data || []; APP.payUnlocked = true; renderPayslips(); return '';
-}
+/** @param {string} pw */
+function payslipUnlock(pw){ return pkm().payslipUnlock(pw); }   // (React — react/src/phone/watch/watch.ts)
 // The payslip window (a payslip row, data-slip) is React since 1 Nov 2026 — react/src/phone/slipdoc.
 // The Profile tab (profile card + "install the app" card) is React since 31 Oct 2026 — react/src/phone/profile. The buttons keep
 // data-act="my-contact" / "install" (handled below, as before).
@@ -1082,28 +726,10 @@ function teamProjChange(key, add, why){ return pkm().teamProjChange(key, add, wh
 function teamReqDecide(key, approve, note){ return pkm().teamReqDecide(key, approve, note); }   // (React — react/src/phone/send/send.ts)
 function teamDecide(id, approve, note){ return pkm().teamDecide(id, approve, note); }   // (React — react/src/phone/send/send.ts)
 // newest Android build: read from our own download page (no limits), GitHub as a fallback
-async function latestBuild(){
-  if (APK_DOWNLOAD) {
-    try { const r = await fetch(APK_DOWNLOAD.replace(/[^/]*$/, '') + '?v=' + Date.now(), { cache:'no-store' });
-      if (r.ok) { const m = (await r.text()).match(/1\.0\.(\d+)/); if (m) return Number(m[1]); } } catch(e){}
-  }
-  if (!APK_REPO) return 0;
-  const r = await fetch(`https://api.github.com/repos/${APK_REPO}/releases/latest`, { headers:{ Accept:'application/vnd.github+json' }, cache:'no-store' });
-  if (!r.ok) return 0;
-  const j = await r.json(); return Number(String(j.tag_name || '').split('.').pop()) || 0;
-}
+function latestBuild(){ return pkm().latestBuild(); }   // (React — react/src/phone/watch/watch.ts)
 let updChecked = 0;
-async function checkAppUpdate(force){
-  if (!NATIVE || PLATFORM !== 'android' || !(APK_REPO || APK_DOWNLOAD) || !APP_BUILD || !navigator.onLine) return;
-  if (!force && Date.now() - updChecked < 15 * 60 * 1000) return;       // at most every 15 minutes
-  updChecked = Date.now();
-  try {
-    const latest = await latestBuild();
-    if (latest > APP_BUILD && !APP.updateUrl){                     // the banner is React (react/src/phone/pull)
-      APP.updateUrl = APK_DOWNLOAD || `https://github.com/${APK_REPO}/releases/latest/download/Petrokima.apk`; if (typeof PKM !== 'undefined') PKM.render();
-    }
-  } catch(e){}
-}
+/** @param {boolean} [force] */
+function checkAppUpdate(force){ return pkm().checkAppUpdate(force); }   // (React — react/src/phone/watch/watch.ts)   (updChecked stays here)
 function renderAll(){ if(!APP.ready) return;
   // who I am (the top bar) is React: react/src/phone/frame
   renderHome(); renderCoReqs(); renderRequests(); renderDocs(); renderDreqs(); renderTeam(); renderPayslips(); renderProfile(); renderNews(); renderVoice(); }
