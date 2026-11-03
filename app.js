@@ -365,7 +365,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v83';
+const PKM_BUILD = 'pk-mobile-v84';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
