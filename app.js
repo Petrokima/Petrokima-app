@@ -359,18 +359,22 @@ function applyLang(){
 /** @type {(id: string) => any} — any page element (field, button, list …) by its id */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const num = v => { const n = Number(v); return isFinite(n) ? n : 0; };
-const pad = n => String(n).padStart(2,'0');
-const loc = () => LANG==='ar' ? 'ar-EG' : 'en-GB';
-const fmt = v => num(v).toLocaleString(loc(), { maximumFractionDigits:2 });
-// hours shown as hours and minutes for employees (9.83 → "9 h 50 m" / "٩ س ٥٠ د"); payroll keeps decimal hours
-const fmtH = v => { const tm = Math.round(num(v) * 60), h = Math.floor(tm / 60), m = tm % 60, n = x => x.toLocaleString(loc());
-  return h && m ? `${n(h)} ${t('hours')} ${n(m)} ${t('mins')}` : h ? `${n(h)} ${t('hours')}` : `${n(m)} ${t('mins')}`; };
-function todayStr(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
-function dObj(s){ const [y,m,d]=String(s).split('-').map(Number); return new Date(y, m-1, d); }
-function dStr(o){ return `${o.getFullYear()}-${pad(o.getMonth()+1)}-${pad(o.getDate())}`; }
-function niceDate(s){ return s ? dObj(s).toLocaleDateString(loc(), { weekday:'short', day:'numeric', month:'short' }) : ''; }
-function toMin(x){ const [h,m]=String(x||'0:0').split(':').map(Number); return h*60+m; }
+// num / pad / loc / fmt / fmtH (hours as "9 h 50 m") / todayStr (the PHONE's own date) / dObj / dStr / niceDate / toMin — and chip, friendly, the payroll
+// calendar and the leave arithmetic below — moved to React on 3 Nov 2026 (react/src/phone/core/helpers.ts — proven to give the same answers by helpers.golden.json); the old names forward to it.
+// react.js runs right after this file and the start-up (boot, below) waits for it, so it is there before any of them is asked.
+function pkm(){ if (typeof PKM === 'undefined') throw new Error(t('appLoadFailed')); return PKM; }
+const num = v => pkm().num(v);
+const pad = n => pkm().pad(n);
+const loc = () => pkm().loc();
+const fmt = v => pkm().fmt(v);
+const fmtH = v => pkm().fmtH(v);
+function todayStr(){ return pkm().todayStr(); }
+/** @param {string} s */
+function dObj(s){ return pkm().dObj(s); }
+/** @param {Date} o */
+function dStr(o){ return pkm().dStr(o); }
+function niceDate(s){ return pkm().niceDate(s); }
+function toMin(x){ return pkm().toMin(x); }
 let toastT;
 function toast(msg, bad){ const el=$('toast'); el.textContent=msg; el.className = 'on' + (bad?' bad':''); clearTimeout(toastT); toastT=setTimeout(()=>el.className='',3200); }
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); $('boot').style.display='none'; }
@@ -378,58 +382,26 @@ function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.t
 function sheet(html){ if (typeof PKM !== 'undefined') PKM.closeWindow(); $('sheet-body').innerHTML = html; $('sheet').classList.add('on'); }
 function closeSheet(){ $('sheet').classList.remove('on'); if (typeof PKM !== 'undefined') PKM.closeWindow(); }
 function sheetOpen(){ return $('sheet').classList.contains('on') || (typeof PKM !== 'undefined' && PKM.windowOpen()); }
-function chip(s){ const c={Pending:'c-orange','Waiting for manager':'c-orange','Waiting for employee':'c-orange','Waiting for HR':'c-blue',Approved:'c-green',Completed:'c-green','In progress':'c-blue',Rejected:'c-red',Cancelled:'c-grey'}[s]||'c-grey'; return `<span class="chip ${c}">${esc(tm('st',s))}</span>`; }
-function friendly(msg){
-  msg = String(msg||'');
-  if (/year of birth does not match/i.test(msg)) return t('yearWrong', { n: (msg.match(/\((\d+)/) || [])[1] || '' });
-  if (/Too many wrong answers|account is (now )?locked/i.test(msg)) return t('acctLockedYear');
-  if (/NOT_ASSIGNED/.test(msg)) return t('notAssigned');
-  if (/LATE_REQUEST/.test(msg)) return t('lateReqErr', { time: (msg.match(/before (\d\d:\d\d)/) || [])[1] || lateDeadline() });
-  if (/ADVANCE_NOTICE/.test(msg)) return t('annualNoticeErr', { n: Number(S.annualNoticeDays) || 1 });
-  if (/PAST_DATE/.test(msg)) return t('pastDateErr');
-  if (/TOO_EARLY/.test(msg)) { const m = msg.match(/from (\d{4}-\d\d-\d\d) \((\d+) months/) || []; return t('tooEarlyErr', { d: m[1] ? dShort(m[1]) : '', m: m[2] || 6 }); }
-  if (/EMERGENCY_LIMIT/.test(msg)) { const m = msg.match(/this year: ([\d.]+) days; already used or requested: ([\d.]+)/) || []; return t('emergLimitErr', { cap: m[1] || '', used: m[2] || '' }); }
-  if (/OFFLINE_TOO_OLD/.test(msg)) return t('tooOld');
-  if (/OFFLINE_ORDER/.test(msg)) return t('wrongOrder');
-  if (/ALREADY_IN/.test(msg)) return t('alreadyIn');
-  if (/^(DATA_VALUE|DATA_FIELD|DATA_CLOSED|DATA_NOT_FOUND|EMAIL): ?/.test(msg)) return msg.replace(/^[A-Z_]+: ?/, '');
-  if (/UNDO_TOO_LATE/.test(msg)) return t('undoLate');
-  if (/UNDO_NOT_LAST/.test(msg)) return t('undoNotLast');
-  if (/UNDO_LOCKED/.test(msg)) return t('undoLocked');
-  if (/UNDO_NOT_FOUND/.test(msg)) return t('undoGone');
-  if (/captcha/i.test(msg)) return t('captchaFail');
-  if (/ACCURACY:/.test(msg)) { const m = msg.match(/±(\S+) m \(needed: (\d+)/) || []; return t('spAccuracy', { n: m[1] || '?', max: m[2] || 50 }); }
-  if (/NOT_ALLOWED:/.test(msg)) return t('spNotAllowed');
-  if (/TOO_SOON/.test(msg)) return t('coTooSoon');
-  if (/NOT_IN/.test(msg)) return t('notInErr');
-  if (/DEVICE/.test(msg)) return t('deviceMismatch');
-  if (/NO_LOCATION/.test(msg)) return t('locDenied');
-  if (/MOCK_LOCATION/.test(msg)) return t('mockLoc');
-  if (/APP_REQUIRED/.test(msg)) return t('appRequired');
-  if (/UPDATE_REQUIRED/.test(msg)) { setTimeout(() => checkAppUpdate(true), 0); return t('updateRequired'); }
-  if (/OUTSIDE_SITE/.test(msg)) { const m = msg.match(/about (.+?) from (.+?)\. Check/) || []; return t(/Check-out is only allowed/.test(msg) ? 'outsideSiteOut' : 'outsideSite', { d: m[1] || '', site: m[2] || '' }); }
-  if (/MISSION_OVERLAP/.test(msg)) return t('misOverlap');
-  if (/MISSION_LOCKED/.test(msg)) return t('misLocked');
-  if (/MISSION_NOT_TEAM/.test(msg)) return t('misNotTeam');
-  if (/MISSION_PLACE/.test(msg)) return t('misNeedPlace');
-  if (/MISSION_TIMES/.test(msg)) return t('misBadTimes');
-  if (/MISSION_DATES/.test(msg) && /after the start/.test(msg)) return t('misBadDates');
-  if (/approved and locked/i.test(msg)) return t('lockedPeriod');
-  if (/Failed to fetch|NetworkError|network/i.test(msg)) return t('offline');
-  return msg.replace(/^[A-Z_]+:\s*/, '');
-}
+function chip(s){ return pkm().chip(s); }
+/** the database's message in the phone's words @param {unknown} msg @returns {string} */
+function friendly(msg){ return pkm().friendly(msg); }
 
 // Payroll rules shared with the HR system
 let S = { weekendDays:[5,6], cycleStartDay:21, permissionsPerMonth:2, permissionMaxHours:2, annualLeaveDefault:21, casualCountsAnnual:'yes', hoursPerDay:8 };
 let HOL = new Set();
-function isWorkday(s){ return !(S.weekendDays||[]).includes(dObj(s).getDay()) && !HOL.has(s); }
-function workdays(a,b){ if(!a||!b||b<a) return 0; let n=0,d=dObj(a),e=dObj(b),g=0; while(d<=e && g++<800){ if(isWorkday(dStr(d))) n++; d.setDate(d.getDate()+1); } return n; }
-function cycleDay(){ const d=Math.round(num(S.cycleStartDay)); return (d>=2&&d<=28)?d:1; }
-function periodStart(p){ const sd=cycleDay(),[y,m]=p.split('-').map(Number); if(sd===1) return `${p}-01`; const d=new Date(y,m-2,sd); return dStr(d); }
-function periodEnd(p){ const sd=cycleDay(),[y,m]=p.split('-').map(Number); return sd===1 ? `${p}-${pad(new Date(y,m,0).getDate())}` : `${p}-${pad(sd-1)}`; }
-function cycleOf(date){ const sd=cycleDay(),[y,m,d]=String(date).split('-').map(Number); if(sd===1||d<sd) return `${y}-${pad(m)}`; const n=new Date(y,m,1); return `${n.getFullYear()}-${pad(n.getMonth()+1)}`; }
-function periodLabel(p){ const [y,m]=p.split('-').map(Number); return new Date(y,m-1,1).toLocaleDateString(loc(),{month:'long',year:'numeric'}); }
-function leaveDaysIn(l,a,b){ const s=l.date_from>a?l.date_from:a, e=l.date_to<b?l.date_to:b; if(e<s) return 0; const full=workdays(l.date_from,l.date_to); if(!full) return 0; return Math.round(num(l.days)*workdays(s,e)/full*100)/100; }
+/** @param {string} s */
+function isWorkday(s){ return pkm().isWorkday(s); }
+/** @param {string} a @param {string} b */
+function workdays(a,b){ return pkm().workdays(a, b); }
+function cycleDay(){ return pkm().cycleDay(); }
+/** @param {string} p */
+function periodStart(p){ return pkm().periodStart(p); }
+/** @param {string} p */
+function periodEnd(p){ return pkm().periodEnd(p); }
+function cycleOf(date){ return pkm().cycleOf(date); }
+/** @param {string} p */
+function periodLabel(p){ return pkm().periodLabel(p); }
+function leaveDaysIn(l,a,b){ return pkm().leaveDaysIn(l, a, b); }
 
 // ═════════════════════════════════════════════════════════
 //  SIGN-IN
@@ -1138,15 +1110,14 @@ async function dropSaved(id){ store.set('pk_queue', queue().filter(ev => ev.clie
 // ═════════════════════════════════════════════════════════
 //  REQUESTS
 // ═════════════════════════════════════════════════════════
-const annualTypes = () => S.casualCountsAnnual==='no' ? ['Annual'] : ['Annual','Casual'];
-function yearDays(types, status){ const y=todayStr().slice(0,4); return APP.leaves.filter(l=>types.includes(l.leave_type)&&l.status===status).reduce((s,l)=>s+leaveDaysIn(l,`${y}-01-01`,`${y}-12-31`),0); }
-function entitlement(){ const e=APP.emp; return (e && e.annual_leave_days!==null && e.annual_leave_days!==undefined) ? num(e.annual_leave_days) : num(S.annualLeaveDefault); }
-const reqStage = r => r.status==='Pending' && r.manager_status==='Pending' ? 'Waiting for manager' : r.status==='Pending' && r.manager_status==='Approved' ? 'Waiting for HR' : r.status;
+const annualTypes = () => pkm().annualTypes();
+function yearDays(types, status){ return pkm().yearDays(types, status); }
+function entitlement(){ return pkm().entitlement(); }
+const reqStage = r => pkm().reqStage(r);
 // when a request was sent, in the phone's language
-const sentAt = ts => ts ? new Date(ts).toLocaleString(LANG==='ar' ? 'ar-EG' : 'en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+const sentAt = ts => pkm().sentAt(ts);
 // latest time to ask for a late-arrival permission: shift start + the allowed minutes (Settings)
-function lateDeadline(){ const [h,m] = String(S.shiftStart || '08:00').split(':').map(Number); const tot = h*60 + m + (Number(S.permDeadlineMin) || 30);
-  return `${String(Math.floor(tot/60)%24).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`; }
+function lateDeadline(){ return pkm().lateDeadline(); }
 // The figures at the top of the Requests tab and "My requests" are React since 31 Oct 2026 — react/src/phone/requests. Kept here:
 // the leave arithmetic above (also used by the request windows), the windows, Cancel (data-cancel → the React window, cancelRequest below) and the mission
 // notice (renderMisAck, added by the wrapper below).
@@ -1326,7 +1297,7 @@ function renderAll(){ if(!APP.ready) return;
 // ═════════════════════════════════════════════════════════
 //  NEWS · BIRTHDAY · COMPLAINTS & SUGGESTIONS · HIRING & TRAINING REQUESTS
 // ═════════════════════════════════════════════════════════
-const dShort = ts => ts ? new Date(ts).toLocaleDateString(LANG==='ar' ? 'ar-EG' : 'en-GB', { day:'numeric', month:'short', year:'numeric' }) : '';
+const dShort = ts => pkm().dShort(ts);
 // The News list and the red number on its tab are React since 31 Oct 2026 — react/src/phone/news. Kept here: marking read when
 // the tab opens (markNewsRead) and opening an attachment (data-att, page-wide handler).
 function renderNews(){ if (typeof PKM !== 'undefined') PKM.render(); }
@@ -1475,6 +1446,10 @@ setInterval(() => { if (APP.ready && queue().length && navigator.onLine) flushQu
 window.addEventListener('load', () => { if (typeof PKM === 'undefined') { const b = $('react-msg');
   if (b) { b.textContent = t('appLoadFailed'); b.style.cssText = 'padding:40px 20px;text-align:center;line-height:1.8'; } show('scr-msg'); } });
 (async function boot(){
+  // the screens and the helpers are react.js (loaded right after this file): wait until it has run; if it did not load, the safety net above
+  // shows the plain message and the app does not start
+  if (typeof PKM === 'undefined' && document.readyState === 'loading') await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  if (typeof PKM === 'undefined') return;
   applyLang(); net();
   if (!NATIVE && 'serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
   if (NATIVE) await restoreDeviceId();
