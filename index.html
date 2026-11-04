@@ -110,7 +110,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 </head>
 <body>
 <div id="react-upd"></div>
-<div id="offline" data-t="offline"></div>
+<div id="react-offline" style="display:contents"></div>   <!-- the "no internet" strip (#offline) is React: react/src/phone/shell -->
 
 <!-- LOGIN -->
 <section class="screen" id="scr-login"><div id="react-login"></div></section>
@@ -183,13 +183,12 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
   <nav class="tabbar"><div id="react-tabs" style="display:contents"></div></nav>
 </section>
 
-<div class="sheet" id="sheet"><div class="sheet-box"><div class="grab"></div><div id="sheet-body"></div></div></div>
 <div id="react-sheet"></div>   <!-- the React bottom windows (react/src/phone/reqwin) -->
-<div id="toast"></div>
+<div id="react-toast" style="display:contents"></div>   <!-- the message strip (#toast) is React: react/src/phone/shell -->
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v84"></script>
+<script src="app.js?v=pk-mobile-v85"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v84"></script>
+<script src="react.js?v=pk-mobile-v85"></script>
 </body>
 </html>

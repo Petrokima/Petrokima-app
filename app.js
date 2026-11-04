@@ -365,7 +365,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v84';
+const PKM_BUILD = 'pk-mobile-v85';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
@@ -380,13 +380,15 @@ function dObj(s){ return pkm().dObj(s); }
 function dStr(o){ return pkm().dStr(o); }
 function niceDate(s){ return pkm().niceDate(s); }
 function toMin(x){ return pkm().toMin(x); }
-let toastT;
-function toast(msg, bad){ const el=$('toast'); el.textContent=msg; el.className = 'on' + (bad?' bad':''); clearTimeout(toastT); toastT=setTimeout(()=>el.className='',3200); }
+// the message strip at the bottom is React (react/src/phone/shell, 4 Nov 2026): kept here only the latest message, which React shows for 3.2 s
+/** @type {{ msg: string, bad: boolean, seq: number } | null} */
+let TOAST = null;
+function toast(msg, bad){ TOAST = { msg: msg == null ? '' : String(msg), bad: !!bad, seq: (TOAST ? TOAST.seq : 0) + 1 }; if (typeof PKM !== 'undefined') PKM.toastShown(); }
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on', s.id===id)); $('boot').style.display='none'; }
 // one bottom window at a time: the old one (#sheet) or a React one (react/src/phone/reqwin — vacation, permission, HR request)
-function sheet(html){ if (typeof PKM !== 'undefined') PKM.closeWindow(); $('sheet-body').innerHTML = html; $('sheet').classList.add('on'); }
-function closeSheet(){ $('sheet').classList.remove('on'); if (typeof PKM !== 'undefined') PKM.closeWindow(); }
-function sheetOpen(){ return $('sheet').classList.contains('on') || (typeof PKM !== 'undefined' && PKM.windowOpen()); }
+// every bottom window is React (react/src/phone — WindowHost); the old #sheet and sheet() were removed on 4 Nov 2026
+function closeSheet(){ if (typeof PKM !== 'undefined') PKM.closeWindow(); }
+function sheetOpen(){ return typeof PKM !== 'undefined' && PKM.windowOpen(); }
 function chip(s){ return pkm().chip(s); }
 /** the database's message in the phone's words @param {unknown} msg @returns {string} */
 function friendly(msg){ return pkm().friendly(msg); }
@@ -486,7 +488,6 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAAFkp9jltaXJo9weC';   // widget "Petrokima HR
 function loadTurnstile(){ return pkm().loadTurnstile(); }
 /** @param {string} boxId @param {string} [lang] */
 function captchaToken(boxId, lang){ return pkm().captchaToken(boxId, lang); }
-function errBox(id, msg){ const e=$(id); if(!msg){ e.style.display='none'; return; } e.textContent=msg; e.style.display='block'; }
 // The sign-in form is React (react/src/phone/signin); signing in and the security check are React too (react/src/phone/session/session.ts).
 /** Sign in: '' when signed in (signedIn() runs first — the form clears itself — then what follows: afterLogin), else the message
  *  (the code is already trimmed) @param {string} code @param {string} pass @param {() => void} signedIn @returns {Promise<string>} */
@@ -797,7 +798,6 @@ document.addEventListener('click', async ev => {
   const x = /** @type {HTMLElement} */ (ev.target);
   if (x.closest('[data-lang]')) return switchLang();
   const tab = x.closest('[data-view]'); if (tab) return go(tab.dataset.view);
-  if (x === $('sheet')) return closeSheet();
   if (x.closest('#sp-open')) return spSheet();                                       // 91: set a site's location
   const sl = x.closest('[data-slip]'); if (sl) return typeof PKM !== 'undefined' && PKM.openWindow('slip', { id: /** @type {string} */ (sl.dataset.slip) });
   const cx = x.closest('[data-cancel]'); if (cx) return typeof PKM !== 'undefined' && PKM.openWindow('cancel', { id: /** @type {string} */ (cx.dataset.cancel) });
@@ -830,7 +830,8 @@ document.addEventListener('click', async ev => {
   if (act==='push-on') return enableWebPush(x.closest('[data-act]'));
   if (act==='install' && installEvt) { installEvt.prompt(); installEvt = null; return; }
 });
-const net = () => { $('offline').style.display = navigator.onLine ? 'none' : 'block'; if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
+// the "no internet" strip is React (react/src/phone/shell): it follows navigator.onLine; this tells it to look again
+const net = () => { if (typeof PKM !== 'undefined') PKM.netChanged(); if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; if (APP.ready) renderPayslips(); } });
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ checkAppUpdate(); await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); try { await loadCoReqs(); renderCoReqs(); } catch(e){} afterStatus().catch(() => {}); } });
