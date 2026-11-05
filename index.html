@@ -147,6 +147,7 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
         <button class="btn" data-act="req-perm">✋ <span data-t="reqPerm"></span></button>
         <button class="btn ghost" data-act="req-hr">📨 <span data-t="reqOther"></span></button>
         <button class="btn ghost" data-act="req-mission">🚗 <span data-t="reqMission"></span></button>
+        <div id="react-bc-ask" style="display:contents"></div>   <!-- 🪪 Request business cards: React (react/src/phone/cards) -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn ghost" data-act="fb-complaint">⚠️ <span data-t="complaint"></span></button><button class="btn ghost" data-act="fb-suggestion">💡 <span data-t="suggestion"></span></button></div>
       </div>
       <!-- mission notice, documents and data HR asked for: React (react/src/phone/reqcards) -->
@@ -154,7 +155,6 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
       <div id="react-doc-card"></div>
       <div id="react-dreq-card"></div>
       <div class="card"><div class="sec" data-t="myRequests"></div><div id="react-req-list"></div></div>
-      <div id="react-bc-req"></div>   <!-- 🪪 business cards: React (react/src/phone/cards) -->
       <div id="react-fb-card"></div>   <!-- React: react/src/phone/voice -->
     </div>
     <!-- NEWS: announcements & decisions -->
@@ -189,8 +189,8 @@ main{padding:16px 16px calc(96px + env(safe-area-inset-bottom,0px))}
 <div id="react-toast" style="display:contents"></div>   <!-- the message strip (#toast) is React: react/src/phone/shell -->
 <div id="boot" class="loading"><div class="spin"></div></div>
 
-<script src="app.js?v=pk-mobile-v87"></script>
+<script src="app.js?v=pk-mobile-v89"></script>
 <!-- the screens moved to React (react/src/phone, built into react.js) — always right after app.js -->
-<script src="react.js?v=pk-mobile-v87"></script>
+<script src="react.js?v=pk-mobile-v89"></script>
 </body>
 </html>
