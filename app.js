@@ -159,7 +159,7 @@ const T = {
   firstMustChange:'Choose your own password now. It must be at least 8 characters and different from your first password.',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
   teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
   projectsN:'{n} project(s)',noProjAssigned:'No projects — can check in at any project',addProject:'Add a project — type code or name…',projAdded:'Project added ✓',projRemoved:'Project removed',
-  removeProjQ:'Remove this project from {name}?',sentMgr:'Request sent to your direct manager ✓',
+  removeProjQ:'Remove this project from {name}?',sentMgr:'Request sent to your direct manager ✓',alreadySent:'Already sent ✓ — your first send went through',
   sentAt:'Sent',lateRule:'Late arrival must be requested before {time} on the same day.',
   leaveRules:'Annual leave: request at least {n} day(s) before it starts. Emergency (casual) leave: the same day is fine.',
   lateReqErr:'Too late — a late-arrival permission must be requested before {time} on that day.',
@@ -263,7 +263,7 @@ const T = {
   firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن كلمة المرور الأولى.',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
   projectsN:'{n} مشروع',noProjAssigned:'بدون مشروعات — يسجّل في أي مشروع',addProject:'أضف مشروعاً — اكتب الكود أو الاسم…',projAdded:'تمت إضافة المشروع ✓',projRemoved:'تمت إزالة المشروع',
-  removeProjQ:'حذف هذا المشروع من {name}؟',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',
+  removeProjQ:'حذف هذا المشروع من {name}؟',sentMgr:'تم إرسال الطلب إلى مديرك المباشر ✓',alreadySent:'تم الإرسال بالفعل ✓ — وصل طلبك في المرة الأولى',
   sentAt:'أُرسل',lateRule:'إذن التأخير الصباحي يُطلب قبل الساعة {time} من نفس اليوم.',
   leaveRules:'الإجازة السنوية: تُطلب قبل بدايتها بـ {n} يوم على الأقل. الإجازة العارضة: يمكن طلبها في نفس اليوم.',
   lateReqErr:'انتهى وقت الطلب — إذن التأخير يُطلب قبل الساعة {time} من نفس اليوم.',
@@ -369,7 +369,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v90';
+const PKM_BUILD = 'pk-mobile-v91';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
