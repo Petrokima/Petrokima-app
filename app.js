@@ -369,7 +369,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v93';
+const PKM_BUILD = 'pk-mobile-v94';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
@@ -492,6 +492,8 @@ const TURNSTILE_SITE_KEY = '0x4AAAAAAFkp9jltaXJo9weC';   // widget "Petrokima HR
 function loadTurnstile(){ return pkm().loadTurnstile(); }
 /** @param {string} boxId @param {string} [lang] */
 function captchaToken(boxId, lang){ return pkm().captchaToken(boxId, lang); }
+/** start the Cloudflare check while the person types (15 Nov 2026 — Sign in then uses that token at once) */
+function prepareSignInCheck(){ return pkm().prepareSignInCheck(); }
 // The sign-in form is React (react/src/phone/signin); signing in and the security check are React too (react/src/phone/session/session.ts).
 /** Sign in: '' when signed in (signedIn() runs first — the form clears itself — then what follows: afterLogin), else the message
  *  (the code is already trimmed) @param {string} code @param {string} pass @param {() => void} signedIn @returns {Promise<string>} */
