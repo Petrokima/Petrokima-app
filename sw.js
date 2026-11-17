@@ -2,17 +2,31 @@
 // Check-ins and requests always go live to the server (never cached).
 // v29 (20 Oct 2026): new version only so iPhones install a fresh worker under the corrected Cloudflare security rule —
 // a worker keeps the security rule it was installed with until sw.js itself changes.
-const VERSION = 'pk-mobile-v95';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './vendor/supabase.js?v=2.117.3', './vendor/sentry.js?v=11.7.0', './app.js?v=pk-mobile-v95', './react.js?v=pk-mobile-v95',
+const VERSION = 'pk-mobile-v96';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './vendor/supabase.js?v=2.117.3', './vendor/sentry.js?v=11.7.0', './app.js?v=pk-mobile-v96', './react.js?v=pk-mobile-v96',
                './fonts/cairo.css?v=5.3.0', './fonts/cairo-arabic-400-normal.woff2', './fonts/cairo-arabic-600-normal.woff2', './fonts/cairo-arabic-700-normal.woff2', './fonts/cairo-arabic-800-normal.woff2', './fonts/cairo-latin-400-normal.woff2', './fonts/cairo-latin-600-normal.woff2', './fonts/cairo-latin-700-normal.woff2', './fonts/cairo-latin-800-normal.woff2', './fonts/cairo-latin-ext-400-normal.woff2', './fonts/cairo-latin-ext-600-normal.woff2', './fonts/cairo-latin-ext-700-normal.woff2', './fonts/cairo-latin-ext-800-normal.woff2'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.hostname.endsWith('supabase.co')) return;           // live data: never touch
-  if (url.origin === location.origin) {                                                     // app files: network first, cache fallback
-    e.respondWith(fetch(e.request).then(r => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); } return r; })
-                                  .catch(() => caches.match(e.request).then(m => m || caches.match('./index.html'))));
+  if (url.origin === location.origin) {
+    // 17 Nov 2026 (opening speed): files that carry their version (?v=…) and the fonts never change under the same name — they come
+    // straight from the phone's own copy (no download at every opening); a new release has new names, so it is fetched once and kept.
+    if (url.searchParams.has('v') || url.pathname.endsWith('.woff2')) {
+      e.respondWith(caches.match(e.request).then(m => m || fetch(e.request).then(r => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); } return r; })));
+      return;
+    }
+    // the page itself (and anything else): network first, so a new release is seen at once — but after 3 s without an answer (a weak
+    // signal) the saved copy is shown, and the newer page is still saved for the next opening
+    e.respondWith(new Promise(resolve => {
+      let done = false;
+      const fallback = () => caches.match(e.request).then(m => m || caches.match('./index.html'));
+      const timer = setTimeout(() => fallback().then(m => { if (m && !done) { done = true; resolve(m); } }), 3000);
+      fetch(e.request).then(r => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+                                   if (!done) { done = true; clearTimeout(timer); resolve(r); } })
+        .catch(() => fallback().then(m => { if (!done) { done = true; clearTimeout(timer); resolve(m || Response.error()); } }));
+    }));
   }   // libraries and fonts are served from our own site since 30 Oct 2026 (nothing from other websites)
 });
 
