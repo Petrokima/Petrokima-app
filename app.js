@@ -289,7 +289,7 @@ Object.assign(T.en, { reqMission:'Outside mission', misTitle:'🚗 Outside missi
   misNeedPlace:'Write where the mission is', misBadDates:'The end date must be on or after the start date', misBadTimes:'The end time must be after the start time',
   misAckTitle:'Your manager assigned you a mission', misAckBtn:'✋ I undertake this mission', misAcked:'Thank you — your manager and HR are notified ✓',
   misSentMgr:'Mission request sent to your direct manager ✓', misSentHR:'Mission request sent to HR ✓', misAssigned:'Mission sent ✓ — app users acknowledge it; the others go straight to HR',
-  misNone:'No missions', misAssignedBy:'Assigned by your manager', misAskedBy:'Requested by {n}', misAckNote:'You still check in and out on the phone during the mission.',
+  misNone:'No missions', misAssignedBy:'Assigned by your manager', misByHr:'Added by HR', misAskedBy:'Requested by {n}', misAckNote:'You still check in and out on the phone during the mission.',
   misOverlap:'There is already a mission on these dates', misLocked:'That payroll month is already approved', misNotTeam:'This employee is not in your team',
   misIAssigned:'Assigned by you', misSelAll:'Select all ({n})', misChosen:'{n} chosen', misAckedHR:'Acknowledged — waiting for HR', misMyAckedHR:'You acknowledged — waiting for HR',
   misNoAppHR:'Sent to HR — employee does not use the app', misNoAppNote:'Employees who do not use the app yet (no login or first sign-in not finished) go straight to HR without acknowledging.' });
@@ -347,7 +347,7 @@ Object.assign(T.ar, { reqMission:'مأمورية خارجية', misTitle:'🚗 �
   misNeedPlace:'اكتب مكان المأمورية', misBadDates:'تاريخ النهاية يجب أن يكون في أو بعد تاريخ البداية', misBadTimes:'وقت النهاية يجب أن يكون بعد وقت البداية',
   misAckTitle:'كلفك مديرك بمأمورية', misAckBtn:'✋ أتعهد بتنفيذ المأمورية', misAcked:'شكراً — تم إبلاغ مديرك والموارد البشرية ✓',
   misSentMgr:'تم إرسال طلب المأمورية إلى مديرك المباشر ✓', misSentHR:'تم إرسال طلب المأمورية إلى الموارد البشرية ✓', misAssigned:'تم إرسال المأمورية ✓ — مستخدمو التطبيق يؤكدونها، والباقون تذهب مأمورياتهم مباشرة للموارد البشرية',
-  misNone:'لا توجد مأموريات', misAssignedBy:'تكليف من مديرك', misAskedBy:'طلب من {n}', misAckNote:'تسجل الحضور والانصراف من الهاتف كالمعتاد أثناء المأمورية.',
+  misNone:'لا توجد مأموريات', misAssignedBy:'تكليف من مديرك', misByHr:'أضافتها الموارد البشرية', misAskedBy:'طلب من {n}', misAckNote:'تسجل الحضور والانصراف من الهاتف كالمعتاد أثناء المأمورية.',
   misOverlap:'توجد مأمورية بالفعل في هذه التواريخ', misLocked:'رواتب هذا الشهر معتمدة بالفعل', misNotTeam:'هذا الموظف ليس من فريقك',
   misIAssigned:'تكليف منك', misSelAll:'اختيار الكل ({n})', misChosen:'تم اختيار {n}', misAckedHR:'أكد الموظف — في انتظار الموارد البشرية', misMyAckedHR:'أكدت المأمورية — في انتظار الموارد البشرية',
   misNoAppHR:'أُرسلت للموارد البشرية — الموظف لا يستخدم التطبيق', misNoAppNote:'الموظفون الذين لا يستخدمون التطبيق بعد (بدون حساب أو لم يكملوا أول دخول) تُرسل مأمورياتهم مباشرة إلى الموارد البشرية دون تأكيد.' });
@@ -371,7 +371,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v99';
+const PKM_BUILD = 'pk-mobile-v100';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
