@@ -157,6 +157,7 @@ const T = {
   prefDate:'Preferred date (optional)',needTrain:'Choose at least one employee and write the training topic',sentHR:'Sent to HR ✓',noMgrReq:'No requests sent yet',
   hireLine:'{n} × {job}',trainLine:'{topic} — {n} employee(s)',inboxTitle:'📥 Complaints & suggestions',noInbox:'Nothing received',status:'Status',saveReply:'Save',birthYear:'Your year of birth',yearWrong:'The year of birth does not match our records ({n} left).',acctLockedYear:'Too many wrong answers — your account is locked. Ask HR to reset it.',needYear:'Enter the year you were born (4 digits, e.g. 1988).',firstHint:'First time? Use the temporary password HR gave you. If your account is locked, contact HR.',
   payLockTitle:'Your payslips are protected',payLockSub:'Enter your password to view them.',payUnlock:'Show my payslips',payWrongPass:'Wrong password',payNeedNet:'Connect to the internet to view your payslips.',payLock:'🔒 Lock',
+  slipNowTitle:'This month',slipSt_draft:'Draft — not authorized yet',slipSt_authorized:'Authorized — not posted yet',slipSt_changed:'Changed — waiting for HR to authorize again',slipStLine_draft:'The payroll so far — it changes as attendance, leave and monthly amounts are recorded. Your fixed pay stays the same.',slipStLine_authorized:'HR has authorized this payroll. It is final once Finance posts it; until then HR may still correct it.',slipStLine_changed:'Your payslip changed after HR authorized the payroll, so it is a draft again until HR authorizes it again.',slipNowNone:'The figures show again once HR authorizes the payroll.',slipAsOf:'Figures as of {t}.',
   firstMustChange:'Choose your own password now. It must be at least 8 characters and different from your first password.',myProjects:'Your projects',notAllowed:'You are not allowed to do this.',filterProj:'Filter your projects…',notAssigned:'You are not assigned to this project. Ask your direct manager to add it.',
   teamProj:'Your team\'s projects',teamProjNote:'Employees with projects can check in only at those projects. Your changes apply immediately.',manage:'Manage',
   projectsN:'{n} project(s)',noProjAssigned:'No projects — can check in at any project',addProject:'Add a project — type code or name…',projAdded:'Project added ✓',projRemoved:'Project removed',
@@ -262,6 +263,7 @@ const T = {
   prefDate:'التاريخ المفضل (اختياري)',needTrain:'اختر موظفاً واحداً على الأقل واكتب موضوع التدريب',sentHR:'تم الإرسال إلى الموارد البشرية ✓',noMgrReq:'لم ترسل طلبات بعد',
   hireLine:'{n} × {job}',trainLine:'{topic} — {n} موظف',inboxTitle:'📥 الشكاوى والاقتراحات',noInbox:'لا يوجد شيء',status:'الحالة',saveReply:'حفظ',birthYear:'سنة ميلادك',yearWrong:'سنة الميلاد غير مطابقة لسجلاتنا (متبقٍ {n} محاولات).',acctLockedYear:'تجاوزت عدد المحاولات — تم قفل حسابك. اطلب من الموارد البشرية إعادة تعيينه.',needYear:'أدخل سنة ميلادك (٤ أرقام، مثال: 1988).',firstHint:'أول مرة؟ استخدم كلمة المرور المؤقتة التي أعطتها لك الموارد البشرية. إذا كان حسابك مقفلاً، تواصل مع الموارد البشرية.',
   payLockTitle:'مفرداتك محمية',payLockSub:'أدخل كلمة المرور لعرضها.',payUnlock:'عرض مفرداتي',payWrongPass:'كلمة المرور غير صحيحة',payNeedNet:'اتصل بالإنترنت لعرض مفرداتك.',payLock:'🔒 قفل',
+  slipNowTitle:'الشهر الحالي',slipSt_draft:'مسودة — لم تُعتمد بعد',slipSt_authorized:'معتمدة — لم تُرحَّل بعد',slipSt_changed:'تغيّرت — في انتظار اعتماد الموارد البشرية مرة أخرى',slipStLine_draft:'الرواتب حتى الآن — تتغير مع تسجيل الحضور والإجازات والمبالغ الشهرية. راتبك الثابت لا يتغير.',slipStLine_authorized:'اعتمدت الموارد البشرية هذه الرواتب. تصبح نهائية عندما تُرحِّلها الإدارة المالية؛ وحتى ذلك يمكن للموارد البشرية تصحيحها.',slipStLine_changed:'تغيّرت قسيمتك بعد اعتماد الموارد البشرية للرواتب، فعادت مسودة حتى تعتمدها الموارد البشرية مرة أخرى.',slipNowNone:'ستظهر الأرقام مرة أخرى بعد اعتماد الموارد البشرية للرواتب.',slipAsOf:'الأرقام حتى {t}.',
   firstMustChange:'اختر كلمة مرور خاصة بك الآن، ٨ أحرف على الأقل ومختلفة عن كلمة المرور الأولى.',myProjects:'مشروعاتك',notAllowed:'غير مسموح لك بهذا الإجراء.',filterProj:'ابحث في مشروعاتك…',notAssigned:'أنت غير مكلّف بهذا المشروع. اطلب من مديرك المباشر إضافته.',
   teamProj:'مشروعات فريقك',teamProjNote:'الموظف المكلّف بمشروعات يسجّل الحضور فيها فقط. تعديلاتك تُطبَّق فوراً.',manage:'إدارة',
   projectsN:'{n} مشروع',noProjAssigned:'بدون مشروعات — يسجّل في أي مشروع',addProject:'أضف مشروعاً — اكتب الكود أو الاسم…',projAdded:'تمت إضافة المشروع ✓',projRemoved:'تمت إزالة المشروع',
@@ -371,7 +373,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v101';
+const PKM_BUILD = 'pk-mobile-v102';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
@@ -430,10 +432,11 @@ function leaveDaysIn(l,a,b){ return pkm().leaveDaysIn(l, a, b); }
  *   news?: Row<'announcements'>[], newsRead?: Set<string>, birthday?: boolean, myFeedback?: Row<'feedback'>[],
  *   inbox?: FnResult<'feedback_inbox'>, myActions?: Row<'manager_actions'>[], boardActions?: Row<'manager_actions'>[],
  *   mgrReqs?: { kind: string, r: any }[], cameBack?: boolean, msg?: { text: string, link: string | null } | null, firstSeq?: number, refreshing?: boolean, updateUrl?: string | null, missions?: Mission[],
- *   teamMissions?: Mission[], payUnlocked?: boolean, attCancelled?: FnResult<'cancelled_attendance'> }}
+ *   teamMissions?: Mission[], payUnlocked?: boolean, attCancelled?: FnResult<'cancelled_attendance'>, slipNow?: any }}
  *   me: the sign-in record — set at sign-in (which stops for a login without an employee code: emp_id is always there),
  *       and every screen that reads it opens only after that.
- *   r in teamReq / mgrReqs: one of several kinds of request (see kind); slips: payslip packages (my_payslips). */
+ *   r in teamReq / mgrReqs: one of several kinds of request (see kind); slips: payslip packages (my_payslips);
+ *   slipNow: this month's payslip with its status (my_current_payslip, file 149) — read with the payslips, dropped when they lock. */
 const APP = { ready:false, me:/** @type {any} — set at sign-in */ (null), emp:null, status:null, statusAt:0, leaves:[], perms:[], reqs:[], slips:[], att:[], manager:null, view:'home' };
 /** @type {PhoneDb} — the database connection (typed: every table, column and database function is checked) */
 let sb = /** @type {any} — set at start-up, before anything reads from the database */ (null);
@@ -707,7 +710,7 @@ renderRequests = function(){ _renderRequestsMis.apply(this, arguments); renderMi
 // the reading of the payslips (payslipUnlock, through the React bridge), locking again (lockPayslips; also when the tab is left
 // or the screen turns off — go() / visibilitychange) and the payslip window (React since 1 Nov, opened by the data-slip page-wide handler).
 function renderPayslips(){ if (typeof PKM !== 'undefined') PKM.render(); }
-function lockPayslips(){ APP.payUnlocked = false; APP.slips = []; renderPayslips(); }
+function lockPayslips(){ APP.payUnlocked = false; APP.slips = []; APP.slipNow = null; renderPayslips(); }
 /** the payslips need the password every time they are opened: '' = opened, otherwise the message to show @param {string} pw */
 /** @param {string} pw */
 function payslipUnlock(pw){ return pkm().payslipUnlock(pw); }   // (React — react/src/phone/watch/watch.ts)
@@ -790,7 +793,7 @@ window.pkBack = function(){
   if (APP.view !== 'home') { go('home', true); return true; }
   return false;
 };
-function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; } APP.view=view; if (typeof PKM !== 'undefined') PKM.tabShown(view); if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); window.scrollTo(0,0); }
+function go(view, back){ if (!back && APP.view && APP.view !== view){ VSTACK.push(APP.view); if (VSTACK.length > 10) VSTACK.shift(); } if (view === 'news') setTimeout(markNewsRead, 1500); if (APP.view === 'pay' && view !== 'pay' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; APP.slipNow = null; } APP.view=view; if (typeof PKM !== 'undefined') PKM.tabShown(view); if (view === 'pay') renderPayslips(); document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view)); window.scrollTo(0,0); }
 
 // ═════════════════════════════════════════════════════════
 //  EVENTS & START-UP
@@ -841,7 +844,7 @@ document.addEventListener('click', async ev => {
 // the "no internet" strip is React (react/src/phone/shell): it follows navigator.onLine; this tells it to look again
 const net = () => { if (typeof PKM !== 'undefined') PKM.netChanged(); if (navigator.onLine && APP.ready) flushQueue().then(()=>{ if (APP.offline) loadAll().then(renderAll).catch(()=>{}); }); };
 window.addEventListener('online', net); window.addEventListener('offline', net);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; if (APP.ready) renderPayslips(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && APP.payUnlocked){ APP.payUnlocked = false; APP.slips = []; APP.slipNow = null; if (APP.ready) renderPayslips(); } });
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState==='visible' && APP.ready && navigator.onLine){ checkAppUpdate(); await flushQueue(); try { await loadStatus(); } catch(e){} renderHome(); try { await loadCoReqs(); renderCoReqs(); } catch(e){} afterStatus().catch(() => {}); } });
 setInterval(() => { if (APP.ready) checkAppUpdate(); }, 60 * 60 * 1000);
 setInterval(() => { if (APP.ready) tick(); }, 15000);
