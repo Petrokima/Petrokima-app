@@ -17,6 +17,7 @@ fs.writeFileSync(manifestPath, m);
 const gradlePath = path.join(app, 'build.gradle');
 let g = fs.readFileSync(gradlePath, 'utf8');
 const build = Number(process.env.BUILD_NUMBER || 1);
+const STORE = process.env.STORE_BUILD === '1';      // the Google Play build (24 Nov 2026) — see LeaveWatch and StoreUpdate below
 g = g.replace(/versionCode \d+/, `versionCode ${build}`).replace(/versionName "[^"]*"/, `versionName "1.0.${build}"`);
 if (!g.includes('signingConfigs')) {
   g = g.replace('    buildTypes {', `    signingConfigs {
@@ -110,6 +111,7 @@ if (fs.existsSync(mainJava)) {
     public void onCreate(android.os.Bundle savedInstanceState) {
         registerPlugin(LocationGuardPlugin.class);
         registerPlugin(LeaveWatchPlugin.class);
+        registerPlugin(StoreUpdatePlugin.class);
         super.onCreate(savedInstanceState);
         // Back button / back gesture: the app goes back one step (closes the open window, previous tab, Home).
         // Only when there is nothing left to go back to does the app move to the background (it is not closed).
@@ -124,11 +126,112 @@ if (fs.existsSync(mainJava)) {
         });
     }
 }`);
-    if (!a.includes('LocationGuardPlugin') || !a.includes('LeaveWatchPlugin')) throw new Error('Could not register LocationGuard / LeaveWatch in MainActivity.java');
+    if (!a.includes('LocationGuardPlugin') || !a.includes('LeaveWatchPlugin') || !a.includes('StoreUpdatePlugin')) throw new Error('Could not register LocationGuard / LeaveWatch / StoreUpdate in MainActivity.java');
     fs.writeFileSync(mainJava, a);
   }
 } else {
   throw new Error('MainActivity.java not found in ' + javaDir);
+}
+
+// ── StoreUpdate (24 Nov 2026, best-practice step 9): the update prompt Google allows in a Play app. The store build asks Google
+//    Play itself (Play In-App Updates, com.google.android.play:app-update — Google's own library) whether a newer version is
+//    in the store and, when the employee taps "Update", shows Google's own full-screen update. Google forbids a Play app to
+//    update itself from anywhere else, so the store build has no download-page banner. The download-page APK gets a small
+//    stand-in that always says "not from the store" (it keeps its own banner that points to the download page).
+const PLAY_UPDATE = 'com.google.android.play:app-update:2.1.0';
+if (STORE) {
+  let gu = fs.readFileSync(gradlePath, 'utf8');
+  if (!gu.includes(PLAY_UPDATE)) {
+    gu = gu.replace(/\ndependencies \{/, `\ndependencies {\n    implementation "${PLAY_UPDATE}"`);
+    if (!gu.includes(PLAY_UPDATE)) throw new Error('Could not add Play In-App Updates to build.gradle');
+    fs.writeFileSync(gradlePath, gu);
+  }
+  fs.writeFileSync(path.join(javaDir, 'StoreUpdatePlugin.java'), `package com.petrokima.hr;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.google.android.play.core.appupdate.AppUpdateInfo;
+import com.google.android.play.core.appupdate.AppUpdateManager;
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.appupdate.AppUpdateOptions;
+import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.UpdateAvailability;
+
+// STORE VERSION: Google Play's own update check and update screen (Play In-App Updates, "immediate" kind).
+@CapacitorPlugin(name = "StoreUpdate")
+public class StoreUpdatePlugin extends Plugin {
+    private AppUpdateManager manager() { return AppUpdateManagerFactory.create(getContext()); }
+
+    private static boolean waiting(AppUpdateInfo i) {
+        int a = i.updateAvailability();
+        return (a == UpdateAvailability.UPDATE_AVAILABLE && i.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE))
+            || a == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS;    // an update started earlier and left half-way
+    }
+
+    @PluginMethod
+    public void info(PluginCall call) {
+        manager().getAppUpdateInfo().addOnSuccessListener(i -> {
+            JSObject r = new JSObject();
+            r.put("store", true);
+            r.put("available", waiting(i));
+            r.put("versionCode", i.availableVersionCode());
+            call.resolve(r);
+        }).addOnFailureListener(e -> {                                           // e.g. not installed from Google Play
+            JSObject r = new JSObject();
+            r.put("store", true);
+            r.put("available", false);
+            r.put("error", String.valueOf(e.getMessage()));
+            call.resolve(r);
+        });
+    }
+
+    @PluginMethod
+    public void start(PluginCall call) {
+        AppUpdateManager m = manager();
+        m.getAppUpdateInfo().addOnSuccessListener(i -> {
+            JSObject r = new JSObject();
+            if (!waiting(i) || getActivity() == null) { r.put("started", false); call.resolve(r); return; }
+            try {
+                boolean s = m.startUpdateFlowForResult(i, getActivity(), AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build(), 7101);
+                r.put("started", s);
+                call.resolve(r);
+            } catch (Exception e) {
+                r.put("started", false);
+                r.put("error", String.valueOf(e.getMessage()));
+                call.resolve(r);
+            }
+        }).addOnFailureListener(e -> {
+            JSObject r = new JSObject();
+            r.put("started", false);
+            r.put("error", String.valueOf(e.getMessage()));
+            call.resolve(r);
+        });
+    }
+}
+`);
+  console.log('✔ Store version — Google Play update check added (' + PLAY_UPDATE + ')');
+} else {
+  const gu = fs.readFileSync(gradlePath, 'utf8');
+  if (gu.includes('com.google.android.play:app-update')) throw new Error('Download version: the Google Play update library must not be in the project');
+  fs.writeFileSync(path.join(javaDir, 'StoreUpdatePlugin.java'), `package com.petrokima.hr;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+// DOWNLOAD-PAGE VERSION: not installed from Google Play — the app's own banner points to the download page instead.
+@CapacitorPlugin(name = "StoreUpdate")
+public class StoreUpdatePlugin extends Plugin {
+    private JSObject none() { JSObject r = new JSObject(); r.put("store", false); r.put("available", false); r.put("started", false); return r; }
+    @PluginMethod public void info(PluginCall call) { call.resolve(none()); }
+    @PluginMethod public void start(PluginCall call) { call.resolve(none()); }
+}
+`);
 }
 
 console.log(`✔ Android project patched — location permission, version 1.0.${build}, release signing, fake-GPS check`);
@@ -172,7 +275,6 @@ console.log(`✔ Android project patched — location permission, version 1.0.${
 //    STORE_BUILD=1 the build has NO background location permission, NO WorkManager and NO worker; LeaveWatch is a small stand-in that
 //    does nothing and says "background allowed", so the app never asks for "Allow all the time". The check when the app is OPENED
 //    (leftCheck) and the 8-hour reminder stay. The download-page APK (STORE_BUILD empty) keeps the full watch, as before.
-const STORE = process.env.STORE_BUILD === '1';
 {
   let mf = fs.readFileSync(manifestPath, 'utf8');
   if (!STORE && !mf.includes('ACCESS_BACKGROUND_LOCATION')) {
