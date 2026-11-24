@@ -142,6 +142,29 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      # Automatic upload to Google Play (24 Nov 2026) — only from main, only once the secret PLAY_SERVICE_ACCOUNT_JSON exists (Play Console →
+      # Setup → API access → a Google Cloud service account with "Release to testing tracks" rights; Mohammed saves its JSON key as a secret
+      # of Petrokima-app — never in a file). Goes to the INTERNAL test track as a DRAFT by default: a person promotes it in Play Console
+      # (internal → closed → production as a staged rollout). Repository variables PLAY_TRACK / PLAY_STATUS change that later.
+      - name: Store version — is the Google Play upload switched on?
+        id: play
+        if: matrix.variant == 'store' && github.ref == 'refs/heads/main'
+        env:
+          PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$PLAY_KEY" ]; then echo "on=1" >> "$GITHUB_OUTPUT"; else echo "::notice::Google Play upload not switched on yet (secret PLAY_SERVICE_ACCOUNT_JSON missing) — upload the bundle by hand"; fi
+
+      - name: Store version — upload to Google Play
+        if: steps.play.outputs.on == '1'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5   # v1.1.5 (20 Apr 2026) — pinned
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.petrokima.hr
+          releaseFiles: Petrokima-1.0.${{ github.run_number }}.aab
+          releaseName: 1.0.${{ github.run_number }}
+          track: ${{ vars.PLAY_TRACK || 'internal' }}
+          status: ${{ vars.PLAY_STATUS || 'draft' }}
+
       - name: Name the file
         if: matrix.variant == 'download'
         run: cp android/app/build/outputs/apk/release/app-release.apk Petrokima.apk

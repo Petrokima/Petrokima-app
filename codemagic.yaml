@@ -1,5 +1,7 @@
 # iPhone build for TestFlight — used ONLY after the Apple Developer account is approved.
 # (Codemagic setup will be done step by step together; the values marked TODO come from App Store Connect.)
+# 24 Nov 2026: Xcode 26 check, privacy manifest + push notifications added by scripts/patch-ios.js. Before the first build the App ID
+# com.petrokima.hr needs the "Push Notifications" capability ticked in developer.apple.com → Identifiers (the signing profile includes it).
 workflows:
   ios-testflight:
     name: Petrokima iPhone → TestFlight
@@ -14,7 +16,12 @@ workflows:
       groups:
         - petrokima            # contains SUPABASE_ANON_KEY
       node: 22
+      xcode: latest            # Apple requires Xcode 26 / the iOS 26 SDK for every upload since 28 Apr 2026 — checked below
     scripts:
+      - name: Check Xcode (Apple's minimum)
+        script: |
+          V=$(xcodebuild -version | head -1 | awk '{print $2}'); echo "Xcode $V"
+          if [ "${V%%.*}" -lt 26 ]; then echo "Xcode 26 or newer is required by Apple (found $V)"; exit 1; fi
       - name: Install
         script: npm ci
       - name: Prepare the app
