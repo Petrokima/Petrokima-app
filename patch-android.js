@@ -168,9 +168,14 @@ console.log(`✔ Android project patched — location permission, version 1.0.${
 //    the phone checks every ~15 minutes (WorkManager) whether he is still at his office. Found away twice in a row → it tells
 //    the database (report_left_by_token, with a single-purpose token — no sign-in needed) and shows a notification.
 //    Needs location "Allow all the time"; without it nothing happens. Stops at check-out, or 16 hours after the check-in.
+//    STORE VERSION (24 Nov 2026, Mohammed: "remove for now" — Google Play / App Store review background location strictly): with
+//    STORE_BUILD=1 the build has NO background location permission, NO WorkManager and NO worker; LeaveWatch is a small stand-in that
+//    does nothing and says "background allowed", so the app never asks for "Allow all the time". The check when the app is OPENED
+//    (leftCheck) and the 8-hour reminder stay. The download-page APK (STORE_BUILD empty) keeps the full watch, as before.
+const STORE = process.env.STORE_BUILD === '1';
 {
   let mf = fs.readFileSync(manifestPath, 'utf8');
-  if (!mf.includes('ACCESS_BACKGROUND_LOCATION')) {
+  if (!STORE && !mf.includes('ACCESS_BACKGROUND_LOCATION')) {
     mf = mf.replace('<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />',
       '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />');
     if (!mf.includes('ACCESS_BACKGROUND_LOCATION')) throw new Error('Could not add background location permission to AndroidManifest.xml');
@@ -184,7 +189,7 @@ console.log(`✔ Android project patched — location permission, version 1.0.${
     fs.writeFileSync(manifestPath, mf);
   }
   let gr = fs.readFileSync(gradlePath, 'utf8');
-  if (!gr.includes('androidx.work:work-runtime')) {
+  if (!STORE && !gr.includes('androidx.work:work-runtime')) {
     gr = gr.replace(/\ndependencies \{/, '\ndependencies {\n    implementation "androidx.work:work-runtime:2.10.1"');
     if (!gr.includes('androidx.work:work-runtime')) throw new Error('Could not add WorkManager to build.gradle');
     fs.writeFileSync(gradlePath, gr);
@@ -470,4 +475,35 @@ public class LeaveWatchWorker extends Worker {
 }
 `);
   console.log('✔ LeaveWatch added — background check while checked in (needs "Allow all the time")');
+}
+if (STORE) {
+  fs.rmSync(path.join(javaDir, 'LeaveWatchWorker.java'), { force: true });
+  fs.writeFileSync(path.join(javaDir, 'LeaveWatchPlugin.java'), `package com.petrokima.hr;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+// STORE VERSION: no background check. Every call answers at once and changes nothing.
+@CapacitorPlugin(name = "LeaveWatch")
+public class LeaveWatchPlugin extends Plugin {
+    private JSObject none() {
+        JSObject r = new JSObject();
+        r.put("background", true);       // so the app never asks for "Allow all the time"
+        r.put("notifications", true);
+        r.put("watching", false);
+        return r;
+    }
+    @PluginMethod public void start(PluginCall call) { call.resolve(none()); }
+    @PluginMethod public void stop(PluginCall call) { call.resolve(); }
+    @PluginMethod public void status(PluginCall call) { call.resolve(none()); }
+    @PluginMethod public void openSettings(PluginCall call) { call.resolve(); }
+}
+`);
+  const mfs = fs.readFileSync(manifestPath, 'utf8'), grs = fs.readFileSync(gradlePath, 'utf8');
+  if (mfs.includes('ACCESS_BACKGROUND_LOCATION') || grs.includes('androidx.work:work-runtime'))
+    throw new Error('Store version: background location / WorkManager must not be in the project');
+  console.log('✔ Store version — LeaveWatch replaced by a stand-in: no background location, no background work');
 }
