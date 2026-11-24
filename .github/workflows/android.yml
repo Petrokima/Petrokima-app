@@ -18,6 +18,13 @@ concurrency:
 jobs:
   android:
     runs-on: ubuntu-latest
+    # Two versions from the same files (24 Nov 2026): 'download' = the APK on the download page, exactly as before;
+    # 'store' = the Google Play bundle (.aab): no background location, no self-update banner (Play rule). Same signing key.
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [download, store]
+    name: Android (${{ matrix.variant }})
     steps:
       - name: Get the project files
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09   # v5.1.0 — pinned to the exact commit (supply-chain rule)
@@ -62,8 +69,8 @@ jobs:
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           APP_BUILD: ${{ github.run_number }}
-          APK_REPO: ${{ github.repository }}
-          APK_DOWNLOAD: ${{ vars.DOWNLOAD_DOMAIN && format('https://{0}/Petrokima.apk', vars.DOWNLOAD_DOMAIN) || '' }}
+          APK_REPO: ${{ matrix.variant == 'download' && github.repository || '' }}
+          APK_DOWNLOAD: ${{ matrix.variant == 'download' && vars.DOWNLOAD_DOMAIN && format('https://{0}/Petrokima.apk', vars.DOWNLOAD_DOMAIN) || '' }}
           ANDROID_STRICT_CSP: ${{ startsWith(github.ref, 'refs/heads/test/') && '1' || '' }}
         run: node scripts/prepare-web.js
 
@@ -76,6 +83,7 @@ jobs:
       - name: Location permission, version number, signing
         env:
           BUILD_NUMBER: ${{ github.run_number }}
+          STORE_BUILD: ${{ matrix.variant == 'store' && '1' || '' }}
         run: node scripts/patch-android.js
 
       - name: Phone notifications (Firebase settings from the secret GOOGLE_SERVICES_JSON)
@@ -108,17 +116,38 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          if [ "${{ matrix.variant }}" = "store" ]; then ./gradlew bundleRelease --no-daemon --stacktrace; else ./gradlew assembleRelease --no-daemon --stacktrace; fi
 
       - name: Remove the signing key file from the build computer
         if: always()
         run: rm -f "$RUNNER_TEMP/petrokima-release.jks"
 
+      - name: Store version — check and keep the bundle for Google Play
+        if: matrix.variant == 'store'
+        run: |
+          MF=$(find android/app/build/intermediates -path '*release*' -name AndroidManifest.xml | head -1)
+          if [ -z "$MF" ]; then echo "::error::The final AndroidManifest.xml of the store version was not found"; exit 1; fi
+          if grep -q ACCESS_BACKGROUND_LOCATION "$MF"; then echo "::error::The store version must not ask for background location"; exit 1; fi
+          if grep -q REQUEST_INSTALL_PACKAGES "$MF"; then echo "::error::The store version must not install other apps"; exit 1; fi
+          if grep -q 'const APK_DOWNLOAD = "[^"]' www/app.js || grep -q 'const APK_REPO  = "[^"]' www/app.js; then echo "::error::The store version must not offer downloads outside Google Play"; exit 1; fi
+          cp android/app/build/outputs/bundle/release/app-release.aab Petrokima-1.0.${{ github.run_number }}.aab
+          echo "::notice::Google Play bundle ready: Petrokima-1.0.${{ github.run_number }}.aab (version code ${{ github.run_number }}) — download it from this run's 'Artifacts'"
+
+      - name: Store version — attach the bundle to this run
+        if: matrix.variant == 'store'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02   # v4.6.2 — pinned
+        with:
+          name: Petrokima-google-play-1.0.${{ github.run_number }}
+          path: Petrokima-1.0.${{ github.run_number }}.aab
+          retention-days: 30
+          if-no-files-found: error
+
       - name: Name the file
+        if: matrix.variant == 'download'
         run: cp android/app/build/outputs/apk/release/app-release.apk Petrokima.apk
 
       - name: Build the download page
-        if: github.ref == 'refs/heads/main'
+        if: matrix.variant == 'download' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p site
           cp Petrokima.apk site/Petrokima.apk
@@ -132,7 +161,7 @@ jobs:
           DOWNLOAD_DOMAIN: ${{ vars.DOWNLOAD_DOMAIN }}
 
       - name: Publish the download page (GitHub Pages)
-        if: github.ref == 'refs/heads/main'
+        if: matrix.variant == 'download' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453   # v4.1.0 — pinned (review)
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -141,7 +170,7 @@ jobs:
           force_orphan: true
 
       - name: Publish the download
-        if: github.ref == 'refs/heads/main'
+        if: matrix.variant == 'download' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.6.2 — pinned (review)
         with:
           tag_name: v1.0.${{ github.run_number }}
@@ -154,7 +183,7 @@ jobs:
           make_latest: true
 
       - name: Publish a TEST version (test/… branches only — not on the download page, never offered to staff)
-        if: startsWith(github.ref, 'refs/heads/test/')
+        if: matrix.variant == 'download' && startsWith(github.ref, 'refs/heads/test/')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65   # v2.6.2 — pinned (review)
         with:
           tag_name: test-1.0.${{ github.run_number }}
