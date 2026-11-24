@@ -116,7 +116,14 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          if [ "${{ matrix.variant }}" = "store" ]; then ./gradlew bundleRelease --no-daemon --stacktrace; else ./gradlew assembleRelease --no-daemon --stacktrace; fi
+          TASK=assembleRelease; if [ "${{ matrix.variant }}" = "store" ]; then TASK=bundleRelease; fi
+          # the public library server (Maven Central) sometimes answers "Too many requests" (429) when many builds run at once
+          # (24 Nov 2026) — then wait 90 seconds and try ONCE more; what was already downloaded is kept, so the second try fetches less
+          if ! ./gradlew "$TASK" --no-daemon --stacktrace; then
+            echo "::warning::The Android build failed once (often the library server being busy) — trying again in 90 seconds"
+            sleep 90
+            ./gradlew "$TASK" --no-daemon --stacktrace
+          fi
 
       - name: Remove the signing key file from the build computer
         if: always()
@@ -168,6 +175,50 @@ jobs:
       - name: Name the file
         if: matrix.variant == 'download'
         run: cp android/app/build/outputs/apk/release/app-release.apk Petrokima.apk
+
+      # Automatic real-device test (24 Nov 2026, best-practice step 7): Firebase Test Lab's "Robo" test installs the app on Google's
+      # test phones (an older and a newer Android) and taps through what it can reach without a password (start-up, sign-in screen,
+      # Forgot password, language switch). It catches an app that crashes or does not start before staff get it. Uses the Google
+      # Cloud command tool already on GitHub's computers (no extra add-on). Switched on once the secret FIREBASE_TESTLAB_KEY and the
+      # variable FIREBASE_PROJECT exist. Least privilege: a SEPARATE, empty Firebase project only for these tests (no staff data in it),
+      # its service account with the role Editor (Google's requirement for the default results storage); or set the variable
+      # TESTLAB_BUCKET (a storage bucket you own) and give only "Firebase Test Lab Admin" + "Firebase Analytics Viewer". Mohammed saves
+      # the key himself — never in a file. Variable TESTLAB_DEVICES changes the phones. A CRASH stops the build before anything is
+      # published; a problem of Test Lab itself (daily quota, Google outage) only warns, so a release is never held up by Google.
+      - name: Real-device test — switched on?
+        id: testlab
+        if: matrix.variant == 'download'
+        env:
+          TL_KEY: ${{ secrets.FIREBASE_TESTLAB_KEY }}
+          TL_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+        run: |
+          if [ -n "$TL_KEY" ] && [ -n "$TL_PROJECT" ]; then echo "on=1" >> "$GITHUB_OUTPUT"; else echo "::notice::Real-device test not switched on yet (secret FIREBASE_TESTLAB_KEY / variable FIREBASE_PROJECT missing)"; fi
+
+      - name: Real-device test (Firebase Test Lab, Robo)
+        if: steps.testlab.outputs.on == '1'
+        env:
+          TL_KEY: ${{ secrets.FIREBASE_TESTLAB_KEY }}
+          TL_PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          TL_DEVICES: ${{ vars.TESTLAB_DEVICES || 'model=MediumPhone.arm,version=30;model=MediumPhone.arm,version=34' }}
+          TL_LABEL: 1.0.${{ github.run_number }}
+          TL_BUCKET: ${{ vars.TESTLAB_BUCKET }}
+        run: |
+          KEY="$RUNNER_TEMP/testlab-key.json"
+          ( umask 077; printf '%s' "$TL_KEY" > "$KEY" )
+          trap 'rm -f "$KEY"; gcloud --quiet auth revoke --all >/dev/null 2>&1 || true' EXIT
+          gcloud --quiet auth activate-service-account --key-file="$KEY"
+          ARGS=(); IFS=';' read -ra DEVS <<< "$TL_DEVICES"; for d in "${DEVS[@]}"; do if [ -n "$d" ]; then ARGS+=(--device "$d"); fi; done
+          if [ -n "$TL_BUCKET" ]; then ARGS+=(--results-bucket "$TL_BUCKET"); fi
+          set +e
+          gcloud --quiet firebase test android run --project "$TL_PROJECT" --type robo --app Petrokima.apk "${ARGS[@]}" \
+            --timeout 5m --results-history-name "Petrokima HR" --client-details "matrixLabel=$TL_LABEL" 2>&1 | tee testlab.log
+          code=${PIPESTATUS[0]}
+          set -e
+          case "$code" in
+            0)  echo "::notice::Real-device test passed on: $TL_DEVICES" ;;
+            10) echo "::error::Real-device test: the app crashed or failed on a test phone — nothing is published. Details: Firebase console → Test Lab → Petrokima HR"; exit 1 ;;
+            *)  echo "::warning::Real-device test could not run (gcloud answered $code) — the release goes on; see this step's log" ;;
+          esac
 
       - name: Build the download page
         if: matrix.variant == 'download' && github.ref == 'refs/heads/main'

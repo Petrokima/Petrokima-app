@@ -21,12 +21,14 @@ const PK_ERR = (function(){
     .replace(/\b[23]\d{13}\b/g, '[id]').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[email]')
     .replace(/eyJ[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}/g, '[token]').replace(/sb_(publishable|secret)_[\w-]+/g, '[key]');
   const bare = u => { try { const x = new URL(u, location.href); return x.origin + x.pathname; } catch(e){ return ''; } };
+  // which phone app sent the report (Android / iPhone) — read from Capacitor itself (the phone's own settings come later in the file)
+  const appKind = () => { try { const c = /** @type {any} */ (window).Capacitor; return (c && typeof c.getPlatform === 'function' && c.getPlatform() === 'ios') ? 'ios' : 'android'; } catch(e){ return 'android'; } };
   try {
     lib.init({
       dsn: 'https://public@o0.ingest.sentry.io/0',                       // placeholder — the real address is added by error-report
       tunnel: 'https://hckkrzghxxhauotyqlqr.supabase.co/functions/v1/error-report',
-      release: typeof APP_BUILD !== 'undefined' ? 'pk-phone@' + (APP_BUILD ? 'android-' + APP_BUILD : 'web') : 'pk-desktop@web',
-      environment: location.hostname === 'localhost' ? 'android-app' : location.hostname,
+      release: typeof APP_BUILD !== 'undefined' ? 'pk-phone@' + (APP_BUILD ? appKind() + '-' + APP_BUILD : 'web') : 'pk-desktop@web',
+      environment: location.hostname === 'localhost' ? appKind() + '-app' : location.hostname,      // android-app / ios-app
       sendDefaultPii: false, maxBreadcrumbs: 30, attachStacktrace: true,
       beforeBreadcrumb(b){
         if (b.category === 'console' || b.category === 'ui.input') return null;          // never what people type or logs
@@ -124,6 +126,7 @@ const T = {
   spNotAllowed:'HR has not given you the right to set site locations.',
   appRequired:'Please check in with the Petrokima app, not the internet browser. Download it from download.petrokima-hr.com',
   updateRequired:'Your Petrokima app is out of date. Install the new version (download.petrokima-hr.com), then check in again.',
+  updateRequiredStore:'Your Petrokima app is out of date. Update it from your phone\'s app store (Google Play or the App Store), then check in again.',
   badDevice:'This phone could not be identified. Close the app and open it again.',
   phoneReg:'Registered phone',thisPhone:'This phone is registered to you',back:'Back',
   locTitle:'Location is required',locDenied:'Check-in needs your location, and this phone is not sharing it with Petrokima.',
@@ -172,7 +175,7 @@ const T = {
   aaWait:'Waiting for you',aaHR:'Approved by you — waiting for HR',aaOk:'Approved — will be paid',aaNo:'Rejected',day:'day',daysW:'days',at:'at',
   locAppAndroid:'Android: open the phone Settings → Apps → Petrokima → Permissions → Location → “Allow only while using the app”. Also make sure Location is switched ON in the quick settings.',
   locAppIos:'iPhone: open Settings → Petrokima → Location → “While Using the App”, and switch Precise Location on.',
-  updateAvail:'A new version of the app is available',updateBtn:'Download update',
+  updateAvail:'A new version of the app is available',updateBtn:'Download update',updateBtnStore:'Update',
   refresh:'Refresh',refreshed:'Up to date ✓',updated:'Updated {t}',pull:'Pull down to refresh',release:'Release to refresh',refreshing:'Refreshing…'},
  ar:{appName:'بتروكيما',loginSub:'الحضور وطلبات الموارد البشرية',empCode:'كود الموظف',password:'كلمة المرور',signIn:'تسجيل الدخول',forgot:'نسيت كلمة المرور؟ اطلب من الموارد البشرية إعادة تعيينها.',forgotLink:'نسيت كلمة المرور؟',forgotTitle:'نسيت كلمة المرور؟',forgotText:'اكتب كود الموظف. إذا كان بريد العمل أو بريدك الشخصي مسجلاً في ملفك فسنرسل إليه رابطاً لاختيار كلمة مرور جديدة. وإلا فسيُطلب من الموارد البشرية إعادة تعيينها.',forgotSend:'إرسال',forgotNoCode:'اكتب كود الموظف.',forgotCaptcha:'لم يكتمل التحقق الأمني. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.',forgotFail:'تعذّر إرسال الطلب — تأكد من الإنترنت وحاول بعد دقيقة. إذا تكرر ذلك فاطلب من الموارد البشرية.',forgotSent:'تم. إذا كان بريد العمل أو بريدك الشخصي مسجلاً في ملفك فقد أُرسل إليه رابط لاختيار كلمة مرور جديدة — راجع البريد الوارد ومجلد الرسائل غير المرغوب فيها. يعمل الرابط مرة واحدة خلال 30 دقيقة. وإذا لم يكن لديك بريد مسجل فقد طُلب من الموارد البشرية إعادة تعيين كلمة المرور وسيتواصلون معك.',forgotHrBtn:'لم يصل بريد خلال 10 دقائق؟ اطلب من الموارد البشرية',forgotHr:'طُلب من الموارد البشرية إعادة تعيين كلمة المرور. سيتواصلون معك بكلمة مرور مؤقتة — سجّل الدخول بالكود وبها، ثم أجب عن سنة الميلاد واختر كلمة مرورك.',forgotBack:'← العودة لتسجيل الدخول',
   wrongLogin:'كود الموظف أو كلمة المرور غير صحيحة.',fillLogin:'أدخل كود الموظف وكلمة المرور.',
@@ -230,6 +233,7 @@ const T = {
   spNotAllowed:'لم تمنحك الموارد البشرية صلاحية تحديد مواقع المشروعات.',
   appRequired:'من فضلك سجّل الحضور من تطبيق بتروكيما وليس من متصفح الإنترنت. حمّله من download.petrokima-hr.com',
   updateRequired:'إصدار تطبيق بتروكيما لديك قديم. ثبّت الإصدار الجديد (download.petrokima-hr.com) ثم سجّل الحضور مرة أخرى.',
+  updateRequiredStore:'إصدار تطبيق بتروكيما لديك قديم. حدّثه من متجر التطبيقات في هاتفك (Google Play أو App Store) ثم سجّل الحضور مرة أخرى.',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
   phoneReg:'الهاتف المسجّل',thisPhone:'هذا الهاتف مسجّل باسمك',back:'رجوع',
   locTitle:'تحديد الموقع مطلوب',locDenied:'تسجيل الحضور يتطلب موقعك، وهذا الهاتف لا يشارك موقعه مع تطبيق بتروكيما.',
@@ -278,7 +282,7 @@ const T = {
   aaWait:'في انتظار موافقتك',aaHR:'وافقت عليه — في انتظار الموارد البشرية',aaOk:'معتمد — سيُصرف',aaNo:'مرفوض',day:'يوم',daysW:'أيام',at:'في',
   locAppAndroid:'أندرويد: افتح إعدادات الهاتف ← التطبيقات ← بتروكيما ← الأذونات ← الموقع ← «السماح فقط أثناء استخدام التطبيق». وتأكد أيضاً من تشغيل الموقع من الإعدادات السريعة.',
   locAppIos:'آيفون: افتح الإعدادات ← بتروكيما ← الموقع ← «أثناء استخدام التطبيق»، وشغّل «الموقع الدقيق».',
-  updateAvail:'يتوفر إصدار جديد من التطبيق',updateBtn:'تنزيل التحديث',
+  updateAvail:'يتوفر إصدار جديد من التطبيق',updateBtn:'تنزيل التحديث',updateBtnStore:'تحديث',
   refresh:'تحديث',refreshed:'تم التحديث ✓',updated:'آخر تحديث {t}',pull:'اسحب للأسفل للتحديث',release:'اترك للتحديث',refreshing:'جارٍ التحديث…'}
 };
 let LANG = localStorage.getItem('pk_lang') || 'ar';   // Arabic by default; one tap switches to English
@@ -373,7 +377,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v103';
+const PKM_BUILD = 'pk-mobile-v104';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);
