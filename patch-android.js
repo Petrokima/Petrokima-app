@@ -36,6 +36,18 @@ if (!g.includes('signingConfigs')) {
 }
 fs.writeFileSync(gradlePath, g);
 
+// ── Google's package-name ownership proof (25 Nov 2026) ──
+// Since 2026 Google asks every developer to register the package names of apps also given out OUTSIDE Google Play. Proof =
+// an APK signed with OUR release key that holds assets/adi-registration.properties with the code shown in Play Console
+// (Android developer verification → Register package name → Upload APK). The code is an account identifier, not a secret;
+// keeping the file in every later build is harmless.
+const ADI_REGISTRATION = 'CSD42K2IDLAJWAAAAAAAAAAAAA';
+{
+  const assets = path.join(app, 'src', 'main', 'assets');
+  fs.mkdirSync(assets, { recursive: true });
+  fs.writeFileSync(path.join(assets, 'adi-registration.properties'), ADI_REGISTRATION + '\n');
+}
+
 // ── LocationGuard: tells the app whether the location came from a fake-location ("mock") app ──
 const javaDir = path.join(app, 'src', 'main', 'java', 'com', 'petrokima', 'hr');
 fs.mkdirSync(javaDir, { recursive: true });
