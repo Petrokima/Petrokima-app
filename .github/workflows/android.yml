@@ -149,28 +149,75 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      # Automatic upload to Google Play (24 Nov 2026) — only from main, only once the secret PLAY_SERVICE_ACCOUNT_JSON exists (Play Console →
-      # Setup → API access → a Google Cloud service account with "Release to testing tracks" rights; Mohammed saves its JSON key as a secret
-      # of Petrokima-app — never in a file). Goes to the INTERNAL test track as a DRAFT by default: a person promotes it in Play Console
-      # (internal → closed → production as a staged rollout). Repository variables PLAY_TRACK / PLAY_STATUS change that later.
+      # Automatic upload to Google Play (24 Nov 2026; 26 Nov: rolled out to testers by itself) — only from main, only once the secret
+      # PLAY_SERVICE_ACCOUNT_JSON exists (a Google Cloud service account invited in Play Console → Users and permissions with ONLY
+      # "Release to testing tracks" for this app — it cannot touch production; Mohammed saves its JSON key as a secret of Petrokima-app,
+      # never in a file). Every new version goes to the INTERNAL test track and is ROLLED OUT there at once (testers get it from Play
+      # within minutes; internal testing is not reviewed by Google). Repository variables change that: PLAY_TRACK (internal / alpha =
+      # closed testing / beta = open testing / a closed track's name) and PLAY_STATUS (completed = roll out, draft = keep as a draft a
+      # person rolls out). Production is NEVER rolled out from here: it is always uploaded as a draft — a person starts the staged
+      # rollout in Play Console. If Google refuses to roll out (an app Google still calls a "draft app"), the version is kept as a draft.
       - name: Store version — is the Google Play upload switched on?
         id: play
         if: matrix.variant == 'store' && github.ref == 'refs/heads/main'
         env:
           PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TRACK: ${{ vars.PLAY_TRACK }}
+          STATUS: ${{ vars.PLAY_STATUS }}
         run: |
-          if [ -n "$PLAY_KEY" ]; then echo "on=1" >> "$GITHUB_OUTPUT"; else echo "::notice::Google Play upload not switched on yet (secret PLAY_SERVICE_ACCOUNT_JSON missing) — upload the bundle by hand"; fi
+          if [ -z "$PLAY_KEY" ]; then echo "::notice::Google Play upload not switched on yet (secret PLAY_SERVICE_ACCOUNT_JSON missing) — upload the bundle by hand"; exit 0; fi
+          T="$(printf '%s' "${TRACK:-internal}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"; T="${T:-internal}"
+          if ! printf '%s' "$T" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9 _.:-]{0,49}$'; then echo "::error::Variable PLAY_TRACK has an odd value: $T"; exit 1; fi
+          S="$(printf '%s' "${STATUS}" | tr -d '[:space:]')"
+          if [ -z "$S" ]; then if [ "$T" = internal ]; then S=completed; else S=draft; fi; fi
+          case "$S" in completed|draft) ;; *) echo "::error::Variable PLAY_STATUS must be completed or draft (is: $S)"; exit 1;; esac
+          if [ "$T" = production ] && [ "$S" != draft ]; then echo "::notice::Production is never rolled out automatically — uploaded as a draft; start the staged rollout in Play Console"; S=draft; fi
+          { echo "on=1"; echo "track=$T"; echo "status=$S"; } >> "$GITHUB_OUTPUT"
+          echo "Google Play: track $T, status $S"
 
       - name: Store version — upload to Google Play
+        id: up
         if: steps.play.outputs.on == '1'
+        continue-on-error: true
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5   # v1.1.5 (20 Apr 2026) — pinned
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.petrokima.hr
           releaseFiles: Petrokima-1.0.${{ github.run_number }}.aab
           releaseName: 1.0.${{ github.run_number }}
-          track: ${{ vars.PLAY_TRACK || 'internal' }}
-          status: ${{ vars.PLAY_STATUS || 'draft' }}
+          track: ${{ steps.play.outputs.track }}
+          status: ${{ steps.play.outputs.status }}
+
+      - name: Store version — Google refused to roll out, keep it as a draft instead
+        id: updraft
+        if: steps.play.outputs.on == '1' && steps.up.outcome == 'failure' && steps.play.outputs.status != 'draft'
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5   # v1.1.5 (20 Apr 2026) — pinned
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.petrokima.hr
+          releaseFiles: Petrokima-1.0.${{ github.run_number }}.aab
+          releaseName: 1.0.${{ github.run_number }}
+          track: ${{ steps.play.outputs.track }}
+          status: draft
+
+      - name: Store version — Google Play upload result
+        if: steps.play.outputs.on == '1'
+        env:
+          UP: ${{ steps.up.outcome }}
+          DRAFT: ${{ steps.updraft.outcome }}
+          TRACK: ${{ steps.play.outputs.track }}
+          STATUS: ${{ steps.play.outputs.status }}
+          VER: 1.0.${{ github.run_number }}
+        run: |
+          if [ "$UP" = success ] && [ "$STATUS" = completed ]; then
+            echo "::notice::Google Play: version $VER ROLLED OUT on the $TRACK test track — testers get it from Play within minutes (Play Console → Test and release → Testing)"
+          elif [ "$UP" = success ]; then
+            echo "::notice::Google Play: version $VER uploaded to the $TRACK track as a DRAFT — open Play Console → that track → Edit release → Review release → Roll out"
+          elif [ "$DRAFT" = success ]; then
+            echo "::warning::Google Play would not roll version $VER out by itself, so it was kept as a DRAFT on the $TRACK track — open Play Console → that track → Edit release → Review release → Roll out (see the step above for Google's reason)"
+          else
+            echo "::error::Google Play refused version $VER — see the upload step above for Google's reason (wrong key, missing permission, or this version number already used)"; exit 1
+          fi
 
       - name: Name the file
         if: matrix.variant == 'download'
