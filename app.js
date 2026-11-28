@@ -125,6 +125,7 @@ const T = {
   spAccuracy:'Your location is only accurate to ±{n} m (needed: {max} m or better). Go outside, wait a few seconds and try again.',
   spNotAllowed:'HR has not given you the right to set site locations.',
   appRequired:'Please check in with the Petrokima app, not the internet browser. Download it from download.petrokima-hr.com',
+  appRequiredIos:'Please check in with the Petrokima iPhone app, not the internet browser. HR will send you the App Store link.',
   updateRequired:'Your Petrokima app is out of date. Install the new version (download.petrokima-hr.com), then check in again.',
   updateRequiredStore:'Your Petrokima app is out of date. Update it from your phone\'s app store (Google Play or the App Store), then check in again.',
   badDevice:'This phone could not be identified. Close the app and open it again.',
@@ -232,6 +233,7 @@ const T = {
   spAccuracy:'دقة موقعك ±{n} م فقط (المطلوب {max} م أو أفضل). اخرج إلى مكان مفتوح وانتظر ثواني ثم حاول مرة أخرى.',
   spNotAllowed:'لم تمنحك الموارد البشرية صلاحية تحديد مواقع المشروعات.',
   appRequired:'من فضلك سجّل الحضور من تطبيق بتروكيما وليس من متصفح الإنترنت. حمّله من download.petrokima-hr.com',
+  appRequiredIos:'من فضلك سجّل الحضور من تطبيق بتروكيما للآيفون وليس من متصفح الإنترنت. سترسل لك الموارد البشرية رابط التطبيق على App Store.',
   updateRequired:'إصدار تطبيق بتروكيما لديك قديم. ثبّت الإصدار الجديد (download.petrokima-hr.com) ثم سجّل الحضور مرة أخرى.',
   updateRequiredStore:'إصدار تطبيق بتروكيما لديك قديم. حدّثه من متجر التطبيقات في هاتفك (Google Play أو App Store) ثم سجّل الحضور مرة أخرى.',
   badDevice:'تعذّر التعرّف على هذا الهاتف. أغلق التطبيق وافتحه مرة أخرى.',
@@ -377,7 +379,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 // app.js and react.js must come from the SAME release (review 3 Nov 2026): react.js says which one it is (PKM.build); a react.js of
 // another release (an old copy kept somewhere) is treated like a missing one — the plain "did not load" message, nothing half-started.
 // Always the same as VERSION in sw.js (checked by tests/check-files.js).
-const PKM_BUILD = 'pk-mobile-v104';
+const PKM_BUILD = 'pk-mobile-v105';
 const pkmReady = () => typeof PKM !== 'undefined' && PKM.build === PKM_BUILD;
 function pkm(){ if (!pkmReady()) throw new Error(t('appLoadFailed')); return /** @type {NonNullable<typeof PKM>} */ (PKM); }
 const num = v => pkm().num(v);

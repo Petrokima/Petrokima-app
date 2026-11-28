@@ -4,6 +4,12 @@
 //     phone functions it uses (UserDefaults: the app's own settings) — required for every upload since 1 May 2024
 //   · Push notifications (24 Nov 2026): App.entitlements (aps-environment production) + the two AppDelegate hooks the
 //     Capacitor push plugin needs to receive the phone's Apple notification address (APNs device token)
+//   · LocationGuard (28 Nov 2026): the same two calls as the Android app — inspect() = was the location made up by a
+//     fake-GPS tool (Apple's "simulated by software" mark, iOS 15+), uptime() = a counter that keeps running while the phone
+//     sleeps and cannot be changed by the user, for check-ins sent later without internet (file 92). Registered through a
+//     small MainViewController (Capacitor's way for code inside the app itself). NO "left the office" watch on iPhone
+//     (Mohammed, 28 Nov 2026) — the app never asks for "Always" location.
+//   · Oldest iPhone system allowed: iOS 16 (older iPhones keep the web app)
 // Every step checks its own result and stops the build with a clear message when the generated project looks different.
 const fs = require('fs'), path = require('path');
 const appDir = path.join(__dirname, '..', 'ios', 'App', 'App');
@@ -18,6 +24,7 @@ add('NSLocationWhenInUseUsageDescription', '<string>Petrokima records your locat
 add('ITSAppUsesNonExemptEncryption', '<false/>');
 p = p.replace(/<key>CFBundleDisplayName<\/key>\s*<string>[^<]*<\/string>/, '<key>CFBundleDisplayName</key>\n\t<string>Petrokima</string>');
 must(p.includes('NSLocationWhenInUseUsageDescription'), 'could not add the location message to Info.plist');
+must(!/NSLocationAlways|<string>location<\/string>/.test(p), 'the iPhone app must never ask for "Always" location or run location in the background');
 fs.writeFileSync(plistPath, p);
 
 // ── privacy manifest ──
@@ -45,6 +52,10 @@ ${[['Name', APP], ['EmailAddress', APP], ['PhoneNumber', APP], ['PhysicalAddress
 \t\t<dict>
 \t\t\t<key>NSPrivacyAccessedAPIType</key><string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 \t\t\t<key>NSPrivacyAccessedAPITypeReasons</key><array><string>CA92.1</string></array>
+\t\t</dict>
+\t\t<dict>
+\t\t\t<key>NSPrivacyAccessedAPIType</key><string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+\t\t\t<key>NSPrivacyAccessedAPITypeReasons</key><array><string>35F9.1</string></array>
 \t\t</dict>
 \t</array>
 </dict>
@@ -82,6 +93,8 @@ if (!x.includes('CODE_SIGN_ENTITLEMENTS')) {
   x = x.replace(/(\n(\t+)INFOPLIST_FILE = App\/Info\.plist;)/g, '\n$2CODE_SIGN_ENTITLEMENTS = App/App.entitlements;$1');
   must((x.match(/CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/g) || []).length === 2, 'could not add the push entitlements to both build settings');
 }
+x = x.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, 'IPHONEOS_DEPLOYMENT_TARGET = 16.0;');
+must(/IPHONEOS_DEPLOYMENT_TARGET = 16\.0;/.test(x) && !/IPHONEOS_DEPLOYMENT_TARGET = (?!16\.0;)/.test(x), 'could not set the oldest iPhone system to iOS 16');
 fs.writeFileSync(pbxPath, x);
 
 // ── push: AppDelegate hands the Apple notification address to the Capacitor push plugin ──
@@ -103,4 +116,85 @@ if (!a.includes('capacitorDidRegisterForRemoteNotifications')) {
   must(a.includes('capacitorDidRegisterForRemoteNotifications') && a.includes('capacitorDidFailToRegisterForRemoteNotifications'), 'could not add the push hooks to AppDelegate.swift');
   fs.writeFileSync(adPath, a);
 }
-console.log('✔ iPhone project patched — location message, app name, export compliance, privacy manifest, push notifications');
+// ── LocationGuard: fake-GPS check + the phone's own counter (same names and answers as the Android plugin) ──
+a = fs.readFileSync(adPath, 'utf8');
+if (!a.includes('LocationGuardPlugin')) {
+  a = a.replace(/import Capacitor\n/, 'import Capacitor\nimport CoreLocation\n');
+  a = a.trimEnd() + `
+
+// Capacitor's way to add the app's own native code: this view controller replaces CAPBridgeViewController in Main.storyboard
+class MainViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        bridge?.registerPluginInstance(LocationGuardPlugin())
+    }
+}
+
+@objc(LocationGuardPlugin)
+public class LocationGuardPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "LocationGuardPlugin"
+    public let jsName = "LocationGuard"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "inspect", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "uptime", returnType: CAPPluginReturnPromise)
+    ]
+    private var manager: CLLocationManager?
+
+    // The latest location the phone has (the one just used for the check-in): did a fake-GPS tool make it?
+    // Only "simulated by software" counts, as on Android; a GPS accessory (for example a car) is not refused.
+    @objc func inspect(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            if self.manager == nil { self.manager = CLLocationManager() }
+            var mock = false
+            var seen = 0
+            if let l = self.manager?.location, abs(l.timestamp.timeIntervalSinceNow) <= 180 {
+                seen = 1
+                if let s = l.sourceInformation, s.isSimulatedBySoftware { mock = true }
+            }
+            call.resolve(["mock": mock, "checked": seen])
+        }
+    }
+
+    // A counter that keeps running while the phone sleeps and cannot be changed by the user (unlike the clock), and a number
+    // for this start-up of the phone. The number is random and the counter is moved by a random amount, both chosen once per
+    // start-up and kept in this app's own settings, so what is sent never tells when the phone was started — the server only
+    // uses the difference between two taps of the same start-up.
+    @objc func uptime(_ call: CAPPluginCall) {
+        var tb = mach_timebase_info_data_t()
+        mach_timebase_info(&tb)
+        let ms = Int64(Double(mach_continuous_time()) * Double(tb.numer) / Double(tb.denom) / 1_000_000)
+        guard let session = LocationGuardPlugin.bootSession() else {
+            call.resolve(["ms": ms, "boot": -1])
+            return
+        }
+        call.resolve(["ms": ms + session.shift, "boot": session.id])
+    }
+
+    static func bootSession() -> (id: Int, shift: Int64)? {
+        var size = 0
+        guard sysctlbyname("kern.bootsessionuuid", nil, &size, nil, 0) == 0, size > 1 else { return nil }
+        var buf = [CChar](repeating: 0, count: size)
+        guard sysctlbyname("kern.bootsessionuuid", &buf, &size, nil, 0) == 0 else { return nil }
+        let uuid = String(cString: buf)
+        let d = UserDefaults.standard
+        if d.string(forKey: "pk_boot_uuid") != uuid || d.integer(forKey: "pk_boot_id") <= 0 {
+            d.set(uuid, forKey: "pk_boot_uuid")
+            d.set(Int(Int32.random(in: 1...Int32.max)), forKey: "pk_boot_id")
+            d.set(NSNumber(value: Int64.random(in: 0...1_000_000_000_000)), forKey: "pk_boot_shift")
+        }
+        let shift = (d.object(forKey: "pk_boot_shift") as? NSNumber)?.int64Value ?? 0
+        return (d.integer(forKey: "pk_boot_id"), shift)
+    }
+}
+`;
+  must(a.includes('class MainViewController: CAPBridgeViewController') && a.includes('import CoreLocation') && a.includes('jsName = "LocationGuard"'),
+       'could not add LocationGuard to AppDelegate.swift');
+  fs.writeFileSync(adPath, a);
+}
+const sbPath = path.join(appDir, 'Base.lproj', 'Main.storyboard');
+let sb = fs.readFileSync(sbPath, 'utf8');
+if (!sb.includes('customClass="MainViewController"')) {
+  sb = sb.replace(/customClass="CAPBridgeViewController" customModule="Capacitor"/, 'customClass="MainViewController" customModule="App" customModuleProvider="target"');
+  must(sb.includes('customClass="MainViewController" customModule="App" customModuleProvider="target"'), 'could not point Main.storyboard to MainViewController');
+  fs.writeFileSync(sbPath, sb);
+}
+console.log('✔ iPhone project patched — location message, app name, export compliance, privacy manifest, push notifications, LocationGuard, iOS 16');
